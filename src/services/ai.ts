@@ -61,7 +61,14 @@ export async function saveMessage(
   conversationId: string,
   role: AiRole,
   content: string,
-  toolCalls?: unknown[]
+  toolCalls?: unknown[],
+  usage?: {
+    inputTokens?: number;
+    outputTokens?: number;
+    totalTokens?: number;
+    stepCount?: number;
+    finishReason?: string;
+  }
 ) {
   const [row] = await db
     .insert(aiMessages)
@@ -70,6 +77,7 @@ export async function saveMessage(
       role,
       content,
       toolCalls: toolCalls ?? [],
+      usage: usage ?? null,
     })
     .returning();
   await db

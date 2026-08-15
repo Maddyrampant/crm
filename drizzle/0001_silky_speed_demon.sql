@@ -1,0 +1,1 @@
+ALTER TABLE "ai_messages" ADD COLUMN "usage" jsonb DEFAULT 'null'::jsonb;
