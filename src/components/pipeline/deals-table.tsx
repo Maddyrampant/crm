@@ -280,11 +280,11 @@ export function DealsTable({
                 ))}
               </SelectContent>
             </Select>
-            <div className="flex items-center gap-1">
+            <div className="flex w-full flex-wrap items-center gap-1 sm:w-auto">
               <Input
                 dir="rtl"
                 type="date"
-                className="w-40"
+                className="w-full min-w-0 flex-1 sm:w-40 sm:flex-none"
                 aria-label="تاریخ بستن از"
                 value={filters.closeDateFrom}
                 onChange={(e) => updateFilter("closeDateFrom", e.target.value)}
@@ -293,7 +293,7 @@ export function DealsTable({
               <Input
                 dir="rtl"
                 type="date"
-                className="w-40"
+                className="w-full min-w-0 flex-1 sm:w-40 sm:flex-none"
                 aria-label="تاریخ بستن تا"
                 value={filters.closeDateTo}
                 onChange={(e) => updateFilter("closeDateTo", e.target.value)}
