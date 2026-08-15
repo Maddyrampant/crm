@@ -143,3 +143,4 @@ export const companyRelations = relations(companies, ({ many }) => ({
 export type Contact = typeof contacts.$inferSelect;
 export type Company = typeof companies.$inferSelect;
 export type Tag = typeof tags.$inferSelect;
+export type CustomField = typeof customFields.$inferSelect;
