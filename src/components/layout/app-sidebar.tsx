@@ -41,7 +41,7 @@ export function AppSidebar() {
   const pathname = usePathname();
 
   return (
-    <Sidebar collapsible="icon" className="border-s">
+    <Sidebar side="right" collapsible="icon" className="border-e">
       <SidebarHeader>
         <Brand />
         <WorkspaceSwitcher />
@@ -67,7 +67,7 @@ export function AppSidebar() {
                         className={cn(
                           !item.ready && "opacity-60",
                           isActive &&
-                            "border-s-2 border-primary bg-sidebar-accent ps-3"
+                            "border-e-2 border-primary bg-sidebar-accent pe-3"
                         )}
                       >
                         <Link href={item.ready ? item.href : "#"}>
