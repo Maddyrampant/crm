@@ -1,261 +1,334 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
-  AlertTriangle,
-  Banknote,
-  Bot,
-  CheckCircle2,
-  Clock3,
-  ListTodo,
+  ArrowLeft,
+  Building2,
+  DollarSign,
+  Handshake,
+  Kanban,
   Target,
   TrendingUp,
   Users,
+  Zap,
 } from "lucide-react";
+import { and, count, desc, eq, gte, sql } from "drizzle-orm";
+import { addMonths, startOfMonth } from "date-fns-jalali";
+import { format as formatJalali } from "date-fns-jalali";
 import { requireWorkspace } from "@/lib/session";
-import {
-  getKpis,
-  getLeadSourceStats,
-  getPipelineStats,
-  getRecentActivity,
-  getRevenueByMonth,
-} from "@/services/reports";
-import { getOverdueInvoices } from "@/services/invoices";
-import { getDueTasks } from "@/services/tasks";
-import { getPendingApprovals } from "@/services/ai";
-import { DashboardCharts } from "@/components/reports/dashboard-charts";
-import { StatCard } from "@/components/reports/stat-card";
-import { ActivityFeed } from "@/components/reports/activity-feed";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { db } from "@/db";
+import { companies, contacts, deals, stages, user } from "@/db/schema";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/format";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatCard } from "@/components/ui/stat-card";
+import { PageHeader } from "@/components/ui/page-header";
+import { RevenueChart } from "@/components/dashboard/revenue-chart";
+import { StageFunnel } from "@/components/dashboard/stage-funnel";
 
 export const metadata: Metadata = { title: "داشبورد" };
 
-const toolLabels: Record<string, string> = {
-  createContact: "ایجاد مشتری جدید",
-  createTask: "ایجاد وظیفه",
-  createDeal: "ایجاد فرصت فروش",
-  updateDealStage: "تغییر مرحله فرصت",
-  createInvoice: "صدور فاکتور",
-  sendEmail: "ارسال ایمیل",
-  sendSms: "ارسال پیامک",
-};
-
-const priorityColor: Record<string, string> = {
-  high: "bg-red-500",
-  medium: "bg-amber-500",
-  low: "bg-slate-400",
-};
+const MONTH_LABEL = ["فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"];
 
 export default async function DashboardPage() {
-  const { workspaceId, user } = await requireWorkspace();
-  const [kpis, revenue, pipeline, leadSources, overdue, dueTasks, approvals, activity] =
-    await Promise.all([
-      getKpis(workspaceId),
-      getRevenueByMonth(workspaceId),
-      getPipelineStats(workspaceId),
-      getLeadSourceStats(workspaceId),
-      getOverdueInvoices(workspaceId),
-      getDueTasks(workspaceId),
-      getPendingApprovals(workspaceId),
-      getRecentActivity(workspaceId),
-    ]);
+  const { workspaceId } = await requireWorkspace();
 
-  const paidRatio =
-    kpis.invoiceTotal > 0 ? Math.round((kpis.invoicePaid / kpis.invoiceTotal) * 100) : 0;
+  const monthStart = startOfMonth(new Date());
+  const sixMonthsAgo = startOfMonth(addMonths(new Date(), -5));
+
+  const [
+    contactTotal,
+    newContacts,
+    openDeals,
+    wonDeals,
+    pipelineValue,
+    wonValue,
+    wonRows,
+    stageRows,
+    recentContacts,
+    recentDeals,
+  ] = await Promise.all([
+    db
+      .select({ value: count() })
+      .from(contacts)
+      .where(eq(contacts.workspaceId, workspaceId)),
+    db
+      .select({ value: count() })
+      .from(contacts)
+      .where(and(eq(contacts.workspaceId, workspaceId), gte(contacts.createdAt, monthStart))),
+    db
+      .select({ value: count() })
+      .from(deals)
+      .where(and(eq(deals.workspaceId, workspaceId), eq(deals.status, "open"))),
+    db
+      .select({ value: count() })
+      .from(deals)
+      .where(and(eq(deals.workspaceId, workspaceId), eq(deals.status, "won"))),
+    db
+      .select({ value: sql<string>`coalesce(sum(${deals.amount}), 0)` })
+      .from(deals)
+      .where(and(eq(deals.workspaceId, workspaceId), eq(deals.status, "open"))),
+    db
+      .select({ value: sql<string>`coalesce(sum(${deals.amount}), 0)` })
+      .from(deals)
+      .where(and(eq(deals.workspaceId, workspaceId), eq(deals.status, "won"))),
+    db
+      .select({ wonAt: deals.wonAt, amount: deals.amount })
+      .from(deals)
+      .where(
+        and(
+          eq(deals.workspaceId, workspaceId),
+          eq(deals.status, "won"),
+          gte(deals.wonAt, sixMonthsAgo)
+        )
+      ),
+    db
+      .select({
+        stageId: stages.id,
+        stageName: stages.name,
+        stageColor: stages.color,
+        count: count(),
+        value: sql<string>`coalesce(sum(${deals.amount}), 0)`,
+      })
+      .from(deals)
+      .innerJoin(stages, eq(stages.id, deals.stageId))
+      .where(and(eq(deals.workspaceId, workspaceId), eq(deals.status, "open")))
+      .groupBy(stages.id, stages.name, stages.color)
+      .orderBy(sql`count desc`),
+    db
+      .select({
+        contact: contacts,
+        companyName: companies.name,
+        ownerName: user.name,
+      })
+      .from(contacts)
+      .leftJoin(companies, eq(companies.id, contacts.companyId))
+      .leftJoin(user, eq(user.id, contacts.ownerId))
+      .where(eq(contacts.workspaceId, workspaceId))
+      .orderBy(desc(contacts.createdAt))
+      .limit(5),
+    db
+      .select({
+        deal: deals,
+        contactName: contacts.firstName,
+        contactLastName: contacts.lastName,
+        contactId: contacts.id,
+        stageName: stages.name,
+        stageColor: stages.color,
+      })
+      .from(deals)
+      .leftJoin(contacts, eq(contacts.id, deals.contactId))
+      .leftJoin(stages, eq(stages.id, deals.stageId))
+      .where(eq(deals.workspaceId, workspaceId))
+      .orderBy(desc(deals.updatedAt))
+      .limit(5),
+  ]);
+
+  const revenueByMonth = (() => {
+    const months: { key: string; label: string; value: number }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const m = startOfMonth(addMonths(new Date(), -i));
+      const j = formatJalali(m, "yyyy/MM");
+      const label = MONTH_LABEL[Number(formatJalali(m, "M")) - 1] ?? "";
+      months.push({ key: j, label, value: 0 });
+    }
+    for (const row of wonRows) {
+      if (!row.wonAt) continue;
+      const key = formatJalali(row.wonAt, "yyyy/MM");
+      const bucket = months.find((m) => m.key === key);
+      if (bucket) bucket.value += Number(row.amount);
+    }
+    return months;
+  })();
+
+  const stats = [
+    {
+      title: "مشتریان",
+      value: formatNumber(contactTotal[0]?.value ?? 0),
+      icon: Users,
+      hint: `${formatNumber(newContacts[0]?.value ?? 0)} نفر این ماه`,
+    },
+    {
+      title: "فروش‌های باز",
+      value: formatNumber(openDeals[0]?.value ?? 0),
+      icon: Target,
+      hint: "فرصت‌های در حال مذاکره",
+    },
+    {
+      title: "ارزش فانل فروش",
+      value: formatCurrency(pipelineValue[0]?.value ?? 0),
+      icon: DollarSign,
+      hint: "مجموع مبلغ فروش‌های باز",
+    },
+    {
+      title: "ارزش بردها",
+      value: formatCurrency(wonValue[0]?.value ?? 0),
+      icon: TrendingUp,
+      hint: `${formatNumber(wonDeals[0]?.value ?? 0)} فروش بسته شده`,
+    },
+  ];
+
+  const quickActions = [
+    { title: "مشتری جدید", href: "/contacts", icon: Users },
+    { title: "فانل فروش", href: "/pipeline", icon: Kanban },
+    { title: "لیست فروش‌ها", href: "/pipeline/deals", icon: Handshake },
+    { title: "شرکت‌ها", href: "/companies", icon: Building2 },
+  ];
 
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            خوش آمدید، {user.name ?? "کاربر"}
-          </h1>
-          <p className="text-muted-foreground">نمای کلی وضعیت فروش و مشتریان شما</p>
-        </div>
-        <div className="hidden text-sm text-muted-foreground sm:block">
-          {formatDate(new Date())}
-        </div>
+      <PageHeader
+        title="داشبورد"
+        description="نمای کلی از وضعیت فروش و مشتریان شما"
+      />
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {stats.map((s) => (
+          <StatCard
+            key={s.title}
+            title={s.title}
+            value={s.value}
+            hint={s.hint}
+            icon={s.icon}
+          />
+        ))}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <StatCard
-          icon={<Users className="size-4" />}
-          label="مخاطبین"
-          value={formatNumber(kpis.contacts)}
-        />
-        <StatCard
-          icon={<Target className="size-4" />}
-          label="فرصت‌های باز"
-          value={formatNumber(kpis.openDeals)}
-          sub={formatCurrency(kpis.openValue)}
-        />
-        <StatCard
-          icon={<TrendingUp className="size-4" />}
-          label="فروش بسته‌شده"
-          value={formatNumber(kpis.wonDeals)}
-          sub={`${kpis.winRate}٪ نرخ برد`}
-        />
-        <StatCard
-          icon={<Banknote className="size-4" />}
-          label="درآمد وصول‌شده"
-          value={formatCurrency(kpis.collected)}
-          sub={`${paidRatio}٪ از فاکتورها`}
-        />
-        <StatCard
-          icon={<Clock3 className="size-4" />}
-          label="فاکتورهای معوق"
-          value={formatNumber(kpis.overdueInvoices)}
-        />
+      <div className="grid gap-4 grid-cols-2 sm:grid-cols-4">
+        {quickActions.map((a) => (
+          <Link
+            key={a.title}
+            href={a.href}
+            className="group flex items-center gap-3 rounded-lg border bg-card p-3 text-card-foreground shadow-sm transition-colors hover:bg-accent"
+          >
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <a.icon className="size-4" />
+            </div>
+            <span className="text-sm font-medium">{a.title}</span>
+          </Link>
+        ))}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <AlertTriangle className="size-4 text-red-500" />
-              فاکتورهای سررسید‌شده
-            </CardTitle>
-            <Link
-              href="/invoices"
-              className="text-xs text-muted-foreground hover:underline"
-            >
-              همه فاکتورها
-            </Link>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader className="flex-row items-center justify-between space-y-0">
+            <div>
+              <CardTitle className="text-base">روند درآمد</CardTitle>
+              <CardDescription>مبلغ بردها در ۶ ماه اخیر</CardDescription>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-2">
-            {overdue.length === 0 ? (
-              <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                <CheckCircle2 className="size-4 text-emerald-500" />
-                هیچ فاکتور معوقی نیست
-              </p>
-            ) : (
-              overdue.map((o) => (
-                <Link
-                  key={o.id}
-                  href={`/invoices/${o.id}`}
-                  className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm transition-colors hover:bg-muted/50"
-                >
-                  <div className="flex min-w-0 items-center gap-2">
-                    <span className="font-medium">{o.number}</span>
-                    <span className="truncate text-muted-foreground">
-                      {o.contactName}
-                    </span>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-3 text-xs">
-                    <span className="font-semibold tabular-nums text-red-600">
-                      {formatCurrency(o.total)}
-                    </span>
-                    {o.dueAt && (
-                      <span className="text-muted-foreground">
-                        {formatDate(o.dueAt)}
-                      </span>
-                    )}
-                  </div>
-                </Link>
-              ))
-            )}
+          <CardContent>
+            <RevenueChart data={revenueByMonth} />
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Bot className="size-4 text-violet-500" />
-              تأییدهای در انتظار دستیار
-            </CardTitle>
-            <Link
-              href="/assistant"
-              className="text-xs text-muted-foreground hover:underline"
-            >
-              دستیار هوشمند
-            </Link>
+          <CardHeader>
+            <CardTitle className="text-base">توزیع مراحل فانل</CardTitle>
+            <CardDescription>فروش‌های باز به تفکیک مرحله</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
-            {approvals.length === 0 ? (
-              <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                <CheckCircle2 className="size-4 text-emerald-500" />
-                عملیاتی در انتظار تأیید نیست
-              </p>
-            ) : (
-              <>
-                {approvals.map((a) => (
-                  <div
-                    key={a.id}
-                    className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm"
-                  >
-                    <span className="truncate">
-                      {toolLabels[a.toolName] ?? a.toolName}
-                    </span>
-                    <span className="shrink-0 text-xs text-muted-foreground">
-                      {formatDate(a.createdAt)}
-                    </span>
-                  </div>
-                ))}
-                <Link
-                  href="/assistant"
-                  className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-                >
-                  رفتن به دستیار برای تأیید
-                </Link>
-              </>
-            )}
+          <CardContent>
+            <StageFunnel
+              data={stageRows.map((r) => ({
+                name: r.stageName,
+                count: Number(r.count),
+                value: Number(r.value),
+                color: r.stageColor || "#888888",
+              }))}
+            />
           </CardContent>
         </Card>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <DashboardCharts
-          revenue={revenue}
-          pipeline={pipeline}
-          leadSources={leadSources}
-          openValue={kpis.openValue}
-        />
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <ListTodo className="size-4 text-sky-500" />
-              وظایف امروز و سررسید‌شده
-            </CardTitle>
-            <Link
-              href="/calendar"
-              className="text-xs text-muted-foreground hover:underline"
-            >
-              همه تسک‌ها
-            </Link>
+          <CardHeader className="flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-base">مشتریان اخیر</CardTitle>
+            <ButtonLink href="/contacts" />
           </CardHeader>
-          <CardContent className="space-y-2">
-            {dueTasks.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                هیچ وظیفه‌ای در صف نیست
+          <CardContent className="space-y-3">
+            {recentContacts.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                هنوز مشتری‌ای ثبت نشده است.
               </p>
             ) : (
-              dueTasks.map((t) => (
-                <div
-                  key={t.id}
-                  className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm"
+              recentContacts.map((r) => (
+                <Link
+                  key={r.contact.id}
+                  href={`/contacts/${r.contact.id}`}
+                  className="flex items-center gap-3 rounded-lg p-1.5 transition-colors hover:bg-accent"
                 >
-                  <div className="flex min-w-0 items-center gap-2">
-                    <span
-                      className={`size-2 shrink-0 rounded-full ${
-                        priorityColor[t.priority] ?? "bg-slate-400"
-                      }`}
-                    />
-                    <span className="truncate">{t.title}</span>
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">
+                    {r.contact.firstName.charAt(0)}
+                    {r.contact.lastName ? r.contact.lastName.charAt(0) : ""}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">
+                      {r.contact.firstName} {r.contact.lastName}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {r.companyName || r.contact.email || "—"}
+                    </p>
                   </div>
                   <span className="shrink-0 text-xs text-muted-foreground">
-                    {t.dueAt ? formatDate(t.dueAt) : "بدون سررسید"}
+                    {formatDate(r.contact.createdAt)}
                   </span>
-                </div>
+                </Link>
               ))
             )}
           </CardContent>
         </Card>
 
-        <ActivityFeed activities={activity} />
+        <Card>
+          <CardHeader className="flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-base">فروش‌های اخیر</CardTitle>
+            <ButtonLink href="/pipeline/deals" />
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {recentDeals.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                هنوز فروشی ثبت نشده است.
+              </p>
+            ) : (
+              recentDeals.map((r) => (
+                <Link
+                  key={r.deal.id}
+                  href="/pipeline"
+                  className="flex items-center gap-3 rounded-lg p-1.5 transition-colors hover:bg-accent"
+                >
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <Zap className="size-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{r.deal.title}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {r.contactName
+                        ? `${r.contactName} ${r.contactLastName ?? ""}`.trim()
+                        : r.stageName || "بدون مشتری"}
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-end">
+                    <p className="text-sm font-medium">
+                      {formatCurrency(r.deal.amount)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{r.stageName || "—"}</p>
+                  </div>
+                </Link>
+              ))
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
+  );
+}
+
+function ButtonLink({ href }: { href: string }) {
+  return (
+    <Link
+      href={href}
+      className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+    >
+      مشاهده همه
+      <ArrowLeft className="size-3.5 rtl:rotate-180" />
+    </Link>
   );
 }

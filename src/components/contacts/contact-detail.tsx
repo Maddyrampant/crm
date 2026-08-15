@@ -3,10 +3,11 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Loader2, Pencil, Plus, Send } from "lucide-react";
+import { ChevronLeft, Loader2, Pencil, Plus, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { addNoteAction } from "@/actions/contacts";
@@ -17,15 +18,17 @@ import {
   SOURCE_LABELS,
   STAGE_LABELS,
   STAGE_VARIANT,
+  STATUS_LABELS,
 } from "@/lib/labels";
-import { formatDateTime, formatNumber } from "@/lib/format";
-import type { ActivityRow, ContactRow, CustomFieldRow } from "@/lib/api-types";
+import { formatCurrency, formatDateTime } from "@/lib/format";
+import type { ActivityRow, ContactRow, CustomFieldRow, DealRow } from "@/lib/api-types";
 import type { WorkspaceMemberRow } from "@/services/workspace";
 
 type Props = {
   contact: ContactRow;
   customFields: CustomFieldRow[];
   activity: ActivityRow[];
+  deals: DealRow[];
   companies: { id: string; name: string }[];
   members: WorkspaceMemberRow[];
   canManage: boolean;
@@ -35,6 +38,7 @@ export function ContactDetail({
   contact,
   customFields,
   activity,
+  deals,
   companies,
   members,
   canManage,
@@ -60,10 +64,6 @@ export function ContactDetail({
       window.location.reload();
     });
   }
-
-  const customFieldValues = Object.entries(contact.customFields).filter(
-    ([, v]) => v !== null && v !== undefined && v !== ""
-  );
 
   return (
     <div className="space-y-4">
@@ -138,6 +138,67 @@ export function ContactDetail({
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
+          <Card>
+            <CardHeader className="flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-base">فروش‌های مرتبط</CardTitle>
+              <Button asChild variant="outline" size="sm">
+                <Link href="/pipeline">
+                  فانل فروش
+                  <ChevronLeft className="size-4 rtl:rotate-0" />
+                </Link>
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {deals.length === 0 ? (
+                <EmptyState
+                  icon={Plus}
+                  title="فروشی ثبت نشده است"
+                  description="از فانل فروش یک فرصت برای این مشتری بسازید."
+                />
+              ) : (
+                <div className="divide-y">
+                  {deals.map((d) => (
+                    <div
+                      key={d.id}
+                      className="flex items-center justify-between gap-3 py-2.5"
+                    >
+                      <div className="min-w-0">
+                        <Link
+                          href="/pipeline"
+                          className="block truncate text-sm font-medium hover:underline"
+                        >
+                          {d.title}
+                        </Link>
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                          <span className="inline-flex items-center gap-1.5">
+                            <span
+                              className="size-2 rounded-full"
+                              style={{
+                                backgroundColor: d.stageColor ?? "#888",
+                              }}
+                            />
+                            {d.stageName || "—"}
+                          </span>
+                          <span>·</span>
+                          <span>{STATUS_LABELS[d.status]}</span>
+                          {d.closeDate ? (
+                            <>
+                              <span>·</span>
+                              <span>بستن: {formatDateTime(d.closeDate)}</span>
+                            </>
+                          ) : null}
+                        </div>
+                      </div>
+                      <div className="shrink-0 text-sm font-medium">
+                        {formatCurrency(d.amount)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {customFields.length > 0 && (
             <Card>
               <CardHeader>
