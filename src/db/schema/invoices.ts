@@ -95,3 +95,5 @@ export const invoiceRelations = relations(invoices, ({ many }) => ({
 export type Invoice = typeof invoices.$inferSelect;
 export type InvoiceItem = typeof invoiceItems.$inferSelect;
 export type Payment = typeof payments.$inferSelect;
+export type InvoiceStatus = typeof invoices.$inferSelect["status"];
+export type PaymentMethod = typeof payments.$inferSelect["method"];
