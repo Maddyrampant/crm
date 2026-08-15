@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getSession, getActiveWorkspace } from "@/lib/session";
+import { getSession, getActiveWorkspace, hasPermission } from "@/lib/session";
 import { sendEmail } from "@/services/automation";
 
 export async function POST(req: NextRequest) {
@@ -10,6 +10,9 @@ export async function POST(req: NextRequest) {
   const membership = await getActiveWorkspace(session.user.id);
   if (!membership) {
     return Response.json({ error: "No workspace" }, { status: 403 });
+  }
+  if (!hasPermission(membership, "manager")) {
+    return Response.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const body = (await req.json().catch(() => null)) as {

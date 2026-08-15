@@ -1,10 +1,11 @@
 import { createHmac, randomBytes, createHash } from "node:crypto";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, lt, lte, or } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import {
   apiKeys,
   emailLogs,
+  emailTemplates,
   smsLogs,
   webhookDeliveries,
   webhooks,
@@ -71,26 +72,22 @@ function signPayload(secret: string, payload: string) {
   return createHmac("sha256", secret).update(payload).digest("hex");
 }
 
-async function deliver(
-  webhookId: string,
+const MAX_DELIVERY_ATTEMPTS = 5;
+const DELIVERY_BACKOFF_MS = [60_000, 120_000, 240_000, 480_000, 960_000];
+
+async function performDelivery(
+  deliveryId: string,
   secret: string,
   url: string,
   event: string,
-  payload: Record<string, unknown>
+  payload: Record<string, unknown>,
+  attempt: number
 ) {
   const body = JSON.stringify({ event, payload });
-  const deliveryId = randomBytes(12).toString("hex");
-  const [delivery] = await db
-    .insert(webhookDeliveries)
-    .values({
-      webhookId,
-      event,
-      payload,
-      id: deliveryId,
-      status: "pending",
-      nextAttemptAt: new Date(Date.now() + 30_000),
-    })
-    .returning();
+  const retryAt =
+    attempt >= MAX_DELIVERY_ATTEMPTS
+      ? null
+      : new Date(Date.now() + (DELIVERY_BACKOFF_MS[attempt - 1] ?? 60_000));
 
   try {
     const res = await fetch(url, {
@@ -109,23 +106,45 @@ async function deliver(
       .update(webhookDeliveries)
       .set({
         status: res.ok ? "delivered" : "failed",
-        attempts: 1,
+        attempts: attempt,
         responseStatus: res.status,
         error: res.ok ? null : `HTTP ${res.status}`,
-        nextAttemptAt: res.ok ? null : new Date(Date.now() + 60_000),
+        nextAttemptAt: res.ok ? null : retryAt,
       })
-      .where(eq(webhookDeliveries.id, delivery.id));
+      .where(eq(webhookDeliveries.id, deliveryId));
   } catch (err) {
     await db
       .update(webhookDeliveries)
       .set({
         status: "failed",
-        attempts: 1,
+        attempts: attempt,
         error: err instanceof Error ? err.message : "network error",
-        nextAttemptAt: new Date(Date.now() + 60_000),
+        nextAttemptAt: retryAt,
       })
-      .where(eq(webhookDeliveries.id, delivery.id));
+      .where(eq(webhookDeliveries.id, deliveryId));
   }
+}
+
+async function deliver(
+  webhookId: string,
+  secret: string,
+  url: string,
+  event: string,
+  payload: Record<string, unknown>
+) {
+  const deliveryId = randomBytes(12).toString("hex");
+  await db
+    .insert(webhookDeliveries)
+    .values({
+      webhookId,
+      event,
+      payload,
+      id: deliveryId,
+      status: "pending",
+      nextAttemptAt: new Date(Date.now() + 30_000),
+    });
+
+  await performDelivery(deliveryId, secret, url, event, payload, 1);
 }
 
 /** ارسال رویداد به همه وب‌هاوک‌های فعال مشترک — بدون await عمدی (fire-and-forget) */
@@ -144,6 +163,73 @@ export function dispatchWebhookEvent(
       await deliver(w.id, w.secret, w.url, event, payload);
     }
   })();
+}
+
+/** آخرین تحویل‌های وب‌هاوک (برای صفحه تنظیمات) */
+export async function listDeliveries(workspaceId: string, limit = 25) {
+  return db
+    .select({ delivery: webhookDeliveries, webhook: webhooks })
+    .from(webhookDeliveries)
+    .innerJoin(webhooks, eq(webhooks.id, webhookDeliveries.webhookId))
+    .where(eq(webhooks.workspaceId, workspaceId))
+    .orderBy(desc(webhookDeliveries.createdAt))
+    .limit(limit);
+}
+
+/** تلاش مجدد تحویل‌های سررسیدشده (backoff) — خروجی تعداد پردازش‌شده */
+export async function processDueDeliveries(workspaceId: string) {
+  const due = await db
+    .select({ delivery: webhookDeliveries, webhook: webhooks })
+    .from(webhookDeliveries)
+    .innerJoin(webhooks, eq(webhooks.id, webhookDeliveries.webhookId))
+    .where(
+      and(
+        eq(webhooks.workspaceId, workspaceId),
+        inArray(webhookDeliveries.status, ["pending", "failed"]),
+        lt(webhookDeliveries.attempts, MAX_DELIVERY_ATTEMPTS),
+        or(
+          isNull(webhookDeliveries.nextAttemptAt),
+          lte(webhookDeliveries.nextAttemptAt, new Date())
+        )
+      )
+    )
+    .limit(10);
+  for (const { delivery, webhook } of due) {
+    await performDelivery(
+      delivery.id,
+      webhook.secret,
+      webhook.url,
+      delivery.event,
+      delivery.payload,
+      delivery.attempts + 1
+    );
+  }
+  return due.length;
+}
+
+/** تلاش مجدد دستی یک تحویل */
+export async function retryDelivery(workspaceId: string, deliveryId: string) {
+  const [item] = await db
+    .select({ delivery: webhookDeliveries, webhook: webhooks })
+    .from(webhookDeliveries)
+    .innerJoin(webhooks, eq(webhooks.id, webhookDeliveries.webhookId))
+    .where(
+      and(
+        eq(webhookDeliveries.id, deliveryId),
+        eq(webhooks.workspaceId, workspaceId)
+      )
+    )
+    .limit(1);
+  if (!item) return null;
+  await performDelivery(
+    item.delivery.id,
+    item.webhook.secret,
+    item.webhook.url,
+    item.delivery.event,
+    item.delivery.payload,
+    Math.min(item.delivery.attempts + 1, MAX_DELIVERY_ATTEMPTS)
+  );
+  return item.delivery;
 }
 
 /* ─────────────────── کلیدهای API ─────────────────── */
@@ -340,6 +426,76 @@ export async function sendSms(
     });
     return { ok: false, provider, error: message };
   }
+}
+
+/* ─────────────────── الگوهای ایمیل ─────────────────── */
+
+export const emailTemplateSchema = z.object({
+  name: z.string().trim().min(1, "نام الگو را وارد کنید").max(80),
+  subject: z.string().trim().min(1, "موضوع را وارد کنید").max(200),
+  body: z.string().trim().min(1, "متن الگو را وارد کنید").max(10_000),
+});
+
+export type EmailTemplateInput = z.infer<typeof emailTemplateSchema>;
+
+export async function listEmailTemplates(workspaceId: string) {
+  return db
+    .select()
+    .from(emailTemplates)
+    .where(eq(emailTemplates.workspaceId, workspaceId))
+    .orderBy(desc(emailTemplates.createdAt));
+}
+
+export async function createEmailTemplate(workspaceId: string, raw: unknown) {
+  const input = emailTemplateSchema.parse(raw);
+  const [row] = await db
+    .insert(emailTemplates)
+    .values({ workspaceId, name: input.name, subject: input.subject, body: input.body })
+    .returning();
+  return row;
+}
+
+export async function updateEmailTemplate(
+  workspaceId: string,
+  templateId: string,
+  raw: unknown
+) {
+  const input = emailTemplateSchema.partial().parse(raw);
+  const [row] = await db
+    .update(emailTemplates)
+    .set({ ...input, updatedAt: new Date() })
+    .where(
+      and(
+        eq(emailTemplates.id, templateId),
+        eq(emailTemplates.workspaceId, workspaceId)
+      )
+    )
+    .returning();
+  return row ?? null;
+}
+
+export async function deleteEmailTemplate(workspaceId: string, templateId: string) {
+  const [row] = await db
+    .delete(emailTemplates)
+    .where(
+      and(
+        eq(emailTemplates.id, templateId),
+        eq(emailTemplates.workspaceId, workspaceId)
+      )
+    )
+    .returning({ id: emailTemplates.id });
+  return row ?? null;
+}
+
+/** درون‌سنجی متغیرهای {{key}} از object داده‌شده */
+export function renderTemplate(
+  text: string,
+  vars: Record<string, string | number | null | undefined>
+) {
+  return text.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (match, key: string) => {
+    const value = vars[key];
+    return value === null || value === undefined ? match : String(value);
+  });
 }
 
 /* ─────────────────── لاگ‌ها ─────────────────── */

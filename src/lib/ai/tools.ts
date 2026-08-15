@@ -181,5 +181,137 @@ export function writeTools(ctx: ToolContext) {
         };
       },
     }),
+
+    createDeal: tool({
+      description:
+        "ساخت فرصت فروش جدید در فانل. به‌دلیل نیاز به تأیید، ابتدا درخواست ثبت می‌شود.",
+      inputSchema: z.object({
+        title: z.string().min(1).describe("عنوان فرصت فروش"),
+        amount: z.number().min(0).optional().describe("مبلغ به تومان"),
+        contactId: z.string().optional().describe("شناسه مخاطب مرتبط"),
+        closeDate: z.string().optional().describe("تاریخ بسته‌شدن تخمینی (ISO)"),
+      }),
+      execute: async (args) => {
+        const run = await requestToolRun(
+          ctx.workspaceId,
+          ctx.userId,
+          ctx.conversationId,
+          "createDeal",
+          args
+        );
+        return {
+          needsApproval: true,
+          toolRunId: run.id,
+          message: "این عملیات در انتظار تأیید شماست.",
+        };
+      },
+    }),
+
+    updateDealStage: tool({
+      description:
+        "انتقال یک فرصت فروش به مرحله دیگر فانل (مثلاً «مذاکره» به «بستن قرارداد»). نیازمند تأیید.",
+      inputSchema: z.object({
+        dealId: z.string().min(1).describe("شناسه فرصت فروش"),
+        stageName: z.string().min(1).describe("نام مرحله مقصد"),
+      }),
+      execute: async (args) => {
+        const run = await requestToolRun(
+          ctx.workspaceId,
+          ctx.userId,
+          ctx.conversationId,
+          "updateDealStage",
+          args
+        );
+        return {
+          needsApproval: true,
+          toolRunId: run.id,
+          message: "این عملیات در انتظار تأیید شماست.",
+        };
+      },
+    }),
+
+    createInvoice: tool({
+      description:
+        "صدور فاکتور برای یک مشتری (با شناسه مشتری) همراه با اقلام. نیازمند تأیید.",
+      inputSchema: z.object({
+        contactId: z.string().min(1).describe("شناسه مشتری"),
+        dueAt: z.string().optional().describe("تاریخ سررسید (ISO)"),
+        discount: z.number().min(0).optional(),
+        taxRate: z.number().min(0).max(100).optional(),
+        items: z
+          .array(
+            z.object({
+              description: z.string().min(1).describe("شرح اقلام"),
+              quantity: z.number().positive(),
+              unitPrice: z.number().min(0),
+              taxRate: z.number().min(0).max(100).default(0),
+            })
+          )
+          .min(1),
+      }),
+      execute: async (args) => {
+        const run = await requestToolRun(
+          ctx.workspaceId,
+          ctx.userId,
+          ctx.conversationId,
+          "createInvoice",
+          args
+        );
+        return {
+          needsApproval: true,
+          toolRunId: run.id,
+          message: "این عملیات در انتظار تأیید شماست.",
+        };
+      },
+    }),
+
+    sendEmail: tool({
+      description:
+        "ارسال ایمیل به یک آدرس. نیازمند تأیید انسانی.",
+      inputSchema: z.object({
+        to: z.string().email(),
+        subject: z.string().min(1),
+        body: z.string().min(1),
+        contactId: z.string().optional(),
+      }),
+      execute: async (args) => {
+        const run = await requestToolRun(
+          ctx.workspaceId,
+          ctx.userId,
+          ctx.conversationId,
+          "sendEmail",
+          args
+        );
+        return {
+          needsApproval: true,
+          toolRunId: run.id,
+          message: "این عملیات در انتظار تأیید شماست.",
+        };
+      },
+    }),
+
+    sendSms: tool({
+      description:
+        "ارسال پیامک به یک شماره. نیازمند تأیید انسانی.",
+      inputSchema: z.object({
+        to: z.string().min(1).describe("شماره گیرنده"),
+        body: z.string().min(1),
+        contactId: z.string().optional(),
+      }),
+      execute: async (args) => {
+        const run = await requestToolRun(
+          ctx.workspaceId,
+          ctx.userId,
+          ctx.conversationId,
+          "sendSms",
+          args
+        );
+        return {
+          needsApproval: true,
+          toolRunId: run.id,
+          message: "این عملیات در انتظار تأیید شماست.",
+        };
+      },
+    }),
   };
 }

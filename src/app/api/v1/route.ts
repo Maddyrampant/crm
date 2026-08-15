@@ -15,6 +15,15 @@ export async function GET(_req: NextRequest) {
     ok: true,
     workspace: workspaceId,
     baseUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/api/v1`,
-    endpoints: ["/contacts", "/invoices"],
+    endpoints: [
+      "/contacts",
+      "/companies",
+      "/deals",
+      "/invoices",
+      "/invoices/:id/payments",
+    ],
+    methods: ["GET", "POST", "PATCH", "DELETE"],
+    auth: "Authorization: Bearer crm_...",
+    rateLimit: "60 requests/min per workspace",
   });
 }

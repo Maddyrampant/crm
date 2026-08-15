@@ -1,4 +1,13 @@
-import { and, desc, eq } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  isNull,
+  lte,
+  ne,
+  or,
+} from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { activityLog, tasks } from "@/db/schema";
@@ -29,6 +38,25 @@ export async function listTasks(workspaceId: string, openOnly = false) {
         : eq(tasks.workspaceId, workspaceId)
     );
   return query.orderBy(desc(tasks.dueAt));
+}
+
+/** وظایف سررسید‌شده یا امروز (برای داشبورد) */
+export async function getDueTasks(workspaceId: string, limit = 8) {
+  const endOfDay = new Date();
+  endOfDay.setHours(23, 59, 59, 999);
+  return db
+    .select()
+    .from(tasks)
+    .where(
+      and(
+        eq(tasks.workspaceId, workspaceId),
+        ne(tasks.status, "done"),
+        ne(tasks.status, "cancelled"),
+        or(isNull(tasks.dueAt), lte(tasks.dueAt, endOfDay))
+      )
+    )
+    .orderBy(asc(tasks.dueAt))
+    .limit(limit);
 }
 
 export async function createTask(workspaceId: string, userId: string, raw: unknown) {

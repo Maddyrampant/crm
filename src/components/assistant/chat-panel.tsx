@@ -6,17 +6,40 @@ import { useChat, type UIMessage } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { Check, MessageSquare, Plus, Send, ShieldAlert, X } from "lucide-react";
 import type { AiConversation, AiToolRun } from "@/db/schema";
+import { DEFAULT_MODEL, MODEL_OPTIONS } from "@/lib/ai/models";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type ConversationRow = AiConversation & { _count?: number };
+
+const toolLabels: Record<string, string> = {
+  createContact: "ساخت مخاطب",
+  createTask: "ساخت تسک",
+  createDeal: "ساخت فرصت فروش",
+  updateDealStage: "تغییر مرحله فرصت",
+  createInvoice: "صدور فاکتور",
+  sendEmail: "ارسال ایمیل",
+  sendSms: "ارسال پیامک",
+};
+
+const MODEL_STORAGE_KEY = "crm-ai-model";
+
+function getStoredModel() {
+  if (typeof window === "undefined") return DEFAULT_MODEL;
+  const stored = window.localStorage.getItem(MODEL_STORAGE_KEY);
+  return MODEL_OPTIONS.some((m) => m.id === stored) ? stored! : DEFAULT_MODEL;
+}
 
 export function ChatPanel({
   conversations,
@@ -31,8 +54,9 @@ export function ChatPanel({
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [approving, setApproving] = useState<string | null>(null);
+  const [model, setModel] = useState<string>(getStoredModel);
 
-  const transportState = { conversationId };
+  const transportState = { conversationId, model };
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
@@ -41,10 +65,11 @@ export function ChatPanel({
           body: {
             ...request.body,
             conversationId: transportState.conversationId,
+            model: transportState.model,
           },
         }),
       }),
-    [transportState.conversationId]
+    [transportState.conversationId, transportState.model]
   );
 
   const {
@@ -66,6 +91,13 @@ export function ChatPanel({
   function startNewChat() {
     setConversationId(crypto.randomUUID());
     setMessages([]);
+  }
+
+  function changeModel(id: string) {
+    setModel(id);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(MODEL_STORAGE_KEY, id);
+    }
   }
 
   function openConversation(id: string) {
@@ -137,7 +169,7 @@ export function ChatPanel({
             {pendingRuns.map((run) => (
               <div key={run.id} className="rounded-lg border p-2 text-xs">
                 <p className="font-medium">
-                  {run.toolName === "createContact" ? "ساخت مخاطب" : "ساخت تسک"}
+                  {toolLabels[run.toolName] ?? run.toolName}
                 </p>
                 <pre className="mt-1 max-h-24 overflow-auto whitespace-pre-wrap font-mono text-[10px] text-muted-foreground">
                   {JSON.stringify(run.input, null, 2)}
@@ -170,6 +202,23 @@ export function ChatPanel({
       </div>
 
       <Card className="flex h-[calc(100vh-14rem)] flex-col">
+        <div className="flex items-center justify-between gap-2 border-b px-4 py-2">
+          <p className="text-xs text-muted-foreground">
+            عملیات نوشتنی پیش از اجرا نیاز به تأیید شما دارد.
+          </p>
+          <Select value={model} onValueChange={changeModel} disabled={disabled}>
+            <SelectTrigger className="h-8 w-52 text-xs">
+              <SelectValue placeholder="انتخاب مدل" />
+            </SelectTrigger>
+            <SelectContent>
+              {MODEL_OPTIONS.map((m) => (
+                <SelectItem key={m.id} value={m.id} className="text-xs">
+                  {m.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <CardContent className="flex-1 overflow-hidden p-0">
           <ScrollArea className="h-full">
             <div className="space-y-4 p-4">
@@ -228,9 +277,6 @@ export function ChatPanel({
               <Send className="size-4 -scale-x-100" />
             </Button>
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            عملیات نوشتنی پیش از اجرا نیاز به تأیید شما دارد.
-          </p>
         </form>
       </Card>
     </div>

@@ -6,9 +6,9 @@
 
 | فاز | مالک | آیسو | وضعیت |
 |---|---|---|---|
-| فاز ۰ — اسکلت زیرساخت | @Maddyrampant | [#1](https://github.com/Maddyrampant/crm/issues/1) | در حال انجام |
-| بخش ۱ — احراز هویت + مشتریان + فانل فروش | @hordekiller | [#2](https://github.com/Maddyrampant/crm/issues/2) | برنامهریزی |
-| بخش ۲ — فاکتور + قرارها + داشبورد + ایمیل/پیامک + API/وبهاوک + AI | @Maddyrampant | [#3](https://github.com/Maddyrampant/crm/issues/3) | برنامهریزی |
+| فاز ۰ — اسکلت زیرساخت | @Maddyrampant | [#1](https://github.com/Maddyrampant/crm/issues/1) | انجام شد |
+| بخش ۱ — احراز هویت + مشتریان + فانل فروش | @hordekiller | [#2](https://github.com/Maddyrampant/crm/issues/2) | در حال انجام |
+| بخش ۲ — فاکتور + قرارها + داشبورد + ایمیل/پیامک + API/وبهاوک + AI | @Maddyrampant | [#3](https://github.com/Maddyrampant/crm/issues/3) | در حال انجام ([PR #4](https://github.com/Maddyrampant/crm/pull/4)) |
 
 ## نقشه مالکیت دایرکتوری
 
@@ -20,6 +20,7 @@ src/db/schema/index.ts        ← ثبت همه schemaها (فایلهای schem
 src/app/layout.tsx            ← روت لیاوت (RTL/فونت)
 src/config/nav.ts             ← ← ← منو: هرکس فقط آیتم خودش را اضافه کند (ویرایش ترتیبی، نه همزمان)
 docs/OWNERSHIP.md             ← همین فایل
+.github/workflows/ci.yml      ← CI: lint + typecheck + build (روی هر PR)
 ```
 
 ### بخش ۱ — @hordekiller (آیسو #2)
@@ -41,6 +42,7 @@ src/db/schema/pipelines.ts
 
 ### بخش ۲ — @Maddyrampant (آیسو #3)
 ```
+src/app/(dashboard)/page.tsx       ← داشبورد
 src/app/(dashboard)/invoices/**
 src/app/(dashboard)/calendar/**
 src/app/(dashboard)/reports/**
@@ -52,6 +54,8 @@ src/app/api/send/**
 src/components/ai/**
 src/components/invoices/**
 src/components/calendar/**
+src/components/dashboard/**
+src/components/integrations/**     ← کامپوزر ایمیل/پیامک (قابل استفاده در صفحه مشتری بخش ۱)
 src/lib/ai/**
 src/lib/integrations/**
 src/services/invoices.ts
@@ -68,8 +72,10 @@ src/db/schema/ai.ts
 
 ## قوانین
 
-1. فایل مشترک (`nav.ts`، `schema/index.ts`، روت لیاوت): تغییر با **PR جداگانه** و اطلاع به دیگری.
+1. فایل مشترک (`nav.ts`، `schema/index.ts`، روت لیاوت، `docs/OWNERSHIP.md`): تغییر با **PR جداگانه** و اطلاع به دیگری.
 2. جدول جدید → فایل `schema/<module>.ts` → ثبت در `schema/index.ts` → `pnpm db:generate` + `pnpm db:migrate`.
-3. لینت/بیلد قبل از هر PR: `pnpm lint` و `pnpm build`.
+3. لینت/بیلد قبل از هر PR: `pnpm lint` و `pnpm build` (و `npx tsc --noEmit`).
 4. کامیتها Conventional: `feat(module): ...` / `fix(module): ...`.
 5. شاخههای کاری: `part1/sales-modules` (بخش ۱) و `part2/finance-ai` (بخش ۲).
+6. ترتیب ادغام: PR بخش ۲ (شامل داشبورد و منو) اول به `main`؛ سپس شاخه بخش ۱ **rebase** روی `main` بهروز. تغییرات `nav.ts` هرکس فقط در PR خودش.
+7. **طراحی بصری UI با @hordekiller است.** کامپوننتهای بخش ۲ (تنظیمات، داشبورد، کامپوزر و...) فقط از نظر منطق/کارکرد ساخته میشوند؛ هر پاس طراحی/استایل بعدی روی آنها با هماهنگی @hordekiller انجام میشود.

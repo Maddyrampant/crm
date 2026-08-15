@@ -147,6 +147,21 @@ export async function listPendingToolRuns(workspaceId: string) {
     .orderBy(desc(aiToolRuns.createdAt));
 }
 
+/** تأییدهای در انتظار برای داشبورد */
+export async function getPendingApprovals(workspaceId: string, limit = 6) {
+  return db
+    .select()
+    .from(aiToolRuns)
+    .where(
+      and(
+        eq(aiToolRuns.workspaceId, workspaceId),
+        eq(aiToolRuns.status, "awaiting_confirmation")
+      )
+    )
+    .orderBy(desc(aiToolRuns.createdAt))
+    .limit(limit);
+}
+
 export async function approveToolRun(
   workspaceId: string,
   toolRunId: string,

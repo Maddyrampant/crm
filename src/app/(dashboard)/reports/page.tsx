@@ -8,6 +8,7 @@ import {
   getRevenueByMonth,
 } from "@/services/reports";
 import { DashboardCharts } from "@/components/reports/dashboard-charts";
+import { RangeSelector } from "@/components/reports/range-selector";
 import { StatCard } from "@/components/reports/stat-card";
 import { ActivityFeed } from "@/components/reports/activity-feed";
 import { Contact, Package, Banknote, TrendingUp, Clock3 } from "lucide-react";
@@ -15,11 +16,20 @@ import { formatCurrency } from "@/lib/format";
 
 export const metadata: Metadata = { title: "گزارش‌ها" };
 
-export default async function ReportsPage() {
+const VALID_MONTHS = ["3", "6", "12"];
+
+export default async function ReportsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ months?: string }>;
+}) {
   const { workspaceId } = await requireWorkspace();
+  const { months: monthsParam } = await searchParams;
+  const months = VALID_MONTHS.includes(monthsParam ?? "") ? Number(monthsParam) : 6;
+
   const [kpis, revenue, pipeline, leadSources, activity] = await Promise.all([
     getKpis(workspaceId),
-    getRevenueByMonth(workspaceId),
+    getRevenueByMonth(workspaceId, months),
     getPipelineStats(workspaceId),
     getLeadSourceStats(workspaceId),
     getRecentActivity(workspaceId),
@@ -27,9 +37,12 @@ export default async function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">گزارش‌ها</h1>
-        <p className="text-muted-foreground">نمای کلی عملکرد فروش</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">گزارش‌ها</h1>
+          <p className="text-muted-foreground">نمای کلی عملکرد فروش</p>
+        </div>
+        <RangeSelector value={String(months)} />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -63,6 +76,7 @@ export default async function ReportsPage() {
           pipeline={pipeline}
           leadSources={leadSources}
           openValue={kpis.openValue}
+          months={months}
         />
       </div>
 
