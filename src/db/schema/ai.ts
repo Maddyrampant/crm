@@ -43,6 +43,13 @@ export const aiMessages = pgTable("ai_messages", {
   role: aiRole("role").notNull(),
   content: text("content"),
   toolCalls: jsonb("tool_calls").$type<unknown[]>().default([]),
+  usage: jsonb("usage").$type<{
+    inputTokens?: number;
+    outputTokens?: number;
+    totalTokens?: number;
+    stepCount?: number;
+    finishReason?: string;
+  } | null>(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

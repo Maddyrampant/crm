@@ -1,4 +1,4 @@
-import { streamText, toUIMessageStream, createUIMessageStreamResponse } from "ai";
+import { streamText, toUIMessageStream, createUIMessageStreamResponse, stepCountIs } from "ai";
 import { NextRequest } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
@@ -7,19 +7,15 @@ import { getSession } from "@/lib/session";
 import { getActiveWorkspace } from "@/lib/session";
 import { getChatModel } from "@/lib/ai/provider";
 import { readTools, writeTools } from "@/lib/ai/tools";
+import { buildSystemPrompt } from "@/lib/ai/system-prompt";
 import {
   createConversation,
   getConversation,
   saveMessage,
 } from "@/services/ai";
 
-const SYSTEM_PROMPT = `تو دستیار هوش مصنوعی CRM فارسی هستی. کاربرها را با زبان فارسی و لحن حرفه‌ای راهنمایی می‌کنی.
-
-قوانین:
-- اطلاعات را بر اساس ابزارهای موجود از پایگاه داده بخوان و گزارش کن؛ هرگز عدد را حدس نزن.
-- عملیات نوشتنی (ساخت مخاطب یا تسک) ابتدا به‌صورت درخواست تأیید ثبت می‌شوند؛ اگر نتیجه ابزار needsApproval=true بود، به کاربر اطلاع بده که عملیات در انتظار تأیید اوست و در پنل «در انتظار تأیید» قابل تأیید است.
-- در پاسخ‌های عددی از اعداد فارسی استفاده کن.
-- اگر ابزار خطا داد یا داده‌ای نبود، صادقانه بگو.`;
+/** حداکثر تعداد گام‌های مدل در هر پیام (جلوگیری از حلقه‌های طولانی ابزار) */
+const MAX_STEPS = 4;
 
 export async function POST(req: NextRequest) {
   const session = await getSession();
@@ -91,14 +87,15 @@ export async function POST(req: NextRequest) {
 
   const result = streamText({
     model: getChatModel(modelId),
-    system: SYSTEM_PROMPT,
+    system: await buildSystemPrompt(workspaceId),
     messages: history.messages.map((m) => ({
       role: m.role === "tool" ? "assistant" : m.role,
       content: m.content ?? "",
     })),
     tools: { ...readTools(ctx), ...writeTools(ctx) },
+    stopWhen: stepCountIs(MAX_STEPS),
     maxRetries: 1,
-    onFinish: async ({ text, toolResults }) => {
+    onFinish: async ({ text, toolResults, usage, steps, finishReason }) => {
       await saveMessage(
         convId,
         "assistant",
@@ -107,7 +104,14 @@ export async function POST(req: NextRequest) {
           tool: r.toolName,
           input: r.input,
           result: r.output,
-        }))
+        })),
+        {
+          inputTokens: usage?.inputTokens,
+          outputTokens: usage?.outputTokens,
+          totalTokens: usage?.totalTokens,
+          stepCount: steps?.length ?? 0,
+          finishReason,
+        }
       );
     },
   });
