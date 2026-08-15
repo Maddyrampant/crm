@@ -111,7 +111,7 @@ export async function createStageAction(pipelineId: string, input: unknown) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "ورودی نامعتبر" };
   }
 
-  const stage = await pipelinesService.createStage(pipelineId, {
+  const stage = await pipelinesService.createStage(ctx.workspaceId, pipelineId, {
     name: parsed.data.name,
     color: parsed.data.color,
     winProbability: parsed.data.winProbability,

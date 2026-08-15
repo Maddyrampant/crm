@@ -477,7 +477,7 @@ export function ContactsTable({
                 disabled={page <= 1 || isPending}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
               >
-                <ChevronRight className="size-4 rtl:rotate-0" />
+                <ChevronRight className="size-4 ltr:rotate-180" />
               </Button>
               <span className="text-sm text-muted-foreground">
                 {formatNumber(page)} / {formatNumber(totalPages)}
@@ -488,7 +488,7 @@ export function ContactsTable({
                 disabled={page >= totalPages || isPending}
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               >
-                <ChevronLeft className="size-4 rtl:rotate-0" />
+                <ChevronLeft className="size-4 ltr:rotate-180" />
               </Button>
             </div>
           </div>

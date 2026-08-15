@@ -327,7 +327,7 @@ export function DealsTable({
                       >
                         <Button asChild variant="outline" size="sm">
                           <Link href="/pipeline">
-                            <ExternalLink className="size-4" />
+                            <ExternalLink className="size-4 rtl:-scale-x-100" />
                             رفتن به فانل فروش
                           </Link>
                         </Button>
@@ -401,7 +401,7 @@ export function DealsTable({
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem asChild>
                               <Link href="/pipeline">
-                                <ExternalLink className="size-4" />
+                                <ExternalLink className="size-4 rtl:-scale-x-100" />
                                 نمایش در فانل
                               </Link>
                             </DropdownMenuItem>
@@ -482,7 +482,7 @@ export function DealsTable({
                 disabled={page <= 1 || isPending}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
               >
-                <ChevronRight className="size-4 rtl:rotate-0" />
+                <ChevronRight className="size-4 ltr:rotate-180" />
               </Button>
               <span className="text-sm text-muted-foreground">
                 {formatNumber(page)} / {formatNumber(totalPages)}
@@ -493,7 +493,7 @@ export function DealsTable({
                 disabled={page >= totalPages || isPending}
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               >
-                <ChevronLeft className="size-4 rtl:rotate-0" />
+                <ChevronLeft className="size-4 ltr:rotate-180" />
               </Button>
             </div>
           </div>

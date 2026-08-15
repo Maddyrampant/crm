@@ -32,7 +32,7 @@ export function WorkspaceSwitcher() {
               ورک‌اسپیس من
             </span>
           </div>
-          <ChevronsUpDown className="ml-auto size-4" />
+          <ChevronsUpDown className="ms-auto size-4" />
         </SidebarMenuButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent

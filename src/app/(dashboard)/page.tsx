@@ -328,7 +328,7 @@ function ButtonLink({ href }: { href: string }) {
       className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
     >
       مشاهده همه
-      <ArrowLeft className="size-3.5 rtl:rotate-180" />
+      <ArrowLeft className="size-3.5 ltr:rotate-180" />
     </Link>
   );
 }

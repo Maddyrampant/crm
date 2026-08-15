@@ -107,11 +107,11 @@ export function GlobalSearch() {
           },
           {
             label: "فروش‌ها",
-            seeAllHref: `/pipeline`,
+            seeAllHref: `/pipeline/deals`,
             items: results.deals.map((d) => ({
               kind: "deal",
               id: d.id,
-              href: `/pipeline`,
+              href: `/pipeline/deals`,
               title: d.title,
               subtitle: d.contactName ?? d.companyName ?? "",
               icon: Kanban,

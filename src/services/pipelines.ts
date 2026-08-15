@@ -90,11 +90,11 @@ export type StageInput = {
   winProbability: number;
 };
 
-export async function createStage(pipelineId: string, input: StageInput) {
+export async function createStage(workspaceId: string, pipelineId: string, input: StageInput) {
   const [pipeline] = await db
-    .select({ workspaceId: pipelines.workspaceId })
+    .select({ id: pipelines.id })
     .from(pipelines)
-    .where(eq(pipelines.id, pipelineId))
+    .where(and(eq(pipelines.id, pipelineId), eq(pipelines.workspaceId, workspaceId)))
     .limit(1);
 
   if (!pipeline) return null;
