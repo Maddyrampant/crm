@@ -129,6 +129,15 @@
   }
 }
 
+/* سایدبار راست (RTL): حذف border خودکار shadcn روی لبهٔ بیرونی */
+[dir="rtl"] [data-slot="sidebar-container"][data-side="right"] {
+  border-inline-start-width: 0;
+}
+[dir="rtl"] [data-slot="sheet-content"][data-side="right"] {
+  border-inline-start-width: 0;
+  border-inline-end-width: 1px;
+}
+
 @media print {
   [data-slot="sidebar"],
   header,
