@@ -218,8 +218,7 @@ export async function addTagToContactAction(contactId: string, tagId: string) {
     return { ok: false, error: "شما اجازه تغییر برچسب‌ها را ندارید" };
   }
 
-  await contactsService.addTagToContact(ctx.workspaceId, contactId, tagId);
-  return { ok: true };
+  return contactsService.addTagToContact(ctx.workspaceId, contactId, tagId);
 }
 
 export async function removeTagFromContactAction(contactId: string, tagId: string) {
@@ -229,8 +228,7 @@ export async function removeTagFromContactAction(contactId: string, tagId: strin
     return { ok: false, error: "شما اجازه تغییر برچسب‌ها را ندارید" };
   }
 
-  await contactsService.removeTagFromContact(contactId, tagId);
-  return { ok: true };
+  return contactsService.removeTagFromContact(ctx.workspaceId, contactId, tagId);
 }
 
 export async function listTagsAction() {

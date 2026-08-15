@@ -243,13 +243,49 @@ export async function deleteContact(workspaceId: string, id: string) {
 }
 
 export async function addTagToContact(workspaceId: string, contactId: string, tagId: string) {
+  const [contact] = await db
+    .select({ id: contacts.id })
+    .from(contacts)
+    .where(and(eq(contacts.id, contactId), eq(contacts.workspaceId, workspaceId)))
+    .limit(1);
+  if (!contact) return { ok: false as const, error: "مشتری یافت نشد" };
+
+  const [tag] = await db
+    .select({ id: tags.id })
+    .from(tags)
+    .where(and(eq(tags.id, tagId), eq(tags.workspaceId, workspaceId)))
+    .limit(1);
+  if (!tag) return { ok: false as const, error: "برچسب یافت نشد" };
+
   await db.insert(contactTags).values({ contactId, tagId }).onConflictDoNothing();
+  return { ok: true as const };
 }
 
-export async function removeTagFromContact(contactId: string, tagId: string) {
-  await db
+export async function removeTagFromContact(workspaceId: string, contactId: string, tagId: string) {
+  const ownedContactIds = db
+    .select({ id: contacts.id })
+    .from(contacts)
+    .where(eq(contacts.workspaceId, workspaceId));
+  const ownedTagIds = db
+    .select({ id: tags.id })
+    .from(tags)
+    .where(eq(tags.workspaceId, workspaceId));
+
+  const deleted = await db
     .delete(contactTags)
-    .where(and(eq(contactTags.contactId, contactId), eq(contactTags.tagId, tagId)));
+    .where(
+      and(
+        eq(contactTags.contactId, contactId),
+        eq(contactTags.tagId, tagId),
+        inArray(contactTags.contactId, ownedContactIds),
+        inArray(contactTags.tagId, ownedTagIds),
+      )
+    )
+    .returning({ contactId: contactTags.contactId });
+
+  return deleted.length > 0
+    ? { ok: true as const }
+    : { ok: false as const, error: "برچسب یافت نشد" };
 }
 
 export async function listTags(workspaceId: string) {

@@ -144,7 +144,7 @@ export function ContactDetail({
               <Button asChild variant="outline" size="sm">
                 <Link href="/pipeline">
                   فانل فروش
-                  <ChevronLeft className="size-4 rtl:rotate-0" />
+                  <ChevronLeft className="size-4 ltr:rotate-180" />
                 </Link>
               </Button>
             </CardHeader>
