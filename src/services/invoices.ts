@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import {
@@ -77,6 +77,28 @@ export async function listInvoices(workspaceId: string) {
 
 export type InvoiceRow = Awaited<ReturnType<typeof listInvoices>>[number];
 
+/** فاکتورهای سررسید‌گذشته برای داشبورد */
+export async function getOverdueInvoices(workspaceId: string, limit = 8) {
+  return db
+    .select({
+      id: invoices.id,
+      number: invoices.number,
+      total: invoices.total,
+      dueAt: invoices.dueAt,
+      contactName: sql<string>`concat(${contacts.firstName}, ' ', coalesce(${contacts.lastName}, ''))`,
+    })
+    .from(invoices)
+    .innerJoin(contacts, eq(contacts.id, invoices.contactId))
+    .where(
+      and(
+        eq(invoices.workspaceId, workspaceId),
+        eq(invoices.status, "overdue")
+      )
+    )
+    .orderBy(asc(invoices.dueAt))
+    .limit(limit);
+}
+
 export async function getInvoice(workspaceId: string, invoiceId: string) {
   const [row] = await db
     .select({
@@ -106,7 +128,7 @@ export async function getInvoice(workspaceId: string, invoiceId: string) {
 
 export async function createInvoice(
   workspaceId: string,
-  userId: string,
+  userId: string | null,
   raw: unknown
 ) {
   const input = createInvoiceSchema.parse(raw);
@@ -161,7 +183,7 @@ export async function createInvoice(
 
 export async function updateInvoiceStatus(
   workspaceId: string,
-  userId: string,
+  userId: string | null,
   invoiceId: string,
   status: InvoiceStatus
 ) {
@@ -184,7 +206,7 @@ export async function updateInvoiceStatus(
 
 export async function recordPayment(
   workspaceId: string,
-  userId: string,
+  userId: string | null,
   invoiceId: string,
   raw: { amount: number; method?: string; reference?: string; paidAt?: string }
 ) {

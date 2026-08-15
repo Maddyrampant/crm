@@ -22,6 +22,7 @@ type Props = {
   pipeline: { name: string; color: string; count: number; total: number }[];
   leadSources: { source: string; count: number }[];
   openValue: number;
+  months?: number;
 };
 
 const sourceLabels: Record<string, string> = {
@@ -32,12 +33,20 @@ const sourceLabels: Record<string, string> = {
   other: "سایر",
 };
 
-export function DashboardCharts({ revenue, pipeline, leadSources, openValue }: Props) {
+export function DashboardCharts({
+  revenue,
+  pipeline,
+  leadSources,
+  openValue,
+  months = 6,
+}: Props) {
   return (
     <>
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">درآمد وصول‌شده (۶ ماه)</CardTitle>
+          <CardTitle className="text-base">
+            درآمد وصول‌شده ({months} ماه)
+          </CardTitle>
         </CardHeader>
         <CardContent className="h-72">
           <ResponsiveContainer width="100%" height="100%">

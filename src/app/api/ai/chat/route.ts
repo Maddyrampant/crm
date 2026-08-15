@@ -1,5 +1,6 @@
 import { streamText, toUIMessageStream, createUIMessageStreamResponse } from "ai";
 import { NextRequest } from "next/server";
+import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { aiConversations } from "@/db/schema";
 import { getSession } from "@/lib/session";
@@ -35,9 +36,11 @@ export async function POST(req: NextRequest) {
   const body = (await req.json().catch(() => null)) as {
     messages?: Array<{ role: string; content: string }>;
     conversationId?: string;
+    model?: string;
   } | null;
   const messages = body?.messages ?? [];
   const lastUser = [...messages].reverse().find((m) => m.role === "user");
+  const requestedModel = body?.model?.trim() || undefined;
 
   let conversationId = body?.conversationId;
   let history = conversationId
@@ -76,10 +79,18 @@ export async function POST(req: NextRequest) {
     await saveMessage(convId, "user", lastUser.content);
   }
 
+  if (requestedModel) {
+    await db
+      .update(aiConversations)
+      .set({ model: requestedModel })
+      .where(eq(aiConversations.id, convId));
+  }
+
   const ctx = { workspaceId, userId, conversationId: convId };
+  const modelId = requestedModel ?? history.conversation.model;
 
   const result = streamText({
-    model: getChatModel(),
+    model: getChatModel(modelId),
     system: SYSTEM_PROMPT,
     messages: history.messages.map((m) => ({
       role: m.role === "tool" ? "assistant" : m.role,
