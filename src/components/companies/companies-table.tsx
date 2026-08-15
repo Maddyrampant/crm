@@ -41,6 +41,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { CompanyFormDialog } from "@/components/companies/company-form-dialog";
+import { EmptyState } from "@/components/ui/empty-state";
 import { listCompaniesAction, deleteCompanyAction } from "@/actions/contacts";
 import { formatDate, formatNumber } from "@/lib/format";
 import type { CompanyRow } from "@/lib/api-types";
@@ -153,8 +154,12 @@ export function CompaniesTable({ initialData, canManage, canDelete }: Props) {
               <TableBody>
                 {data.items.length === 0 && !isPending ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
-                      شرکتی یافت نشد.
+                    <TableCell colSpan={6} className="border-0">
+                      <EmptyState
+                        icon={Search}
+                        title="شرکتی یافت نشد"
+                        description="فیلتر یا جستجو را تغییر دهید یا شرکت جدید بسازید."
+                      />
                     </TableCell>
                   </TableRow>
                 ) : (
