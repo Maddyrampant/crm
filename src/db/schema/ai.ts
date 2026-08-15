@@ -76,3 +76,5 @@ export const aiToolRuns = pgTable("ai_tool_runs", {
 export type AiConversation = typeof aiConversations.$inferSelect;
 export type AiMessage = typeof aiMessages.$inferSelect;
 export type AiToolRun = typeof aiToolRuns.$inferSelect;
+export type AiRole = typeof aiMessages.$inferSelect["role"];
+export type ToolRunStatus = typeof aiToolRuns.$inferSelect["status"];
