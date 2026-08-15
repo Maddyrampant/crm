@@ -83,12 +83,27 @@ export async function POST(req: NextRequest) {
   }
 
   const ctx = { workspaceId, userId, conversationId: convId };
-  const modelId = requestedModel ?? history.conversation.model;
+
+  if (requestedModel) {
+    await db
+      .update(aiConversations)
+      .set({ model: requestedModel })
+      .where(eq(aiConversations.id, convId));
+  }
+
+  // بارگذاری مجدد تاریخچه تا پیام جاری کاربر هم در پرامپت مدل باشد
+  // (در غیر این صورت در اولین پیام، messages خالی و مدل خطا میدهد)
+  const updatedHistory = await getConversation(workspaceId, convId);
+  if (!updatedHistory) {
+    return Response.json({ error: "Conversation not found" }, { status: 404 });
+  }
+
+  const modelId = requestedModel ?? updatedHistory.conversation.model;
 
   const result = streamText({
     model: getChatModel(modelId),
     system: await buildSystemPrompt(workspaceId),
-    messages: history.messages.map((m) => ({
+    messages: updatedHistory.messages.map((m) => ({
       role: m.role === "tool" ? "assistant" : m.role,
       content: m.content ?? "",
     })),
