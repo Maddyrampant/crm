@@ -4,6 +4,7 @@ import { listPipelines } from "@/services/pipelines";
 import { listContacts } from "@/services/contacts";
 import { getWorkspaceMembers } from "@/services/workspace";
 import { toKanbanBoardRow, toPipelineRow } from "@/lib/serialize";
+import { PageHeader } from "@/components/ui/page-header";
 import { KanbanBoard } from "@/components/pipeline/kanban-board";
 
 export default async function PipelinePage() {
@@ -17,16 +18,22 @@ export default async function PipelinePage() {
   ]);
 
   return (
-    <KanbanBoard
-      initialBoard={toKanbanBoardRow(board)}
-      initialPipelines={pipelines.map(toPipelineRow)}
-      contacts={contactsResult.items.map((c) => ({
-        id: c.id,
-        name: `${c.firstName} ${c.lastName ?? ""}`.trim(),
-      }))}
-      members={members}
-      canManageDeal={hasPermission(membership, "seller")}
-      canManagePipeline={hasPermission(membership, "manager")}
-    />
+    <div className="space-y-6">
+      <PageHeader
+        title="فانل فروش"
+        description="فروش‌ها را بین مراحل جابه‌جا کنید و برد/باخت را ثبت کنید."
+      />
+      <KanbanBoard
+        initialBoard={toKanbanBoardRow(board)}
+        initialPipelines={pipelines.map(toPipelineRow)}
+        contacts={contactsResult.items.map((c) => ({
+          id: c.id,
+          name: `${c.firstName} ${c.lastName ?? ""}`.trim(),
+        }))}
+        members={members}
+        canManageDeal={hasPermission(membership, "seller")}
+        canManagePipeline={hasPermission(membership, "manager")}
+      />
+    </div>
   );
 }
