@@ -471,7 +471,7 @@ export function DealsTable({
                 <SelectContent>
                   {[10, 20, 50, 100].map((n) => (
                     <SelectItem key={n} value={String(n)}>
-                      {n} در هر صفحه
+                      {formatNumber(n)} در هر صفحه
                     </SelectItem>
                   ))}
                 </SelectContent>

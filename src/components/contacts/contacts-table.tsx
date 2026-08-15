@@ -56,6 +56,7 @@ import {
   exportContactsCsvAction,
 } from "@/actions/contacts";
 import { ContactFormDialog } from "@/components/contacts/contact-form-dialog";
+import { EmptyState } from "@/components/ui/empty-state";
 import { SOURCE_LABELS, STAGE_LABELS, STAGE_VARIANT } from "@/lib/labels";
 import { formatDate, formatNumber } from "@/lib/format";
 import type { ContactRow, CustomFieldRow, TagRow } from "@/lib/api-types";
@@ -341,8 +342,12 @@ export function ContactsTable({
               <TableBody>
                 {data.items.length === 0 && !isPending ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
-                      مشتری‌ای یافت نشد.
+                    <TableCell colSpan={7} className="border-0">
+                      <EmptyState
+                        icon={Search}
+                        title="مشتری‌ای یافت نشد"
+                        description="فیلتر یا جستجو را تغییر دهید یا مشتری جدید بسازید."
+                      />
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -466,7 +471,7 @@ export function ContactsTable({
                 <SelectContent>
                   {[10, 20, 50, 100].map((n) => (
                     <SelectItem key={n} value={String(n)}>
-                      {n} در هر صفحه
+                      {formatNumber(n)} در هر صفحه
                     </SelectItem>
                   ))}
                 </SelectContent>
