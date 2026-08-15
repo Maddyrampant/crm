@@ -13,6 +13,8 @@
     "db:seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/utilities": "^3.2.2",
     "@openrouter/ai-sdk-provider": "^3.0.0",
     "@tanstack/react-query": "^5.101.4",
     "@tanstack/react-table": "^9.1.2",
