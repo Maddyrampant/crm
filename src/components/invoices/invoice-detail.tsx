@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Printer } from "lucide-react";
+import { ArrowLeft, FileDown, Printer } from "lucide-react";
 import { toast } from "sonner";
 import {
   recordPaymentAction,
@@ -107,6 +107,12 @@ export function InvoiceDetail({ data }: { data: InvoiceDetailData }) {
           <Button variant="outline" onClick={() => window.print()}>
             <Printer />
             چاپ
+          </Button>
+          <Button asChild variant="outline">
+            <Link href={`/api/invoices/${invoice.id}/pdf`} target="_blank" rel="noopener">
+              <FileDown />
+              PDF
+            </Link>
           </Button>
           {invoice.status === "draft" && (
             <Button
