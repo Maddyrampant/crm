@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { contacts } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { CalendarView } from "@/components/calendar/calendar-view";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const metadata: Metadata = { title: "تقویم و قرارها" };
 
@@ -23,12 +24,10 @@ export default async function CalendarPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">تقویم و قرارها</h1>
-        <p className="text-muted-foreground">
-          مدیریت قرار ملاقات و وظایف
-        </p>
-      </div>
+      <PageHeader
+        title="تقویم و قرارها"
+        description="مدیریت قرار ملاقات و وظایف"
+      />
       <CalendarView
         appointments={appointments}
         tasks={tasks}

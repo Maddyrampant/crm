@@ -11,6 +11,7 @@ import {
   processDueDeliveries,
 } from "@/services/automation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PageHeader } from "@/components/ui/page-header";
 import { ApiKeysPanel } from "@/components/settings/api-keys-panel";
 import { DeliveriesPanel } from "@/components/settings/deliveries-panel";
 import { EmailTemplatesPanel } from "@/components/settings/email-templates-panel";
@@ -44,12 +45,10 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">تنظیمات</h1>
-        <p className="text-muted-foreground">
-          وب‌هاوک‌ها، کلیدهای API و اتصال‌های ایمیل و پیامک
-        </p>
-      </div>
+      <PageHeader
+        title="تنظیمات"
+        description="وب‌هاوک‌ها، کلیدهای API و اتصال‌های ایمیل و پیامک"
+      />
 
       <Tabs defaultValue="webhooks">
         <TabsList>
