@@ -198,6 +198,14 @@ export const navSections: NavSection[] = [
         ready: true,
         minRole: "admin",
       },
+      {
+        title: "قوانین اتوماسیون",
+        href: "/settings/rules",
+        icon: Workflow,
+        owner: "part1",
+        ready: true,
+        minRole: "manager",
+      },
     ],
   },
 ];
