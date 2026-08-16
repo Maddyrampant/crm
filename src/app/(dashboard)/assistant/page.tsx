@@ -4,6 +4,7 @@ import { hasAiConfigured } from "@/lib/ai/provider";
 import { listConversations, listPendingToolRuns } from "@/services/ai";
 import { ChatPanel } from "@/components/assistant/chat-panel";
 import { AssistantNotice } from "@/components/assistant/assistant-notice";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const metadata: Metadata = { title: "دستیار هوش مصنوعی" };
 
@@ -17,12 +18,10 @@ export default async function AssistantPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">دستیار هوش مصنوعی</h1>
-        <p className="text-muted-foreground">
-          سؤال بپرسید، گزارش بگیرید یا درخواست ساخت مخاطب و تسک بدهید
-        </p>
-      </div>
+      <PageHeader
+        title="دستیار هوش مصنوعی"
+        description="سؤال بپرسید، گزارش بگیرید یا درخواست ساخت مخاطب و تسک بدهید"
+      />
       {!configured && <AssistantNotice />}
       <ChatPanel
         conversations={conversations}

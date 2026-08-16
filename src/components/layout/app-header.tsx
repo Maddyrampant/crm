@@ -4,6 +4,7 @@ import { UserMenu } from "@/components/layout/user-menu";
 import { PageTitle } from "@/components/layout/page-title";
 import { GlobalSearch } from "@/components/layout/global-search";
 import { NotificationBell } from "@/components/layout/notification-bell";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 
 export function AppHeader({ userName, userEmail }: { userName: string; userEmail: string }) {
   return (
@@ -15,6 +16,7 @@ export function AppHeader({ userName, userEmail }: { userName: string; userEmail
       <div className="hidden md:block">
         <GlobalSearch />
       </div>
+      <ThemeToggle />
       <NotificationBell />
       <UserMenu name={userName} email={userEmail} />
     </header>

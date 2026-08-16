@@ -11,6 +11,7 @@ import { DashboardCharts } from "@/components/reports/dashboard-charts";
 import { RangeSelector } from "@/components/reports/range-selector";
 import { StatCard } from "@/components/reports/stat-card";
 import { ActivityFeed } from "@/components/reports/activity-feed";
+import { PageHeader } from "@/components/ui/page-header";
 import { Contact, Package, Banknote, TrendingUp, Clock3 } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 
@@ -37,13 +38,9 @@ export default async function ReportsPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">گزارش‌ها</h1>
-          <p className="text-muted-foreground">نمای کلی عملکرد فروش</p>
-        </div>
+      <PageHeader title="گزارش‌ها" description="نمای کلی عملکرد فروش">
         <RangeSelector value={String(months)} />
-      </div>
+      </PageHeader>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
