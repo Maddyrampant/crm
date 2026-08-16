@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createDealAction, updateDealAction } from "@/actions/deals";
+import { NotesPanel } from "@/components/notes/notes-panel";
 import { formatNumber } from "@/lib/format";
 import type { DealRow, PipelineRow } from "@/lib/api-types";
 
@@ -231,6 +232,12 @@ export function DealFormDialog({
             </Button>
           </DialogFooter>
         </form>
+
+        {deal && open && (
+          <div className="grid gap-2 border-t pt-4">
+            <NotesPanel entityType="deal" entityId={deal.id} />
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
