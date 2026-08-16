@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toContactRow } from "@/lib/serialize";
 import { STAGE_LABELS, STAGE_VARIANT } from "@/lib/labels";
 import { formatDate, formatNumber } from "@/lib/format";
+import { NotesPanel } from "@/components/notes/notes-panel";
 
 export default async function CompanyDetailPage({
   params,
@@ -115,10 +116,12 @@ export default async function CompanyDetailPage({
                   </Badge>
                 </li>
               ))}
-            </ul>
-          )}
+          </ul>
+        )}
         </CardContent>
       </Card>
+
+      <NotesPanel entityType="company" entityId={id} />
     </div>
   );
 }
