@@ -6,6 +6,7 @@ import { getWorkspaceMembers } from "@/services/workspace";
 import { toKanbanBoardRow, toPipelineRow } from "@/lib/serialize";
 import { PageHeader } from "@/components/ui/page-header";
 import { KanbanBoard } from "@/components/pipeline/kanban-board";
+import { ImportCsvDialog } from "@/components/contacts/import-csv-dialog";
 
 export default async function PipelinePage() {
   const { workspaceId, membership } = await requireWorkspace();
@@ -22,7 +23,9 @@ export default async function PipelinePage() {
       <PageHeader
         title="فانل فروش"
         description="فروش‌ها را بین مراحل جابه‌جا کنید و برد/باخت را ثبت کنید."
-      />
+      >
+        {hasPermission(membership, "seller") && <ImportCsvDialog />}
+      </PageHeader>
       <KanbanBoard
         initialBoard={toKanbanBoardRow(board)}
         initialPipelines={pipelines.map(toPipelineRow)}
