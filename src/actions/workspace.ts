@@ -76,11 +76,22 @@ const addMemberSchema = z.object({
 
 export async function addWorkspaceMemberAction(raw: unknown) {
   const { user, workspaceId } = await requireWorkspaceRole("admin");
-  const input = addMemberSchema.parse(raw);
-  await addWorkspaceMember(workspaceId, input.email, input.role as EditableRole);
-  revalidatePath("/settings");
-  revalidatePath("/settings/team");
-  return { ok: true, actorName: user.name };
+  const parsed = addMemberSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "ورودی نامعتبر" };
+  }
+  try {
+    const member = await addWorkspaceMember(
+      workspaceId,
+      parsed.data.email,
+      parsed.data.role as EditableRole
+    );
+    revalidatePath("/settings");
+    revalidatePath("/settings/team");
+    return { ok: true, member, actorName: user.name };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "خطا در افزودن عضو" };
+  }
 }
 
 export async function updateMemberRoleAction(
@@ -89,18 +100,26 @@ export async function updateMemberRoleAction(
 ) {
   const { user, workspaceId } = await requireWorkspaceRole("admin");
   if (!MEMBER_ROLE_VALUES.includes(role as (typeof MEMBER_ROLE_VALUES)[number])) {
-    throw new Error("نقش نامعتبر است");
+    return { ok: false, error: "نقش نامعتبر است" };
   }
-  await updateMemberRole(workspaceId, user.id, userId, role);
-  revalidatePath("/settings");
-  revalidatePath("/settings/team");
-  return { ok: true };
+  try {
+    await updateMemberRole(workspaceId, user.id, userId, role);
+    revalidatePath("/settings");
+    revalidatePath("/settings/team");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "خطا در تغییر نقش" };
+  }
 }
 
 export async function removeWorkspaceMemberAction(userId: string) {
   const { user, workspaceId } = await requireWorkspaceRole("admin");
-  await removeWorkspaceMember(workspaceId, user.id, userId);
-  revalidatePath("/settings");
-  revalidatePath("/settings/team");
-  return { ok: true };
+  try {
+    await removeWorkspaceMember(workspaceId, user.id, userId);
+    revalidatePath("/settings");
+    revalidatePath("/settings/team");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "خطا در حذف عضو" };
+  }
 }
