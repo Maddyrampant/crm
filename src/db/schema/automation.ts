@@ -140,3 +140,6 @@ export const smsLogs = pgTable("sms_logs", {
 export type Webhook = typeof webhooks.$inferSelect;
 export type ApiKey = typeof apiKeys.$inferSelect;
 export type EmailTemplate = typeof emailTemplates.$inferSelect;
+export type WebhookDelivery = typeof webhookDeliveries.$inferSelect;
+export type EmailLog = typeof emailLogs.$inferSelect;
+export type SmsLog = typeof smsLogs.$inferSelect;

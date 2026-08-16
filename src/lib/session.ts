@@ -56,3 +56,13 @@ export async function requireWorkspace() {
     membership,
   };
 }
+
+export async function requireWorkspaceRole(
+  required: keyof typeof ROLE_LEVEL
+) {
+  const ctx = await requireWorkspace();
+  if (!hasPermission(ctx.membership, required)) {
+    redirect("/dashboard");
+  }
+  return ctx;
+}
