@@ -4,6 +4,7 @@ import { Plus } from "lucide-react";
 import { requireWorkspace } from "@/lib/session";
 import { listInvoices } from "@/services/invoices";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
 import { InvoiceList } from "@/components/invoices/invoice-list";
 
 export const metadata: Metadata = { title: "فاکتورها" };
@@ -14,20 +15,14 @@ export default async function InvoicesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">فاکتورها</h1>
-          <p className="text-muted-foreground">
-            مدیریت فاکتورها، پرداخت‌ها و وضعیت‌ها
-          </p>
-        </div>
+      <PageHeader title="فاکتورها" description="مدیریت فاکتورها، پرداخت‌ها و وضعیت‌ها">
         <Button asChild>
           <Link href="/invoices/new">
             <Plus />
             فاکتور جدید
           </Link>
         </Button>
-      </div>
+      </PageHeader>
 
       <InvoiceList initialData={invoices} />
     </div>

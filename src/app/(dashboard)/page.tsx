@@ -291,7 +291,7 @@ export default async function DashboardPage() {
               recentDeals.map((r) => (
                 <Link
                   key={r.deal.id}
-                  href="/pipeline"
+                  href={`/pipeline/deals/${r.deal.id}`}
                   className="flex items-center gap-3 rounded-lg p-1.5 transition-colors hover:bg-accent"
                 >
                   <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
