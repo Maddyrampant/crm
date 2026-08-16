@@ -8,8 +8,10 @@ import {
   Handshake,
   Kanban,
   LayoutDashboard,
+  Package,
   Settings,
   Users,
+  Warehouse,
   Workflow,
 } from "lucide-react";
 
@@ -107,6 +109,25 @@ export const navSections: NavSection[] = [
         href: "/reports",
         icon: BarChart3,
         owner: "part2",
+        ready: true,
+      },
+    ],
+  },
+  {
+    title: "فروشگاه و انبار",
+    items: [
+      {
+        title: "کالاها",
+        href: "/products",
+        icon: Package,
+        owner: "part1",
+        ready: true,
+      },
+      {
+        title: "انبارها",
+        href: "/warehouses",
+        icon: Warehouse,
+        owner: "part1",
         ready: true,
       },
     ],
