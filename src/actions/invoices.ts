@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireWorkspace } from "@/lib/session";
 import {
+  convertInvoice,
   createInvoice,
   deleteInvoice,
   recordPayment,
@@ -25,6 +26,17 @@ export async function updateInvoiceStatusAction(
   revalidatePath("/invoices");
   revalidatePath(`/invoices/${invoiceId}`);
   return { ok: Boolean(row) };
+}
+
+/** تبدیل پیش‌فاکتور به فاکتور رسمی (draft → sent). */
+export async function convertInvoiceAction(invoiceId: string) {
+  const { user, workspaceId } = await requireWorkspace();
+  const result = await convertInvoice(workspaceId, user.id, invoiceId);
+  if (!result.ok) return { ok: false, error: result.error };
+  revalidatePath("/invoices");
+  revalidatePath(`/invoices/${invoiceId}`);
+  revalidatePath("/dashboard");
+  return { ok: true };
 }
 
 export async function recordPaymentAction(
