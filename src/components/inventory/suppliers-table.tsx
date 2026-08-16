@@ -1,0 +1,204 @@
+"use client";
+
+import { useState } from "react";
+import { toast } from "sonner";
+import {
+  Loader2,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Store,
+  Trash2,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { deleteSupplierAction, listSuppliersAction } from "@/actions/inventory";
+import { SupplierFormDialog } from "@/components/inventory/supplier-form-dialog";
+import { EmptyState } from "@/components/ui/empty-state";
+import type { Supplier } from "@/db/schema";
+
+type Props = {
+  initialData: Supplier[];
+  canManage: boolean;
+};
+
+export function SuppliersTable({ initialData, canManage }: Props) {
+  const [suppliers, setSuppliers] = useState(initialData);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<Supplier | null>(null);
+  const [deleting, setDeleting] = useState<Supplier | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function reload() {
+    try {
+      const result = await listSuppliersAction();
+      setSuppliers(result);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "خطا در بارگذاری تأمین‌کننده‌ها");
+    }
+  }
+
+  async function handleDelete() {
+    if (!deleting) return;
+    setBusy(true);
+    try {
+      await deleteSupplierAction(deleting.id);
+      toast.success("تأمین‌کننده حذف شد");
+      setSuppliers((s) => s.filter((x) => x.id !== deleting.id));
+      setDeleting(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "خطا در حذف تأمین‌کننده");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="flex-row items-center justify-between space-y-0">
+          <CardTitle className="text-lg">تأمین‌کنندگان</CardTitle>
+          {canManage && (
+            <Button
+              size="sm"
+              onClick={() => {
+                setEditing(null);
+                setFormOpen(true);
+              }}
+            >
+              <Plus className="size-4" />
+              تأمین‌کننده جدید
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          {suppliers.length === 0 ? (
+            <EmptyState
+              icon={Store}
+              title="تأمین‌کننده‌ای ثبت نشده است"
+              description={
+                canManage
+                  ? "اولین تأمین‌کننده را اضافه کنید."
+                  : "مدیر فضای کاری، تأمین‌کنندگان را ثبت می‌کند."
+              }
+            />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>نام</TableHead>
+                  <TableHead>شخص تماس</TableHead>
+                  <TableHead>موبایل</TableHead>
+                  <TableHead>ایمیل</TableHead>
+                  <TableHead>آدرس</TableHead>
+                  <TableHead className="w-12" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {suppliers.map((s) => (
+                  <TableRow key={s.id}>
+                    <TableCell className="font-medium">{s.name}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {s.contactName || "—"}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground" dir="ltr">
+                      {s.phone || "—"}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground" dir="ltr">
+                      {s.email || "—"}
+                    </TableCell>
+                    <TableCell className="max-w-48 truncate text-muted-foreground">
+                      {s.address || "—"}
+                    </TableCell>
+                    <TableCell>
+                      {canManage && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon-sm">
+                              <MoreHorizontal className="size-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setEditing(s);
+                                setFormOpen(true);
+                              }}
+                            >
+                              <Pencil className="size-4" />
+                              ویرایش
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onClick={() => setDeleting(s)}
+                            >
+                              <Trash2 className="size-4" />
+                              حذف
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <SupplierFormDialog
+        key={editing?.id ?? "new"}
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        supplier={editing}
+        onSaved={reload}
+      />
+
+      <Dialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>حذف تأمین‌کننده</DialogTitle>
+            <DialogDescription>
+              مطمئن هستید که «{deleting?.name}» حذف شود؟ سفارش‌های قبلی
+              باقی می‌مانند.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleting(null)} disabled={busy}>
+              انصراف
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={busy}>
+              {busy && <Loader2 className="size-4 animate-spin" />}
+              حذف
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
