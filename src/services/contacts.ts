@@ -23,6 +23,7 @@ import {
 } from "@/db/schema";
 import { getActivityFeed } from "@/services/activity";
 import { dispatchWebhookEvent } from "@/services/automation";
+import { dispatchRuleEvent } from "@/services/rules";
 
 export type ContactListFilters = {
   workspaceId: string;
@@ -206,6 +207,19 @@ export async function createContact(workspaceId: string, input: ContactInput) {
     .returning();
 
   dispatchWebhookEvent(workspaceId, "contact.created", { id: contact.id });
+  dispatchRuleEvent(workspaceId, "contact.created", {
+    entityId: contact.id,
+    contactId: contact.id,
+    firstName: contact.firstName,
+    lastName: contact.lastName,
+    email: contact.email,
+    phone: contact.phone,
+    source: contact.source,
+    lifecycleStage: contact.lifecycleStage,
+    companyId: contact.companyId,
+    ownerId: contact.ownerId,
+    link: "/contacts",
+  });
   return contact;
 }
 
