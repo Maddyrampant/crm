@@ -22,6 +22,7 @@ import {
   type Contact,
 } from "@/db/schema";
 import { getActivityFeed } from "@/services/activity";
+import { dispatchWebhookEvent } from "@/services/automation";
 
 export type ContactListFilters = {
   workspaceId: string;
@@ -204,6 +205,7 @@ export async function createContact(workspaceId: string, input: ContactInput) {
     })
     .returning();
 
+  dispatchWebhookEvent(workspaceId, "contact.created", { id: contact.id });
   return contact;
 }
 
@@ -230,6 +232,9 @@ export async function updateContact(
     .where(and(eq(contacts.workspaceId, workspaceId), eq(contacts.id, id)))
     .returning();
 
+  if (contact) {
+    dispatchWebhookEvent(workspaceId, "contact.updated", { id: contact.id });
+  }
   return contact ?? null;
 }
 
@@ -239,6 +244,9 @@ export async function deleteContact(workspaceId: string, id: string) {
     .where(and(eq(contacts.workspaceId, workspaceId), eq(contacts.id, id)))
     .returning({ id: contacts.id });
 
+  if (deleted) {
+    dispatchWebhookEvent(workspaceId, "contact.deleted", { id: deleted.id });
+  }
   return deleted ?? null;
 }
 
