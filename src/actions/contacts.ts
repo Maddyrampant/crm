@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getSession, getActiveWorkspace, hasPermission } from "@/lib/session";
 import * as contactsService from "@/services/contacts";
 import * as companiesService from "@/services/companies";
-import { logActivity, addNote } from "@/services/activity";
+import { logActivity, addNote, getNotes } from "@/services/activity";
 import { toCompanyRow, toContactRow } from "@/lib/serialize";
 
 const contactSchema = z.object({
@@ -346,6 +346,37 @@ export async function addNoteAction(input: unknown) {
   revalidatePath(`/contacts/${parsed.data.entityId}`);
   revalidatePath(`/pipeline`);
   return { ok: true, data: note };
+}
+
+const getNotesSchema = z.object({
+  entityType: z.enum([
+    "contact",
+    "company",
+    "deal",
+    "invoice",
+    "appointment",
+    "task",
+    "payment",
+  ]),
+  entityId: z.string().min(1),
+});
+
+/** فهرست یادداشت‌های یک موجودیت (جدیدترین اول). */
+export async function getNotesAction(input: unknown) {
+  const ctx = await getWorkspaceContext();
+  if (!ctx) return { ok: false, error: "ابتدا وارد شوید" };
+
+  const parsed = getNotesSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "ورودی نامعتبر" };
+  }
+
+  const notes = await getNotes({
+    workspaceId: ctx.workspaceId,
+    entityType: parsed.data.entityType,
+    entityId: parsed.data.entityId,
+  });
+  return { ok: true, data: notes };
 }
 
 /* ---------- شرکت‌ها ---------- */
