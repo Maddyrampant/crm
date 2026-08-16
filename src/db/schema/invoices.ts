@@ -8,6 +8,7 @@ import {
 import { relations } from "drizzle-orm";
 import { workspaces } from "./workspaces";
 import { contacts } from "./contacts";
+import { products } from "./inventory";
 
 export const invoiceStatus = pgEnum("invoice_status", [
   "draft",
@@ -60,6 +61,9 @@ export const invoiceItems = pgTable("invoice_items", {
   invoiceId: text("invoice_id")
     .notNull()
     .references(() => invoices.id, { onDelete: "cascade" }),
+  productId: text("product_id").references(() => products.id, {
+    onDelete: "set null",
+  }),
   description: text("description").notNull(),
   quantity: numeric("quantity", { precision: 18, scale: 3 }).notNull().default("1"),
   unitPrice: numeric("unit_price", { precision: 18, scale: 2 })
