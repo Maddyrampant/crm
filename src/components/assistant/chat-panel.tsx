@@ -7,7 +7,7 @@ import { DefaultChatTransport } from "ai";
 import { Check, MessageSquare, Plus, Send, ShieldAlert, X } from "lucide-react";
 import type { AiConversation, AiToolRun } from "@/db/schema";
 import { DEFAULT_MODEL, MODEL_OPTIONS } from "@/lib/ai/models";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -290,9 +290,26 @@ function MessageBubble({ message }: { message: UIMessage }) {
       ?.filter((p) => p.type === "text")
       .map((p) => (p as { type: "text"; text: string }).text)
       .join("") ?? "";
+  const stepCount = message.parts.filter((p) => p.type === "step-start").length;
+  const meta = message.metadata as
+    | {
+        usage?: {
+          inputTokens?: number;
+          outputTokens?: number;
+          totalTokens?: number;
+        };
+        finishReason?: string;
+      }
+    | undefined;
+  const usage = meta?.usage;
+  const showUsage =
+    !isUser &&
+    (stepCount > 0 ||
+      usage?.inputTokens != null ||
+      usage?.totalTokens != null);
 
   return (
-    <div className={cn("flex", isUser ? "justify-end" : "justify-start")}>
+    <div className={cn("flex flex-col", isUser ? "items-end" : "items-start")}>
       <div
         className={cn(
           "max-w-[80%] whitespace-pre-wrap rounded-2xl px-4 py-2 text-sm leading-6",
@@ -303,6 +320,23 @@ function MessageBubble({ message }: { message: UIMessage }) {
       >
         {text}
       </div>
+      {showUsage && (
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 px-1 text-[10px] text-muted-foreground">
+          {stepCount > 0 && <span>{formatNumber(stepCount)} قدم</span>}
+          {usage?.inputTokens != null && (
+            <span>ورودی {formatNumber(usage.inputTokens)} توکن</span>
+          )}
+          {usage?.outputTokens != null && (
+            <span>خروجی {formatNumber(usage.outputTokens)} توکن</span>
+          )}
+          {usage?.totalTokens != null && (
+            <span>جمع {formatNumber(usage.totalTokens)} توکن</span>
+          )}
+          {meta?.finishReason === "length" && (
+            <span className="text-amber-500">پاسخ کامل نشد</span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
