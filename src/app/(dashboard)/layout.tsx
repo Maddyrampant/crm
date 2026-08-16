@@ -9,12 +9,12 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user } = await requireWorkspace();
+  const { user, membership } = await requireWorkspace();
 
   return (
     <TooltipProvider>
       <SidebarProvider>
-        <AppSidebar />
+        <AppSidebar role={membership.role} />
         <SidebarInset>
           <AppHeader userName={user.name} userEmail={user.email} />
           <main className="flex-1 p-4 md:p-6">{children}</main>
