@@ -1,6 +1,7 @@
 import { requireWorkspace, hasPermission } from "@/lib/session";
 import { listCompanies } from "@/services/companies";
 import { toCompanyRow } from "@/lib/serialize";
+import { PageHeader } from "@/components/ui/page-header";
 import { CompaniesTable } from "@/components/companies/companies-table";
 
 export default async function CompaniesPage() {
@@ -15,13 +16,19 @@ export default async function CompaniesPage() {
   });
 
   return (
-    <CompaniesTable
-      initialData={{
-        items: result.items.map(toCompanyRow),
-        total: result.total,
-      }}
-      canManage={hasPermission(membership, "seller")}
-      canDelete={hasPermission(membership, "manager")}
-    />
+    <div className="space-y-6">
+      <PageHeader
+        title="شرکت‌ها"
+        description="مدیریت شرکت‌ها و مشتریان حقوقی شما."
+      />
+      <CompaniesTable
+        initialData={{
+          items: result.items.map(toCompanyRow),
+          total: result.total,
+        }}
+        canManage={hasPermission(membership, "seller")}
+        canDelete={hasPermission(membership, "manager")}
+      />
+    </div>
   );
 }

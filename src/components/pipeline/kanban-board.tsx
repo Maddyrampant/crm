@@ -252,7 +252,7 @@ export function KanbanBoard({
   canManagePipeline,
 }: Props) {
   const [board, setBoard] = useState(initialBoard);
-  const [pipelines, setPipelines] = useState(initialPipelines);
+  const [pipelines] = useState(initialPipelines);
   const [selectedPipelineId, setSelectedPipelineId] = useState<string>(
     initialBoard.pipeline?.id ?? ""
   );
@@ -370,8 +370,6 @@ export function KanbanBoard({
     setDeletingDeal(null);
     reloadBoard();
   }
-
-  const selectedPipeline = pipelines.find((p) => p.id === selectedPipelineId);
 
   return (
     <div className="space-y-4">

@@ -41,6 +41,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { CompanyFormDialog } from "@/components/companies/company-form-dialog";
+import { EmptyState } from "@/components/ui/empty-state";
 import { listCompaniesAction, deleteCompanyAction } from "@/actions/contacts";
 import { formatDate, formatNumber } from "@/lib/format";
 import type { CompanyRow } from "@/lib/api-types";
@@ -153,8 +154,12 @@ export function CompaniesTable({ initialData, canManage, canDelete }: Props) {
               <TableBody>
                 {data.items.length === 0 && !isPending ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
-                      شرکتی یافت نشد.
+                    <TableCell colSpan={6} className="border-0">
+                      <EmptyState
+                        icon={Search}
+                        title="شرکتی یافت نشد"
+                        description="فیلتر یا جستجو را تغییر دهید یا شرکت جدید بسازید."
+                      />
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -235,7 +240,7 @@ export function CompaniesTable({ initialData, canManage, canDelete }: Props) {
                 disabled={page <= 1 || isPending}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
               >
-                <ChevronRight className="size-4 rtl:rotate-0" />
+                <ChevronRight className="size-4 ltr:rotate-180" />
               </Button>
               <span className="text-sm text-muted-foreground">
                 {formatNumber(page)} / {formatNumber(totalPages)}
@@ -246,7 +251,7 @@ export function CompaniesTable({ initialData, canManage, canDelete }: Props) {
                 disabled={page >= totalPages || isPending}
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               >
-                <ChevronLeft className="size-4 rtl:rotate-0" />
+                <ChevronLeft className="size-4 ltr:rotate-180" />
               </Button>
             </div>
           </div>

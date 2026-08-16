@@ -3,6 +3,7 @@ import { listContacts, listTags, listCustomFields } from "@/services/contacts";
 import { listCompanies } from "@/services/companies";
 import { getWorkspaceMembers } from "@/services/workspace";
 import { toContactRow, toCustomFieldRow } from "@/lib/serialize";
+import { PageHeader } from "@/components/ui/page-header";
 import { ContactsTable } from "@/components/contacts/contacts-table";
 
 export default async function ContactsPage() {
@@ -17,17 +18,23 @@ export default async function ContactsPage() {
   ]);
 
   return (
-    <ContactsTable
-      initialData={{
-        items: contactsResult.items.map(toContactRow),
-        total: contactsResult.total,
-      }}
-      companies={companies.items.map((c) => ({ id: c.id, name: c.name }))}
-      tags={tags.map((t) => ({ id: t.id, name: t.name, color: t.color }))}
-      members={members}
-      customFields={customFields.map(toCustomFieldRow)}
-      canManage={hasPermission(membership, "seller")}
-      canDelete={hasPermission(membership, "manager")}
-    />
+    <div className="space-y-6">
+      <PageHeader
+        title="مشتریان"
+        description="مشتریان، سرنخ‌ها و اطلاعات تماس شما."
+      />
+      <ContactsTable
+        initialData={{
+          items: contactsResult.items.map(toContactRow),
+          total: contactsResult.total,
+        }}
+        companies={companies.items.map((c) => ({ id: c.id, name: c.name }))}
+        tags={tags.map((t) => ({ id: t.id, name: t.name, color: t.color }))}
+        members={members}
+        customFields={customFields.map(toCustomFieldRow)}
+        canManage={hasPermission(membership, "seller")}
+        canDelete={hasPermission(membership, "manager")}
+      />
+    </div>
   );
 }
