@@ -1,5 +1,6 @@
 import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { db } from "@/db";
+import { cacheKey, cacheRemember } from "@/lib/cache";
 import {
   activityLog,
   contacts,
@@ -12,55 +13,64 @@ import {
 
 const num = (v: string | number | null | undefined) => Number(v ?? 0);
 
-export async function getKpis(workspaceId: string) {
-  const [contactRow, dealRow, invoiceRow, paymentRow] = await Promise.all([
-    db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(contacts)
-      .where(eq(contacts.workspaceId, workspaceId)),
-    db
-      .select({
-        openValue: sql<string>`coalesce(sum(case when deals.status = 'open' then deals.amount::numeric else 0 end),0)::text`,
-        wonValue: sql<string>`coalesce(sum(case when deals.status = 'won' then deals.amount::numeric else 0 end),0)::text`,
-        wonCount: sql<number>`count(*) filter (where deals.status = 'won')::int`,
-        openCount: sql<number>`count(*) filter (where deals.status = 'open')::int`,
-      })
-      .from(deals)
-      .where(eq(deals.workspaceId, workspaceId)),
-    db
-      .select({
-        total: sql<string>`coalesce(sum(case when invoices.status != 'cancelled' then invoices.total::numeric else 0 end),0)::text`,
-        paid: sql<string>`coalesce(sum(case when invoices.status = 'paid' then invoices.total::numeric else 0 end),0)::text`,
-        overdue: sql<number>`count(*) filter (where invoices.status = 'overdue')::int`,
-        count: sql<number>`count(*)::int`,
-      })
-      .from(invoices)
-      .where(eq(invoices.workspaceId, workspaceId)),
-    db
-      .select({ sum: sql<string>`coalesce(sum(amount::numeric),0)::text` })
-      .from(payments)
-      .innerJoin(invoices, eq(invoices.id, payments.invoiceId))
-      .where(eq(invoices.workspaceId, workspaceId)),
-  ]);
+/** ۶۰ ثانیه کش برای تجمیع‌های سنگین (بدون تغییر در شکل خروجی) */
+const KPIS_TTL = 60;
 
-  return {
-    contacts: contactRow[0]?.count ?? 0,
-    openDeals: dealRow[0]?.openCount ?? 0,
-    wonDeals: dealRow[0]?.wonCount ?? 0,
-    openValue: num(dealRow[0]?.openValue),
-    wonValue: num(dealRow[0]?.wonValue),
-    invoiceCount: invoiceRow[0]?.count ?? 0,
-    invoiceTotal: num(invoiceRow[0]?.total),
-    invoicePaid: num(invoiceRow[0]?.paid),
-    overdueInvoices: invoiceRow[0]?.overdue ?? 0,
-    collected: num(paymentRow[0]?.sum),
-    winRate: num(dealRow[0]?.wonCount) + num(dealRow[0]?.openCount) > 0
-      ? Math.round(
-          (num(dealRow[0]?.wonCount) /
-            (num(dealRow[0]?.wonCount) + num(dealRow[0]?.openCount))) * 100
-        )
-      : 0,
-  };
+export async function getKpis(workspaceId: string) {
+  return cacheRemember(
+    cacheKey("kpis", workspaceId),
+    KPIS_TTL,
+    async () => {
+      const [contactRow, dealRow, invoiceRow, paymentRow] = await Promise.all([
+        db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(contacts)
+          .where(eq(contacts.workspaceId, workspaceId)),
+        db
+          .select({
+            openValue: sql<string>`coalesce(sum(case when deals.status = 'open' then deals.amount::numeric else 0 end),0)::text`,
+            wonValue: sql<string>`coalesce(sum(case when deals.status = 'won' then deals.amount::numeric else 0 end),0)::text`,
+            wonCount: sql<number>`count(*) filter (where deals.status = 'won')::int`,
+            openCount: sql<number>`count(*) filter (where deals.status = 'open')::int`,
+          })
+          .from(deals)
+          .where(eq(deals.workspaceId, workspaceId)),
+        db
+          .select({
+            total: sql<string>`coalesce(sum(case when invoices.status != 'cancelled' then invoices.total::numeric else 0 end),0)::text`,
+            paid: sql<string>`coalesce(sum(case when invoices.status = 'paid' then invoices.total::numeric else 0 end),0)::text`,
+            overdue: sql<number>`count(*) filter (where invoices.status = 'overdue')::int`,
+            count: sql<number>`count(*)::int`,
+          })
+          .from(invoices)
+          .where(eq(invoices.workspaceId, workspaceId)),
+        db
+          .select({ sum: sql<string>`coalesce(sum(amount::numeric),0)::text` })
+          .from(payments)
+          .innerJoin(invoices, eq(invoices.id, payments.invoiceId))
+          .where(eq(invoices.workspaceId, workspaceId)),
+      ]);
+
+      return {
+        contacts: contactRow[0]?.count ?? 0,
+        openDeals: dealRow[0]?.openCount ?? 0,
+        wonDeals: dealRow[0]?.wonCount ?? 0,
+        openValue: num(dealRow[0]?.openValue),
+        wonValue: num(dealRow[0]?.wonValue),
+        invoiceCount: invoiceRow[0]?.count ?? 0,
+        invoiceTotal: num(invoiceRow[0]?.total),
+        invoicePaid: num(invoiceRow[0]?.paid),
+        overdueInvoices: invoiceRow[0]?.overdue ?? 0,
+        collected: num(paymentRow[0]?.sum),
+        winRate: num(dealRow[0]?.wonCount) + num(dealRow[0]?.openCount) > 0
+          ? Math.round(
+              (num(dealRow[0]?.wonCount) /
+                (num(dealRow[0]?.wonCount) + num(dealRow[0]?.openCount))) * 100
+            )
+          : 0,
+      };
+    },
+  );
 }
 
 /** درآمد واقعی (پرداخت‌ها) به تفکیک ۶ ماه اخیر */

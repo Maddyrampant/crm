@@ -161,7 +161,7 @@ export async function GET(req: NextRequest, { params }: Ctx) {
   const workspaceId = await authed(req);
   if (!workspaceId) return unauthorized();
 
-  const rl = checkRateLimit(`v1:${workspaceId}`);
+  const rl = await checkRateLimit(`v1:${workspaceId}`);
   if (!rl.ok) return rateLimited(rl.retryAfterMs);
 
   const { slug = [] } = await params;
@@ -244,7 +244,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   const workspaceId = await authed(req);
   if (!workspaceId) return unauthorized();
 
-  const rl = checkRateLimit(`v1:${workspaceId}`, 30);
+  const rl = await checkRateLimit(`v1:${workspaceId}`, 30);
   if (!rl.ok) return rateLimited(rl.retryAfterMs);
 
   const { slug = [] } = await params;
@@ -357,7 +357,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   const workspaceId = await authed(req);
   if (!workspaceId) return unauthorized();
 
-  const rl = checkRateLimit(`v1:${workspaceId}`, 30);
+  const rl = await checkRateLimit(`v1:${workspaceId}`, 30);
   if (!rl.ok) return rateLimited(rl.retryAfterMs);
 
   const { slug = [] } = await params;
@@ -465,7 +465,7 @@ export async function DELETE(req: NextRequest, { params }: Ctx) {
   const workspaceId = await authed(req);
   if (!workspaceId) return unauthorized();
 
-  const rl = checkRateLimit(`v1:${workspaceId}`, 30);
+  const rl = await checkRateLimit(`v1:${workspaceId}`, 30);
   if (!rl.ok) return rateLimited(rl.retryAfterMs);
 
   const { slug = [] } = await params;
