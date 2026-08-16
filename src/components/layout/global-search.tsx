@@ -111,7 +111,7 @@ export function GlobalSearch() {
             items: results.deals.map((d) => ({
               kind: "deal",
               id: d.id,
-              href: `/pipeline/deals`,
+              href: `/pipeline/deals/${d.id}`,
               title: d.title,
               subtitle: d.contactName ?? d.companyName ?? "",
               icon: Kanban,
