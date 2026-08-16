@@ -5,6 +5,7 @@ import { getWorkspaceMembers } from "@/services/workspace";
 import { toContactRow, toCustomFieldRow } from "@/lib/serialize";
 import { PageHeader } from "@/components/ui/page-header";
 import { ContactsTable } from "@/components/contacts/contacts-table";
+import { ImportCsvDialog } from "@/components/contacts/import-csv-dialog";
 
 export default async function ContactsPage() {
   const { workspaceId, membership } = await requireWorkspace();
@@ -22,7 +23,9 @@ export default async function ContactsPage() {
       <PageHeader
         title="مشتریان"
         description="مشتریان، سرنخ‌ها و اطلاعات تماس شما."
-      />
+      >
+        {hasPermission(membership, "seller") && <ImportCsvDialog />}
+      </PageHeader>
       <ContactsTable
         initialData={{
           items: contactsResult.items.map(toContactRow),
