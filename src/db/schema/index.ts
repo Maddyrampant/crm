@@ -7,3 +7,4 @@ export * from "./calendar";
 export * from "./activity";
 export * from "./automation";
 export * from "./ai";
+export * from "./notifications";
