@@ -13,6 +13,7 @@ import { dispatchWebhookEvent } from "./automation";
 import { notifyWorkspace } from "./notifications";
 import { adjustStock } from "./inventory";
 import { warehouses } from "@/db/schema";
+import { products } from "@/db/schema";
 
 export const invoiceItemSchema = z.object({
   productId: z.string().nullable().optional(),
@@ -158,10 +159,16 @@ export async function getInvoice(workspaceId: string, invoiceId: string) {
   if (!row) return null;
 
   const items = await db
-    .select()
+    .select({
+      item: invoiceItems,
+      productName: products.name,
+    })
     .from(invoiceItems)
+    .leftJoin(products, eq(products.id, invoiceItems.productId))
     .where(eq(invoiceItems.invoiceId, invoiceId))
     .orderBy(invoiceItems.id);
+
+  const flatItems = items.map((r) => ({ ...r.item, productName: r.productName }));
 
   const pays = await db
     .select()
@@ -169,7 +176,7 @@ export async function getInvoice(workspaceId: string, invoiceId: string) {
     .where(eq(payments.invoiceId, invoiceId))
     .orderBy(desc(payments.paidAt));
 
-  return { ...row, items, payments: pays };
+  return { ...row, items: flatItems, payments: pays };
 }
 
 export async function createInvoice(
