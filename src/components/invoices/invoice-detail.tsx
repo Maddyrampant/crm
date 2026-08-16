@@ -181,7 +181,14 @@ export function InvoiceDetail({ data }: { data: InvoiceDetailData }) {
             <TableBody>
               {items.map((it) => (
                 <TableRow key={it.id}>
-                  <TableCell>{it.description}</TableCell>
+                  <TableCell>
+                    <span className="block font-medium">{it.description}</span>
+                    {it.productName && (
+                      <span className="block text-xs text-muted-foreground">
+                        {it.productName}
+                      </span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-center">{it.quantity}</TableCell>
                   <TableCell className="text-left tabular-nums">
                     {formatCurrency(it.unitPrice)}
