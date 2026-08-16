@@ -11,6 +11,7 @@ import {
 } from "@/db/schema";
 import { dispatchWebhookEvent } from "./automation";
 import { notifyWorkspace } from "./notifications";
+import { dispatchRuleEvent } from "./rules";
 import { adjustStock } from "./inventory";
 import { warehouses } from "@/db/schema";
 import { products } from "@/db/schema";
@@ -380,6 +381,16 @@ export async function recordPayment(
   await dispatchWebhookEvent(workspaceId, "payment.recorded", {
     invoiceId,
     amount: input.amount,
+  });
+  dispatchRuleEvent(workspaceId, "invoice.payment_received", {
+    entityId: invoiceId,
+    invoiceId,
+    number: invoice.number,
+    amount: input.amount,
+    total: total,
+    status: newStatus,
+    contactId: invoice.contactId,
+    link: `/invoices/${invoiceId}`,
   });
   await notifyWorkspace({
     workspaceId,

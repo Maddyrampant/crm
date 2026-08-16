@@ -19,6 +19,7 @@ import {
   updateInvoiceStatus,
 } from "@/services/invoices";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { dispatchRuleEvent } from "@/services/rules";
 
 type Ctx = { params: Promise<{ slug: string[] }> };
 
@@ -272,6 +273,19 @@ export async function POST(req: NextRequest, { params }: Ctx) {
         customFields: parsed.data.customFields ?? {},
       })
       .returning();
+    dispatchRuleEvent(workspaceId, "contact.created", {
+      entityId: row.id,
+      contactId: row.id,
+      firstName: row.firstName,
+      lastName: row.lastName,
+      email: row.email,
+      phone: row.phone,
+      source: row.source,
+      lifecycleStage: row.lifecycleStage,
+      companyId: row.companyId,
+      ownerId: row.ownerId,
+      link: "/contacts",
+    });
     return json({ ok: true, data: row }, 201);
   }
 
@@ -401,6 +415,13 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     const contactId = await resolveContact(workspaceId, d.contactId);
     const wonAt =
       d.status === "won" ? new Date() : d.status === "open" ? null : undefined;
+    const before = (
+      await db
+        .select({ stageId: deals.stageId })
+        .from(deals)
+        .where(and(eq(deals.id, id), eq(deals.workspaceId, workspaceId)))
+        .limit(1)
+    )[0];
     const [row] = await db
       .update(deals)
       .set({
@@ -420,6 +441,21 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
       })
       .where(and(eq(deals.id, id), eq(deals.workspaceId, workspaceId)))
       .returning();
+    if (row && stage && before && before.stageId !== row.stageId) {
+      dispatchRuleEvent(workspaceId, "deal.stage_changed", {
+        entityId: row.id,
+        dealId: row.id,
+        title: row.title,
+        amount: Number(row.amount),
+        stageId: row.stageId,
+        fromStageId: before.stageId,
+        pipelineId: row.pipelineId,
+        contactId: row.contactId,
+        ownerId: row.ownerId,
+        status: row.status,
+        link: "/pipeline",
+      });
+    }
     return row ? json({ ok: true, data: row }) : json({ error: "Not found" }, 404);
   }
 

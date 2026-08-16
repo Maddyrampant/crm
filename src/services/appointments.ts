@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { activityLog, appointments } from "@/db/schema";
 import { dispatchWebhookEvent } from "./automation";
 import { createNotification } from "./notifications";
+import { dispatchRuleEvent } from "./rules";
 
 const appointmentSchema = z.object({
   title: z.string().trim().min(1, "عنوان را وارد کنید").max(200),
@@ -73,6 +74,16 @@ export async function createAppointment(
     data: { title: row.title },
   });
   dispatchWebhookEvent(workspaceId, "appointment.created", { id: row.id });
+  dispatchRuleEvent(workspaceId, "appointment.created", {
+    entityId: row.id,
+    appointmentId: row.id,
+    title: row.title,
+    type: row.type,
+    startsAt: row.startsAt.toISOString(),
+    contactId: row.contactId,
+    userId: row.userId,
+    link: "/calendar",
+  });
   if (row.userId) {
     await createNotification({
       workspaceId,

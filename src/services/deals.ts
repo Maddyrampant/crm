@@ -14,6 +14,7 @@ import {
 import { getActivityFeed } from "@/services/activity";
 import { dispatchWebhookEvent } from "@/services/automation";
 import { notifyWorkspace } from "@/services/notifications";
+import { dispatchRuleEvent } from "@/services/rules";
 
 const DEAL_SELECT = {
   deal: deals,
@@ -243,6 +244,21 @@ export async function updateDeal(
 
 /** انتقال دیل به مرحله دیگر (درگ‌اند‌دراپ کانبان). */
 export async function moveDeal(workspaceId: string, id: string, stageId: string) {
+  const [before] = await db
+    .select({
+      stageId: deals.stageId,
+      title: deals.title,
+      amount: deals.amount,
+      pipelineId: deals.pipelineId,
+      contactId: deals.contactId,
+      ownerId: deals.ownerId,
+      status: deals.status,
+    })
+    .from(deals)
+    .where(and(eq(deals.workspaceId, workspaceId), eq(deals.id, id)))
+    .limit(1);
+  if (!before || before.stageId === stageId) return null;
+
   const [deal] = await db
     .update(deals)
     .set({ stageId, updatedAt: new Date() })
@@ -254,6 +270,19 @@ export async function moveDeal(workspaceId: string, id: string, stageId: string)
       id: deal.id,
       pipelineId: deal.pipelineId,
       stageId: deal.stageId,
+    });
+    dispatchRuleEvent(workspaceId, "deal.stage_changed", {
+      entityId: deal.id,
+      dealId: deal.id,
+      title: deal.title,
+      amount: Number(deal.amount),
+      stageId: deal.stageId,
+      fromStageId: before.stageId,
+      pipelineId: deal.pipelineId,
+      contactId: deal.contactId,
+      ownerId: deal.ownerId,
+      status: deal.status,
+      link: "/pipeline",
     });
   }
   return deal ?? null;
@@ -292,6 +321,17 @@ export async function setDealOutcome(
     dispatchWebhookEvent(workspaceId, "deal.outcome_changed", {
       id: deal.id,
       status: deal.status,
+    });
+    dispatchRuleEvent(workspaceId, "deal.outcome_changed", {
+      entityId: deal.id,
+      dealId: deal.id,
+      title: deal.title,
+      amount: Number(deal.amount),
+      status: deal.status,
+      stageId: deal.stageId,
+      contactId: deal.contactId,
+      ownerId: deal.ownerId,
+      link: "/pipeline",
     });
   }
   return deal ?? null;

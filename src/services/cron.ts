@@ -5,6 +5,11 @@ import { db } from "@/db";
 import { invoices, workspaces } from "@/db/schema";
 import { listLowStock } from "./inventory";
 import { notifyWorkspace, processDueReminders } from "./notifications";
+import { dispatchRuleEvent } from "./rules";
+
+function num(v: string | null | undefined) {
+  return v ? Number(v) : 0;
+}
 
 export type DailyCronResult = {
   remindersProcessed: number;
@@ -21,6 +26,8 @@ export async function runDailyMaintenance(): Promise<DailyCronResult> {
       id: invoices.id,
       number: invoices.number,
       workspaceId: invoices.workspaceId,
+      contactId: invoices.contactId,
+      total: invoices.total,
     })
     .from(invoices)
     .where(and(eq(invoices.status, "sent"), lt(invoices.dueAt, new Date())))
@@ -31,6 +38,14 @@ export async function runDailyMaintenance(): Promise<DailyCronResult> {
       .update(invoices)
       .set({ status: "overdue", updatedAt: new Date() })
       .where(eq(invoices.id, row.id));
+    dispatchRuleEvent(row.workspaceId, "invoice.overdue", {
+      entityId: row.id,
+      invoiceId: row.id,
+      number: row.number,
+      total: num(row.total),
+      contactId: row.contactId,
+      link: `/invoices/${row.id}`,
+    });
     await notifyWorkspace({
       workspaceId: row.workspaceId,
       type: "invoice",
