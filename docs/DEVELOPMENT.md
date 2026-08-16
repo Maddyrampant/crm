@@ -82,7 +82,7 @@ src/
 │   └── format.ts         ← تاریخ/عدد فارسی
 ├── actions/              ← Server Actions (مستقیم از صفحات)
 ├── services/             ← لاجیک بیزینس
-└── middleware.ts         ← محدودسازی مسیر
+└── middleware.ts         ← (اختیاری) محدودسازی مسیر — فعلاً محافظت با requireWorkspace در هر صفحه است
 ```
 
 ## قراردادها
@@ -97,6 +97,34 @@ src/
 ## جریان کار (گیتب)
 
 1. از آخرین `main`: `git pull`
-2. شاخه کاری: `git checkout -b part1/sales-modules` (یا `part2/finance-ai`)
+2. شاخه کاری: `git checkout -b part1/sales-modules` (بخش ۱) یا `part2/finance-ai` (بخش ۲)
 3. کامیتهای کوچک Conventional
-4. PR به `main` → مرج با مجوز مالک فایلهای مشترک
+4. PR به `main` → CI خودکار (`lint` + `tsc` + `build`) روی PR اجرا میشود
+
+### ترتیب ادغام (مهم برای فایلهای مشترک)
+
+1. PR بخش ۲ (`part2/finance-ai` → شامل داشبورد، منو، فایلهای مشترک) **اول** به `main` مرج شود.
+2. شاخه بخش ۱ پس از آن روی `main` بهروز **rebase** شود تا `nav.ts` و... بدون تعارض ادغام شوند.
+3. هر تغییر فایل مشترک فقط در PR خودش، و با کامنت در PR تا طرف مقابل در جریان باشد.
+
+## چکلیست قبل از PR
+
+- [ ] فقط فایلهای در مالکیت خودم تغییر کردهاند (`docs/OWNERSHIP.md` را ببینید)
+- [ ] `pnpm lint` و `npx tsc --noEmit` و `pnpm build` سبز
+- [ ] همه اعداد/تاریخها با `src/lib/format.ts` فارسی فرمت شدهاند؛ رابط راستچین است
+- [ ] جهشهای مهم دیتابیس در `activityLog` ثبت شدهاند
+- [ ] هیچ رازی (کلید API/توکن) در کلاینت یا کامیت نیست
+- [ ] تغییر فایل مشترک (اگر هست) در کامنت PR توضیح داده شده
+- [ ] اسکرینشات صفحههای جدید در کامنت PR
+
+## CI (GitHub Actions)
+
+فایل `.github/workflows/ci.yml` روی هر PR به `main` اجرا میشود:
+
+- `pnpm install --frozen-lockfile`
+- `pnpm db:migrate` (با سرویس Postgres در CI)
+- `pnpm lint`
+- `npx tsc --noEmit`
+- `pnpm build`
+
+هر PR باید این مراحل را پاس کند تا قابلمرج باشد.

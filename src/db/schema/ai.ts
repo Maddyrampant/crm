@@ -43,6 +43,13 @@ export const aiMessages = pgTable("ai_messages", {
   role: aiRole("role").notNull(),
   content: text("content"),
   toolCalls: jsonb("tool_calls").$type<unknown[]>().default([]),
+  usage: jsonb("usage").$type<{
+    inputTokens?: number;
+    outputTokens?: number;
+    totalTokens?: number;
+    stepCount?: number;
+    finishReason?: string;
+  } | null>(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -76,3 +83,5 @@ export const aiToolRuns = pgTable("ai_tool_runs", {
 export type AiConversation = typeof aiConversations.$inferSelect;
 export type AiMessage = typeof aiMessages.$inferSelect;
 export type AiToolRun = typeof aiToolRuns.$inferSelect;
+export type AiRole = typeof aiMessages.$inferSelect["role"];
+export type ToolRunStatus = typeof aiToolRuns.$inferSelect["status"];
