@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { activityLog, appointments } from "@/db/schema";
 import { dispatchWebhookEvent } from "./automation";
+import { createNotification } from "./notifications";
 
 const appointmentSchema = z.object({
   title: z.string().trim().min(1, "عنوان را وارد کنید").max(200),
@@ -72,6 +73,17 @@ export async function createAppointment(
     data: { title: row.title },
   });
   dispatchWebhookEvent(workspaceId, "appointment.created", { id: row.id });
+  if (row.userId) {
+    await createNotification({
+      workspaceId,
+      userId: row.userId,
+      type: "appointment",
+      title: "قرار ملاقات جدید برای شما",
+      body: row.title,
+      link: "/calendar",
+      data: { appointmentId: row.id, startsAt: row.startsAt.toISOString() },
+    });
+  }
   return row;
 }
 

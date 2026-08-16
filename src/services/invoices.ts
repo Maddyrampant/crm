@@ -10,6 +10,7 @@ import {
   type InvoiceStatus,
 } from "@/db/schema";
 import { dispatchWebhookEvent } from "./automation";
+import { notifyWorkspace } from "./notifications";
 
 export const invoiceItemSchema = z.object({
   description: z.string().trim().min(1, "شرح مورد نیاز است"),
@@ -257,6 +258,14 @@ export async function recordPayment(
   await dispatchWebhookEvent(workspaceId, "payment.recorded", {
     invoiceId,
     amount: input.amount,
+  });
+  await notifyWorkspace({
+    workspaceId,
+    type: "payment",
+    title: "پرداخت جدید ثبت شد",
+    body: `مبلغ ${input.amount} برای فاکتور ${invoice.number} دریافت شد.`,
+    link: `/invoices/${invoiceId}`,
+    data: { amount: input.amount, method: input.method },
   });
 
   return { paid, total };
