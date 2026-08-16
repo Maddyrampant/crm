@@ -27,6 +27,7 @@
     "bidi-js": "^1.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "csv-parse": "^7.0.2",
     "date-fns": "^4.4.0",
     "date-fns-jalali": "4.4.0-0",
     "drizzle-orm": "^0.45.2",
