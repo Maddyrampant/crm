@@ -19,14 +19,18 @@ import {
   Workflow,
 } from "lucide-react";
 
+export type NavRole = "owner" | "admin" | "manager" | "seller" | "viewer";
+
 export type NavItem = {
   title: string;
   href: string;
   icon: LucideIcon;
-  /** مالک ماژول: shared | part1 | part2 — برای مستندات و کامنتهای PR */
+  /** مالک ماژول: shared | part1 | part2 — برای مستندات و کامنت‌های PR */
   owner: "shared" | "part1" | "part2";
   /** آیا صفحه هنوز ساخته شده؟ */
   ready: boolean;
+  /** حداقل نقش لازم برای نمایش آیتم در منو (اختیاری) */
+  minRole?: NavRole;
 };
 
 export type NavSection = {
@@ -192,6 +196,7 @@ export const navSections: NavSection[] = [
         icon: UserCog,
         owner: "part1",
         ready: true,
+        minRole: "admin",
       },
     ],
   },

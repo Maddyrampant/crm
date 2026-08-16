@@ -17,8 +17,16 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { navSections } from "@/config/nav";
+import { navSections, type NavRole } from "@/config/nav";
 import { WorkspaceSwitcher } from "@/components/layout/workspace-switcher";
+
+const ROLE_LEVEL: Record<NavRole, number> = {
+  viewer: 0,
+  seller: 1,
+  manager: 2,
+  admin: 3,
+  owner: 4,
+};
 
 function Brand() {
   return (
@@ -36,7 +44,7 @@ function Brand() {
   );
 }
 
-export function AppSidebar() {
+export function AppSidebar({ role }: { role: NavRole }) {
   const pathname = usePathname();
 
   return (
@@ -46,47 +54,53 @@ export function AppSidebar() {
         <WorkspaceSwitcher />
       </SidebarHeader>
       <SidebarContent>
-        {navSections.map((section) => (
-          <SidebarGroup key={section.title}>
-            <SidebarGroupLabel>{section.title}</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {section.items.map((item) => {
-                  const isActive =
-                    pathname === item.href ||
-                    (item.href !== "/" &&
-                      (pathname.startsWith(item.href) ||
-                        pathname.startsWith(`${item.href}/`)));
-                  return (
-                    <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={isActive}
-                        tooltip={item.title}
-                        className={cn(
-                          !item.ready && "opacity-60",
-                          isActive &&
-                            "border-e-2 border-primary bg-sidebar-accent pe-3"
-                        )}
-                      >
-                        <Link href={item.ready ? item.href : "#"}>
-                          <item.icon />
-                          <span>{item.title}</span>
-                          {!item.ready && (
-                            <SidebarMenuBadge className="text-[10px]">
-                              بهزودی
-                            </SidebarMenuBadge>
+        {navSections.map((section) => {
+          const items = section.items.filter((item) =>
+            item.minRole ? ROLE_LEVEL[role] >= ROLE_LEVEL[item.minRole] : true
+          );
+          if (items.length === 0) return null;
+          return (
+            <SidebarGroup key={section.title}>
+              <SidebarGroupLabel>{section.title}</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {items.map((item) => {
+                    const isActive =
+                      pathname === item.href ||
+                      (item.href !== "/" &&
+                        (pathname.startsWith(item.href) ||
+                          pathname.startsWith(`${item.href}/`)));
+                    return (
+                      <SidebarMenuItem key={item.href}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={isActive}
+                          tooltip={item.title}
+                          className={cn(
+                            !item.ready && "opacity-60",
+                            isActive &&
+                              "border-e-2 border-primary bg-sidebar-accent pe-3"
                           )}
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ))}
-      </SidebarContent>
+                        >
+                          <Link href={item.ready ? item.href : "#"}>
+                            <item.icon />
+                            <span>{item.title}</span>
+                            {!item.ready && (
+                              <SidebarMenuBadge className="text-[10px]">
+                                بهزودی
+                              </SidebarMenuBadge>
+                            )}
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            );
+          })}
+        </SidebarContent>
       <SidebarRail />
     </Sidebar>
   );
