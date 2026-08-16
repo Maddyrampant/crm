@@ -23,10 +23,22 @@ const listQuerySchema = z.object({
   stageId: z.string().nullable().optional(),
   status: z.enum(["open", "won", "lost"]).nullable().optional(),
   ownerId: z.string().nullable().optional(),
+  contactId: z.string().nullable().optional(),
+  closeDateFrom: z.string().nullable().optional(),
+  closeDateTo: z.string().nullable().optional(),
   search: z.string().trim().max(200).optional(),
   page: z.coerce.number().int().min(1).optional(),
   pageSize: z.coerce.number().int().min(1).max(100).optional(),
 });
+
+function parseDateOnly(value: string | null | undefined, endOfDay: boolean) {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  if (endOfDay) d.setHours(23, 59, 59, 999);
+  else d.setHours(0, 0, 0, 0);
+  return d;
+}
 
 async function getWorkspaceContext() {
   const session = await getSession();
@@ -56,9 +68,28 @@ export async function listDealsAction(input: unknown) {
   const result = await dealsService.listDeals({
     ...parsed.data,
     workspaceId: ctx.workspaceId,
+    closeDateFrom: parseDateOnly(parsed.data.closeDateFrom, false),
+    closeDateTo: parseDateOnly(parsed.data.closeDateTo, true),
   });
 
-  return { ok: true, data: result };
+  return {
+    ok: true,
+    data: {
+      items: result.items.map((r) =>
+        toDealRow({
+          ...r.deal,
+          stageName: r.stageName,
+          stageColor: r.stageColor,
+          contactName: r.contactName,
+          contactLastName: r.contactLastName,
+          contactEmail: r.contactEmail,
+          companyName: r.companyName,
+          ownerName: r.ownerName,
+        })
+      ),
+      total: result.total,
+    },
+  };
 }
 
 export async function createDealAction(input: unknown) {

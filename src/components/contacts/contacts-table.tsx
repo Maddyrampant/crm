@@ -56,6 +56,7 @@ import {
   exportContactsCsvAction,
 } from "@/actions/contacts";
 import { ContactFormDialog } from "@/components/contacts/contact-form-dialog";
+import { EmptyState } from "@/components/ui/empty-state";
 import { SOURCE_LABELS, STAGE_LABELS, STAGE_VARIANT } from "@/lib/labels";
 import { formatDate, formatNumber } from "@/lib/format";
 import type { ContactRow, CustomFieldRow, TagRow } from "@/lib/api-types";
@@ -193,7 +194,7 @@ export function ContactsTable({
 
   const totalPages = Math.max(1, Math.ceil(data.total / pageSize));
 
-  const sortIndicator = (col: "firstName" | "createdAt") => (
+  const sortIndicator = () => (
     <ChevronsUpDown className="size-3.5 text-muted-foreground" />
   );
 
@@ -323,7 +324,7 @@ export function ContactsTable({
                 <TableRow>
                   <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("firstName")}>
                     <span className="inline-flex items-center gap-1">
-                      نام {sortBy === "firstName" && sortIndicator("firstName")}
+                      نام {sortBy === "firstName" && sortIndicator()}
                     </span>
                   </TableHead>
                   <TableHead>شرکت</TableHead>
@@ -332,7 +333,7 @@ export function ContactsTable({
                   <TableHead>برچسب‌ها</TableHead>
                   <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("createdAt")}>
                     <span className="inline-flex items-center gap-1">
-                      تاریخ افزودن {sortBy === "createdAt" && sortIndicator("createdAt")}
+                      تاریخ افزودن {sortBy === "createdAt" && sortIndicator()}
                     </span>
                   </TableHead>
                   <TableHead className="w-12" />
@@ -341,8 +342,12 @@ export function ContactsTable({
               <TableBody>
                 {data.items.length === 0 && !isPending ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
-                      مشتری‌ای یافت نشد.
+                    <TableCell colSpan={7} className="border-0">
+                      <EmptyState
+                        icon={Search}
+                        title="مشتری‌ای یافت نشد"
+                        description="فیلتر یا جستجو را تغییر دهید یا مشتری جدید بسازید."
+                      />
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -466,7 +471,7 @@ export function ContactsTable({
                 <SelectContent>
                   {[10, 20, 50, 100].map((n) => (
                     <SelectItem key={n} value={String(n)}>
-                      {n} در هر صفحه
+                      {formatNumber(n)} در هر صفحه
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -477,7 +482,7 @@ export function ContactsTable({
                 disabled={page <= 1 || isPending}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
               >
-                <ChevronRight className="size-4 rtl:rotate-0" />
+                <ChevronRight className="size-4 ltr:rotate-180" />
               </Button>
               <span className="text-sm text-muted-foreground">
                 {formatNumber(page)} / {formatNumber(totalPages)}
@@ -488,7 +493,7 @@ export function ContactsTable({
                 disabled={page >= totalPages || isPending}
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               >
-                <ChevronLeft className="size-4 rtl:rotate-0" />
+                <ChevronLeft className="size-4 ltr:rotate-180" />
               </Button>
             </div>
           </div>

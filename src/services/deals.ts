@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, count, desc, eq, ilike, or, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, ilike, lte, or, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import {
   companies,
@@ -30,6 +30,11 @@ export type DealFilters = {
   stageId?: string | null;
   status?: Deal["status"] | null;
   ownerId?: string | null;
+  contactId?: string | null;
+  /** تاریخ شروع (شمول) — برای فیلتر بر اساس تاریخ بستن */
+  closeDateFrom?: Date | null;
+  /** تاریخ پایان (شمول) — برای فیلتر بر اساس تاریخ بستن */
+  closeDateTo?: Date | null;
   search?: string;
   page?: number;
   pageSize?: number;
@@ -44,6 +49,13 @@ export async function listDeals(filters: DealFilters) {
   if (filters.stageId) conditions.push(eq(deals.stageId, filters.stageId));
   if (filters.status) conditions.push(eq(deals.status, filters.status));
   if (filters.ownerId) conditions.push(eq(deals.ownerId, filters.ownerId));
+  if (filters.contactId) conditions.push(eq(deals.contactId, filters.contactId));
+  if (filters.closeDateFrom) {
+    conditions.push(gte(deals.closeDate, filters.closeDateFrom));
+  }
+  if (filters.closeDateTo) {
+    conditions.push(lte(deals.closeDate, filters.closeDateTo));
+  }
   if (filters.search?.trim()) {
     const q = `%${filters.search.trim()}%`;
     const searchCond = or(

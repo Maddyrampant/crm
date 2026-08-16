@@ -32,13 +32,13 @@ export function WorkspaceSwitcher() {
               ورک‌اسپیس من
             </span>
           </div>
-          <ChevronsUpDown className="ml-auto size-4" />
+          <ChevronsUpDown className="ms-auto size-4" />
         </SidebarMenuButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent
         className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
         align="start"
-        side={isMobile ? "bottom" : "right"}
+        side={isMobile ? "bottom" : "left"}
         sideOffset={4}
       >
         <DropdownMenuLabel className="text-xs text-muted-foreground">
