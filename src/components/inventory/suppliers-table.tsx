@@ -172,6 +172,7 @@ export function SuppliersTable({ initialData, canManage }: Props) {
       </Card>
 
       <SupplierFormDialog
+        key={editing?.id ?? "new"}
         open={formOpen}
         onOpenChange={setFormOpen}
         supplier={editing}
