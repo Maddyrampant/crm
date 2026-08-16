@@ -1,0 +1,746 @@
+import "server-only";
+
+import {
+  and,
+  desc,
+  eq,
+  ilike,
+  ne,
+  or,
+  sql,
+  type SQL,
+} from "drizzle-orm";
+import { z } from "zod";
+import { db } from "@/db";
+import {
+  productCategories,
+  products,
+  purchaseOrderItems,
+  purchaseOrders,
+  stockLevels,
+  stockMovements,
+  suppliers,
+  warehouses,
+  type StockMovementTypeEnum,
+} from "@/db/schema";
+import { notifyWorkspace } from "./notifications";
+import type { ProductWithStock } from "@/lib/inventory";
+
+const num = (v: string | number | null | undefined) => Number(v ?? 0);
+const round2 = (v: number) => Math.round(v * 100) / 100;
+const round3 = (v: number) => Math.round(v * 1000) / 1000;
+
+/* ─────────────────── کالاها ─────────────────── */
+
+export const productSchema = z.object({
+  name: z.string().trim().min(1, "نام کالا را وارد کنید").max(200),
+  sku: z.string().trim().min(1, "کد کالا را وارد کنید").max(100),
+  categoryId: z.string().nullable().optional(),
+  barcode: z.string().trim().max(100).nullable().optional(),
+  unit: z.string().trim().min(1).max(30).default("عدد"),
+  unitPrice: z.coerce.number().min(0).default(0),
+  costPrice: z.coerce.number().min(0).default(0),
+  taxable: z.boolean().default(true),
+  active: z.boolean().default(true),
+  notes: z.string().trim().max(2000).optional().default(""),
+});
+
+export type ProductInput = z.infer<typeof productSchema>;
+
+export type ProductFilters = {
+  workspaceId: string;
+  search?: string;
+  categoryId?: string | null;
+  active?: "active" | "inactive" | null;
+  page?: number;
+  pageSize?: number;
+};
+
+export async function listProducts(filters: ProductFilters) {
+  const page = Math.max(1, filters.page ?? 1);
+  const pageSize = Math.min(100, Math.max(1, filters.pageSize ?? 20));
+
+  const conditions: SQL[] = [eq(products.workspaceId, filters.workspaceId)];
+  if (filters.categoryId) conditions.push(eq(products.categoryId, filters.categoryId));
+  if (filters.active) conditions.push(eq(products.active, filters.active === "active"));
+  if (filters.search?.trim()) {
+    const q = `%${filters.search.trim()}%`;
+    conditions.push(
+      or(ilike(products.name, q), ilike(products.sku, q), ilike(products.barcode, q))!
+    );
+  }
+
+  const [rows, totalRow] = await Promise.all([
+    db
+      .select({
+        product: products,
+        categoryName: productCategories.name,
+        totalStock: sql<string>`coalesce(sum(${stockLevels.quantity}::numeric), 0)::text`,
+      })
+      .from(products)
+      .leftJoin(productCategories, eq(productCategories.id, products.categoryId))
+      .leftJoin(stockLevels, eq(stockLevels.productId, products.id))
+      .where(and(...conditions))
+      .groupBy(products.id, productCategories.name)
+      .orderBy(desc(products.createdAt))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize),
+    db
+      .select({ value: sql<number>`count(*)::int` })
+      .from(products)
+      .where(and(...conditions)),
+  ]);
+
+  const items: ProductWithStock[] = rows.map((r) => ({
+    ...r.product,
+    totalStock: num(r.totalStock),
+    categoryName: r.categoryName,
+  }));
+
+  return { items, total: Number(totalRow[0]?.value ?? 0) };
+}
+
+export async function getProduct(workspaceId: string, productId: string) {
+  const [row] = await db
+    .select({
+      product: products,
+      categoryName: productCategories.name,
+    })
+    .from(products)
+    .leftJoin(productCategories, eq(productCategories.id, products.categoryId))
+    .where(
+      and(eq(products.id, productId), eq(products.workspaceId, workspaceId))
+    )
+    .limit(1);
+  if (!row) return null;
+
+  const stockRows = await db
+    .select({ level: stockLevels, warehouseName: warehouses.name })
+    .from(stockLevels)
+    .leftJoin(warehouses, eq(warehouses.id, stockLevels.warehouseId))
+    .where(eq(stockLevels.productId, productId));
+
+  const movements = await db
+    .select()
+    .from(stockMovements)
+    .where(eq(stockMovements.productId, productId))
+    .orderBy(desc(stockMovements.createdAt))
+    .limit(20);
+
+  return {
+    ...row.product,
+    categoryName: row.categoryName,
+    stock: stockRows.map((s) => ({
+      ...s.level,
+      quantity: num(s.level.quantity),
+      warehouseName: s.warehouseName,
+    })),
+    totalStock: stockRows.reduce((acc, s) => acc + num(s.level.quantity), 0),
+    movements,
+  };
+}
+
+export async function createProduct(workspaceId: string, raw: unknown) {
+  const input = productSchema.parse(raw);
+  const existing = await db
+    .select({ id: products.id })
+    .from(products)
+    .where(
+      and(
+        eq(products.workspaceId, workspaceId),
+        eq(products.sku, input.sku)
+      )
+    )
+    .limit(1);
+  if (existing[0]) {
+    throw new Error("کد کالا (SKU) تکراری است");
+  }
+  const [row] = await db
+    .insert(products)
+    .values({
+      workspaceId,
+      name: input.name,
+      sku: input.sku,
+      categoryId: input.categoryId || null,
+      barcode: input.barcode || null,
+      unit: input.unit,
+      unitPrice: String(round2(input.unitPrice)),
+      costPrice: String(round2(input.costPrice)),
+      taxable: input.taxable,
+      active: input.active,
+      notes: input.notes || null,
+    })
+    .returning();
+  return row;
+}
+
+export async function updateProduct(
+  workspaceId: string,
+  productId: string,
+  raw: unknown
+) {
+  const input = productSchema.partial().parse(raw);
+  if (input.sku !== undefined) {
+    const existing = await db
+      .select({ id: products.id })
+      .from(products)
+      .where(
+        and(
+          eq(products.workspaceId, workspaceId),
+          eq(products.sku, input.sku),
+          ne(products.id, productId)
+        )
+      )
+      .limit(1);
+    if (existing[0]) throw new Error("کد کالا (SKU) تکراری است");
+  }
+  const [row] = await db
+    .update(products)
+    .set({
+      name: input.name,
+      sku: input.sku,
+      categoryId: input.categoryId !== undefined ? input.categoryId || null : undefined,
+      barcode: input.barcode,
+      unit: input.unit,
+      unitPrice: input.unitPrice !== undefined ? String(round2(input.unitPrice)) : undefined,
+      costPrice: input.costPrice !== undefined ? String(round2(input.costPrice)) : undefined,
+      taxable: input.taxable,
+      active: input.active,
+      notes: input.notes,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(products.id, productId), eq(products.workspaceId, workspaceId)))
+    .returning();
+  return row ?? null;
+}
+
+export async function deleteProduct(workspaceId: string, productId: string) {
+  const [row] = await db
+    .delete(products)
+    .where(and(eq(products.id, productId), eq(products.workspaceId, workspaceId)))
+    .returning({ id: products.id });
+  return row ?? null;
+}
+
+/* ─────────────────── دسته‌بندی‌ها ─────────────────── */
+
+export async function listProductCategories(workspaceId: string) {
+  const rows = await db
+    .select({
+      category: productCategories,
+      productCount: sql<number>`count(${products.id})::int`,
+    })
+    .from(productCategories)
+    .leftJoin(products, eq(products.categoryId, productCategories.id))
+    .where(eq(productCategories.workspaceId, workspaceId))
+    .groupBy(productCategories.id)
+    .orderBy(desc(productCategories.createdAt));
+  return rows.map((r) => ({ ...r.category, productCount: Number(r.productCount) }));
+}
+
+export async function createProductCategory(workspaceId: string, name: string) {
+  const clean = name.trim();
+  if (!clean) throw new Error("نام دسته‌بندی را وارد کنید");
+  const [row] = await db
+    .insert(productCategories)
+    .values({ workspaceId, name: clean })
+    .returning();
+  return row;
+}
+
+export async function deleteProductCategory(workspaceId: string, categoryId: string) {
+  const [row] = await db
+    .delete(productCategories)
+    .where(
+      and(
+        eq(productCategories.id, categoryId),
+        eq(productCategories.workspaceId, workspaceId)
+      )
+    )
+    .returning({ id: productCategories.id });
+  return row ?? null;
+}
+
+/* ─────────────────── انبارها ─────────────────── */
+
+export const warehouseSchema = z.object({
+  name: z.string().trim().min(1, "نام انبار را وارد کنید").max(120),
+  code: z.string().trim().max(50).optional().default(""),
+  location: z.string().trim().max(200).optional().default(""),
+  isDefault: z.boolean().default(false),
+  active: z.boolean().default(true),
+});
+
+export type WarehouseInput = z.infer<typeof warehouseSchema>;
+
+async function clearDefaultWarehouse(workspaceId: string, exceptId?: string) {
+  const conditions: SQL[] = [
+    eq(warehouses.workspaceId, workspaceId),
+    eq(warehouses.isDefault, true),
+  ];
+  if (exceptId) conditions.push(ne(warehouses.id, exceptId));
+  await db
+    .update(warehouses)
+    .set({ isDefault: false, updatedAt: new Date() })
+    .where(and(...conditions));
+}
+
+export async function listWarehouses(workspaceId: string) {
+  const rows = await db
+    .select({
+      warehouse: warehouses,
+      productCount: sql<number>`count(distinct ${stockLevels.productId})::int`,
+    })
+    .from(warehouses)
+    .leftJoin(stockLevels, eq(stockLevels.warehouseId, warehouses.id))
+    .where(eq(warehouses.workspaceId, workspaceId))
+    .groupBy(warehouses.id)
+    .orderBy(desc(warehouses.isDefault));
+  return rows.map((r) => ({
+    ...r.warehouse,
+    productCount: Number(r.productCount),
+  }));
+}
+
+export async function createWarehouse(workspaceId: string, raw: unknown) {
+  const input = warehouseSchema.parse(raw);
+  if (input.isDefault) await clearDefaultWarehouse(workspaceId);
+  const [row] = await db
+    .insert(warehouses)
+    .values({
+      workspaceId,
+      name: input.name,
+      code: input.code || null,
+      location: input.location || null,
+      isDefault: input.isDefault,
+      active: input.active,
+    })
+    .returning();
+  return row;
+}
+
+export async function updateWarehouse(
+  workspaceId: string,
+  warehouseId: string,
+  raw: unknown
+) {
+  const input = warehouseSchema.partial().parse(raw);
+  if (input.isDefault) await clearDefaultWarehouse(workspaceId, warehouseId);
+  const [row] = await db
+    .update(warehouses)
+    .set({
+      name: input.name,
+      code: input.code,
+      location: input.location,
+      isDefault: input.isDefault,
+      active: input.active,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(warehouses.id, warehouseId),
+        eq(warehouses.workspaceId, workspaceId)
+      )
+    )
+    .returning();
+  return row ?? null;
+}
+
+export async function deleteWarehouse(workspaceId: string, warehouseId: string) {
+  const [row] = await db
+    .delete(warehouses)
+    .where(
+      and(
+        eq(warehouses.id, warehouseId),
+        eq(warehouses.workspaceId, workspaceId)
+      )
+    )
+    .returning({ id: warehouses.id });
+  return row ?? null;
+}
+
+/* ─────────────────── موجودی ─────────────────── */
+
+export type AdjustStockInput = {
+  productId: string;
+  warehouseId: string;
+  quantity: number;
+  type: StockMovementTypeEnum;
+  reference?: string;
+  notes?: string;
+};
+
+/** تغییر موجودی یک کالا در یک انبار (مقدار مثبت = ورود، منفی = خروج) + ثبت گردش. */
+export async function adjustStock(
+  workspaceId: string,
+  userId: string | null,
+  input: AdjustStockInput
+) {
+  const qty = round3(input.quantity);
+  if (qty === 0) return null;
+
+  const [existing] = await db
+    .select()
+    .from(stockLevels)
+    .where(
+      and(
+        eq(stockLevels.productId, input.productId),
+        eq(stockLevels.warehouseId, input.warehouseId)
+      )
+    )
+    .limit(1);
+
+  const prevTotal = existing ? num(existing.quantity) : 0;
+  const newTotal = round3(prevTotal + qty);
+
+  if (existing) {
+    await db
+      .update(stockLevels)
+      .set({ quantity: String(newTotal), updatedAt: new Date() })
+      .where(eq(stockLevels.id, existing.id));
+  } else {
+    await db.insert(stockLevels).values({
+      workspaceId,
+      productId: input.productId,
+      warehouseId: input.warehouseId,
+      quantity: String(newTotal),
+    });
+  }
+
+  await db.insert(stockMovements).values({
+    workspaceId,
+    productId: input.productId,
+    warehouseId: input.warehouseId,
+    type: input.type,
+    quantity: String(qty),
+    reference: input.reference ?? null,
+    notes: input.notes ?? null,
+    userId,
+  });
+
+  await checkLowStock(workspaceId, input.productId, prevTotal);
+  return { prevTotal, newTotal };
+}
+
+/** بررسی کسری موجودی نسبت به نقطه سفارش مجدد — فقط هنگام عبور از آستانه اعلان می‌دهد. */
+async function checkLowStock(
+  workspaceId: string,
+  productId: string,
+  prevTotal: number
+) {
+  const [agg] = await db
+    .select({
+      total: sql<string>`coalesce(sum(${stockLevels.quantity}::numeric), 0)::text`,
+    })
+    .from(stockLevels)
+    .where(eq(stockLevels.productId, productId));
+  const total = num(agg?.total);
+
+  const [level] = await db
+    .select({ reorderLevel: stockLevels.reorderLevel })
+    .from(stockLevels)
+    .where(eq(stockLevels.productId, productId))
+    .limit(1);
+
+  if (!level?.reorderLevel) return;
+  const threshold = num(level.reorderLevel);
+  if (prevTotal > threshold && total <= threshold) {
+    const [product] = await db
+      .select({ name: products.name })
+      .from(products)
+      .where(eq(products.id, productId))
+      .limit(1);
+    await notifyWorkspace({
+      workspaceId,
+      type: "system",
+      title: "موجودی کالا کمتر از حد مجاز شد",
+      body: `موجودی «${product?.name ?? ""}» به ${total} رسید.`,
+      link: "/products",
+      data: { productId, total },
+    });
+  }
+}
+
+/** موجودی هر کالا به‌تفکیک انبار. */
+export async function getStockLevels(workspaceId: string, productId: string) {
+  return db
+    .select({ level: stockLevels, warehouseName: warehouses.name })
+    .from(stockLevels)
+    .leftJoin(warehouses, eq(warehouses.id, stockLevels.warehouseId))
+    .where(
+      and(
+        eq(stockLevels.productId, productId),
+        eq(stockLevels.workspaceId, workspaceId)
+      )
+    )
+    .orderBy(warehouses.isDefault);
+}
+
+/** کالاهایی که موجودی آن‌ها کمتر/مساوی نقطه سفارش مجدد است. */
+export async function listLowStock(workspaceId: string, limit = 50) {
+  const rows = await db
+    .select({
+      product: products,
+      totalStock: sql<string>`coalesce(sum(${stockLevels.quantity}::numeric), 0)::text`,
+    })
+    .from(stockLevels)
+    .innerJoin(products, eq(products.id, stockLevels.productId))
+    .where(
+      and(
+        eq(stockLevels.workspaceId, workspaceId),
+        sql`${stockLevels.reorderLevel} is not null`
+      )
+    )
+    .groupBy(products.id)
+    .having(
+      sql`coalesce(sum(${stockLevels.quantity}::numeric), 0) <= min(${stockLevels.reorderLevel}::numeric)`
+    )
+    .orderBy(sql`coalesce(sum(${stockLevels.quantity}::numeric), 0)`)
+    .limit(limit);
+  return rows.map((r) => ({
+    ...r.product,
+    totalStock: num(r.totalStock),
+  })) as ProductWithStock[];
+}
+
+/* ─────────────────── تأمین‌کنندگان ─────────────────── */
+
+export const supplierSchema = z.object({
+  name: z.string().trim().min(1, "نام تأمین‌کننده را وارد کنید").max(200),
+  contactName: z.string().trim().max(120).optional().default(""),
+  phone: z.string().trim().max(30).optional().default(""),
+  email: z.string().trim().max(200).optional().default(""),
+  address: z.string().trim().max(300).optional().default(""),
+  notes: z.string().trim().max(2000).optional().default(""),
+});
+
+export type SupplierInput = z.infer<typeof supplierSchema>;
+
+export async function listSuppliers(workspaceId: string) {
+  return db
+    .select()
+    .from(suppliers)
+    .where(eq(suppliers.workspaceId, workspaceId))
+    .orderBy(desc(suppliers.createdAt));
+}
+
+export async function createSupplier(workspaceId: string, raw: unknown) {
+  const input = supplierSchema.parse(raw);
+  const [row] = await db
+    .insert(suppliers)
+    .values({
+      workspaceId,
+      name: input.name,
+      contactName: input.contactName || null,
+      phone: input.phone || null,
+      email: input.email || null,
+      address: input.address || null,
+      notes: input.notes || null,
+    })
+    .returning();
+  return row;
+}
+
+export async function updateSupplier(
+  workspaceId: string,
+  supplierId: string,
+  raw: unknown
+) {
+  const input = supplierSchema.partial().parse(raw);
+  const [row] = await db
+    .update(suppliers)
+    .set({
+      name: input.name,
+      contactName: input.contactName,
+      phone: input.phone,
+      email: input.email,
+      address: input.address,
+      notes: input.notes,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(suppliers.id, supplierId),
+        eq(suppliers.workspaceId, workspaceId)
+      )
+    )
+    .returning();
+  return row ?? null;
+}
+
+export async function deleteSupplier(workspaceId: string, supplierId: string) {
+  const [row] = await db
+    .delete(suppliers)
+    .where(
+      and(
+        eq(suppliers.id, supplierId),
+        eq(suppliers.workspaceId, workspaceId)
+      )
+    )
+    .returning({ id: suppliers.id });
+  return row ?? null;
+}
+
+/* ─────────────────── سفارش خرید ─────────────────── */
+
+const purchaseOrderItemSchema = z.object({
+  productId: z.string().min(1, "کالا را انتخاب کنید"),
+  quantity: z.coerce.number().positive("تعداد باید مثبت باشد").default(1),
+  unitPrice: z.coerce.number().min(0).default(0),
+});
+
+export const purchaseOrderSchema = z.object({
+  supplierId: z.string().nullable().optional(),
+  expectedAt: z.string().datetime({ offset: true }).nullable().optional(),
+  notes: z.string().trim().max(2000).optional().default(""),
+  items: z.array(purchaseOrderItemSchema).min(1, "حداقل یک آیتم لازم است"),
+});
+
+export type PurchaseOrderInput = z.infer<typeof purchaseOrderSchema>;
+
+async function nextPurchaseOrderNumber(workspaceId: string) {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(purchaseOrders)
+    .where(eq(purchaseOrders.workspaceId, workspaceId));
+  return `PO-${String((row?.count ?? 0) + 1).padStart(5, "0")}`;
+}
+
+export async function listPurchaseOrders(workspaceId: string) {
+  const rows = await db
+    .select({
+      order: purchaseOrders,
+      supplierName: suppliers.name,
+      itemCount: sql<number>`count(${purchaseOrderItems.id})::int`,
+    })
+    .from(purchaseOrders)
+    .leftJoin(suppliers, eq(suppliers.id, purchaseOrders.supplierId))
+    .leftJoin(purchaseOrderItems, eq(purchaseOrderItems.purchaseOrderId, purchaseOrders.id))
+    .where(eq(purchaseOrders.workspaceId, workspaceId))
+    .groupBy(purchaseOrders.id, suppliers.name)
+    .orderBy(desc(purchaseOrders.createdAt));
+  return rows.map((r) => ({
+    ...r.order,
+    supplierName: r.supplierName,
+    itemCount: Number(r.itemCount),
+  }));
+}
+
+export async function getPurchaseOrder(workspaceId: string, orderId: string) {
+  const [row] = await db
+    .select({ order: purchaseOrders, supplierName: suppliers.name })
+    .from(purchaseOrders)
+    .leftJoin(suppliers, eq(suppliers.id, purchaseOrders.supplierId))
+    .where(
+      and(eq(purchaseOrders.id, orderId), eq(purchaseOrders.workspaceId, workspaceId))
+    )
+    .limit(1);
+  if (!row) return null;
+
+  const items = await db
+    .select({
+      item: purchaseOrderItems,
+      productName: products.name,
+      unit: products.unit,
+    })
+    .from(purchaseOrderItems)
+    .leftJoin(products, eq(products.id, purchaseOrderItems.productId))
+    .where(eq(purchaseOrderItems.purchaseOrderId, orderId));
+  return { ...row.order, supplierName: row.supplierName, items };
+}
+
+export async function createPurchaseOrder(
+  workspaceId: string,
+  raw: unknown
+) {
+  const input = purchaseOrderSchema.parse(raw);
+  const number = await nextPurchaseOrderNumber(workspaceId);
+  const [order] = await db
+    .insert(purchaseOrders)
+    .values({
+      workspaceId,
+      supplierId: input.supplierId || null,
+      number,
+      status: "draft",
+      expectedAt: input.expectedAt ? new Date(input.expectedAt) : null,
+      notes: input.notes || null,
+    })
+    .returning();
+
+  await db.insert(purchaseOrderItems).values(
+    input.items.map((it) => ({
+      purchaseOrderId: order.id,
+      productId: it.productId,
+      quantity: String(round3(it.quantity)),
+      unitPrice: String(round2(it.unitPrice)),
+    }))
+  );
+  return order;
+}
+
+export async function updatePurchaseOrderStatus(
+  workspaceId: string,
+  userId: string | null,
+  orderId: string,
+  status: "draft" | "ordered" | "received" | "cancelled"
+) {
+  const [order] = await db
+    .select()
+    .from(purchaseOrders)
+    .where(
+      and(eq(purchaseOrders.id, orderId), eq(purchaseOrders.workspaceId, workspaceId))
+    )
+    .limit(1);
+  if (!order) return null;
+
+  const [updated] = await db
+    .update(purchaseOrders)
+    .set({ status, updatedAt: new Date() })
+    .where(eq(purchaseOrders.id, orderId))
+    .returning();
+
+  if (status === "received" && order.status !== "received") {
+    const items = await db
+      .select()
+      .from(purchaseOrderItems)
+      .where(eq(purchaseOrderItems.purchaseOrderId, orderId));
+
+    const [defaultWh] = await db
+      .select({ id: warehouses.id })
+      .from(warehouses)
+      .where(
+        and(
+          eq(warehouses.workspaceId, workspaceId),
+          eq(warehouses.isDefault, true)
+        )
+      )
+      .limit(1);
+    if (defaultWh) {
+      for (const it of items) {
+        if (!it.productId) continue;
+        await adjustStock(
+          workspaceId,
+          userId,
+          {
+            productId: it.productId,
+            warehouseId: defaultWh.id,
+            quantity: num(it.quantity),
+            type: "purchase",
+            reference: order.number,
+          }
+        );
+      }
+    }
+  }
+  return updated;
+}
+
+export async function deletePurchaseOrder(workspaceId: string, orderId: string) {
+  const [row] = await db
+    .delete(purchaseOrders)
+    .where(
+      and(eq(purchaseOrders.id, orderId), eq(purchaseOrders.workspaceId, workspaceId))
+    )
+    .returning({ id: purchaseOrders.id });
+  return row ?? null;
+}

@@ -8,3 +8,4 @@ export * from "./activity";
 export * from "./automation";
 export * from "./ai";
 export * from "./notifications";
+export * from "./inventory";

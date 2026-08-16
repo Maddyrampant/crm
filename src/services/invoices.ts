@@ -11,8 +11,11 @@ import {
 } from "@/db/schema";
 import { dispatchWebhookEvent } from "./automation";
 import { notifyWorkspace } from "./notifications";
+import { adjustStock } from "./inventory";
+import { warehouses } from "@/db/schema";
 
 export const invoiceItemSchema = z.object({
+  productId: z.string().nullable().optional(),
   description: z.string().trim().min(1, "شرح مورد نیاز است"),
   quantity: z.coerce.number().positive().default(1),
   unitPrice: z.coerce.number().min(0).default(0),
@@ -57,6 +60,48 @@ async function logActivity(
     userId,
     data,
   });
+}
+
+/** کسر موجودی کالاهای فاکتور هنگام ارسال (و برگشت آن هنگام لغو). */
+async function adjustStockForInvoice(
+  workspaceId: string,
+  userId: string | null,
+  invoiceId: string,
+  direction: 1 | -1
+) {
+  const [wh] = await db
+    .select({ id: warehouses.id })
+    .from(warehouses)
+    .where(
+      and(eq(warehouses.workspaceId, workspaceId), eq(warehouses.isDefault, true))
+    )
+    .limit(1);
+  if (!wh) return;
+
+  const [invoice] = await db
+    .select({ number: invoices.number })
+    .from(invoices)
+    .where(eq(invoices.id, invoiceId))
+    .limit(1);
+
+  const items = await db
+    .select()
+    .from(invoiceItems)
+    .where(eq(invoiceItems.invoiceId, invoiceId));
+  for (const it of items) {
+    if (!it.productId) continue;
+    await adjustStock(
+      workspaceId,
+      userId,
+      {
+        productId: it.productId,
+        warehouseId: wh.id,
+        quantity: direction * num(it.quantity),
+        type: direction < 0 ? "sale" : "return",
+        reference: invoice?.number,
+      }
+    );
+  }
 }
 
 export async function listInvoices(workspaceId: string) {
@@ -141,6 +186,7 @@ export async function createInvoice(
     const tax = round2(line * num(it.taxRate) / 100);
     total = round2(total + line + tax);
     return {
+      productId: it.productId || null,
       description: it.description,
       quantity: String(it.quantity),
       unitPrice: String(it.unitPrice),
@@ -188,12 +234,31 @@ export async function updateInvoiceStatus(
   invoiceId: string,
   status: InvoiceStatus
 ) {
+  const [existing] = await db
+    .select({ id: invoices.id, status: invoices.status })
+    .from(invoices)
+    .where(and(eq(invoices.id, invoiceId), eq(invoices.workspaceId, workspaceId)))
+    .limit(1);
+  if (!existing) return null;
+  const prevStatus = existing.status;
+
   const [invoice] = await db
     .update(invoices)
     .set({ status, updatedAt: new Date() })
-    .where(and(eq(invoices.id, invoiceId), eq(invoices.workspaceId, workspaceId)))
+    .where(eq(invoices.id, invoiceId))
     .returning();
   if (!invoice) return null;
+
+  if (prevStatus !== status) {
+    if (status === "sent" && prevStatus !== "sent") {
+      await adjustStockForInvoice(workspaceId, userId, invoiceId, -1);
+    } else if (
+      status === "cancelled" &&
+      (prevStatus === "sent" || prevStatus === "paid")
+    ) {
+      await adjustStockForInvoice(workspaceId, userId, invoiceId, 1);
+    }
+  }
 
   await logActivity(workspaceId, userId, "invoice.status_changed", invoiceId, {
     status,
