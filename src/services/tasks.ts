@@ -12,6 +12,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { activityLog, tasks } from "@/db/schema";
 import { dispatchWebhookEvent } from "./automation";
+import { createNotification } from "./notifications";
 
 const taskSchema = z.object({
   title: z.string().trim().min(1, "عنوان را وارد کنید").max(200),
@@ -84,6 +85,17 @@ export async function createTask(workspaceId: string, userId: string, raw: unkno
     data: { title: row.title },
   });
   dispatchWebhookEvent(workspaceId, "task.created", { id: row.id });
+  if (row.userId) {
+    await createNotification({
+      workspaceId,
+      userId: row.userId,
+      type: "task",
+      title: "تسک جدید به شما واگذار شد",
+      body: row.title,
+      link: "/calendar",
+      data: { taskId: row.id, priority: row.priority },
+    });
+  }
   return row;
 }
 

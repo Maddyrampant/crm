@@ -7,6 +7,7 @@ import {
   activityLog,
   type AiRole,
 } from "@/db/schema";
+import { notifyWorkspace } from "@/services/notifications";
 
 export async function listConversations(workspaceId: string, userId: string) {
   return db
@@ -139,6 +140,15 @@ export async function requestToolRun(
       status: "awaiting_confirmation",
     })
     .returning();
+
+  await notifyWorkspace({
+    workspaceId,
+    type: "ai",
+    title: "درخواست تأیید ابزار هوش مصنوعی",
+    body: `دستیار هوش مصنوعی درخواست «${toolName}» دارد و منتظر تأیید شماست.`,
+    link: "/assistant",
+    data: { toolName, toolRunId: row.id },
+  });
   return row;
 }
 
