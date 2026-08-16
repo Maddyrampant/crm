@@ -2,12 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Sparkles, Zap } from "lucide-react";
+import { Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -88,23 +87,6 @@ export function AppSidebar() {
           </SidebarGroup>
         ))}
       </SidebarContent>
-      <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              tooltip="دستیار هوشمند"
-              className="opacity-60"
-            >
-              <Link href="#" aria-disabled>
-                <Sparkles />
-                <span>دستیار هوشمند</span>
-                <SidebarMenuBadge>بهزودی</SidebarMenuBadge>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   );
