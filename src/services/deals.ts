@@ -12,6 +12,7 @@ import {
   type Deal,
 } from "@/db/schema";
 import { getActivityFeed } from "@/services/activity";
+import { notifyWorkspace } from "@/services/notifications";
 
 const DEAL_SELECT = {
   deal: deals,
@@ -254,6 +255,17 @@ export async function setDealOutcome(
     })
     .where(and(eq(deals.workspaceId, workspaceId), eq(deals.id, id)))
     .returning();
+
+  if (deal?.status === "won") {
+    await notifyWorkspace({
+      workspaceId,
+      type: "deal",
+      title: "فرصت فروش به برد رسید",
+      body: `فرصت «${deal.title}» با موفقیت بسته شد.`,
+      link: "/pipeline",
+      data: { dealId: deal.id, amount: Number(deal.amount) },
+    });
+  }
 
   return deal ?? null;
 }
