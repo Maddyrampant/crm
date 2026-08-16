@@ -12,6 +12,7 @@ import {
   type Deal,
 } from "@/db/schema";
 import { getActivityFeed } from "@/services/activity";
+import { dispatchWebhookEvent } from "@/services/automation";
 import { notifyWorkspace } from "@/services/notifications";
 
 const DEAL_SELECT = {
@@ -212,6 +213,7 @@ export async function createDeal(workspaceId: string, input: DealInput) {
     })
     .returning();
 
+  dispatchWebhookEvent(workspaceId, "deal.created", { id: deal.id });
   return deal;
 }
 
@@ -247,6 +249,13 @@ export async function moveDeal(workspaceId: string, id: string, stageId: string)
     .where(and(eq(deals.workspaceId, workspaceId), eq(deals.id, id)))
     .returning();
 
+  if (deal) {
+    dispatchWebhookEvent(workspaceId, "deal.stage_changed", {
+      id: deal.id,
+      pipelineId: deal.pipelineId,
+      stageId: deal.stageId,
+    });
+  }
   return deal ?? null;
 }
 
@@ -279,6 +288,12 @@ export async function setDealOutcome(
     });
   }
 
+  if (deal) {
+    dispatchWebhookEvent(workspaceId, "deal.outcome_changed", {
+      id: deal.id,
+      status: deal.status,
+    });
+  }
   return deal ?? null;
 }
 
@@ -288,5 +303,8 @@ export async function deleteDeal(workspaceId: string, id: string) {
     .where(and(eq(deals.workspaceId, workspaceId), eq(deals.id, id)))
     .returning({ id: deals.id });
 
+  if (deleted) {
+    dispatchWebhookEvent(workspaceId, "deal.deleted", { id: deleted.id });
+  }
   return deleted ?? null;
 }
