@@ -82,14 +82,17 @@ export function ProductFormDialog({
     const payload = {
       name: form.name,
       sku: form.sku,
-      categoryId: form.categoryId || null,
+      categoryId:
+        form.categoryId && form.categoryId !== "no-category"
+          ? form.categoryId
+          : null,
       unit: form.unit,
       unitPrice: Number(form.unitPrice) || 0,
       costPrice: Number(form.costPrice) || 0,
       taxable: form.taxable,
       active: form.active,
       barcode: form.barcode || null,
-      notes: form.notes || null,
+      notes: form.notes,
     };
 
     try {

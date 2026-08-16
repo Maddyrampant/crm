@@ -191,6 +191,7 @@ export function WarehousesTable({ initialData, canManage }: Props) {
       </Card>
 
       <WarehouseFormDialog
+        key={editing?.id ?? "new"}
         open={formOpen}
         onOpenChange={setFormOpen}
         warehouse={editing}

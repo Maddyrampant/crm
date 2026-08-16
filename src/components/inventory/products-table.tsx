@@ -348,6 +348,7 @@ export function ProductsTable({ initialData, categories, canManage }: Props) {
       </Card>
 
       <ProductFormDialog
+        key={editing?.id ?? "new"}
         open={formOpen}
         onOpenChange={setFormOpen}
         product={editing}

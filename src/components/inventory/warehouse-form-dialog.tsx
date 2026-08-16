@@ -59,8 +59,8 @@ export function WarehouseFormDialog({
 
     const payload = {
       name: form.name,
-      code: form.code || null,
-      location: form.location || null,
+      code: form.code,
+      location: form.location,
       isDefault: form.isDefault,
       active: form.active,
     };
