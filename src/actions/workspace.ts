@@ -1,11 +1,18 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { getSession } from "@/lib/session";
+import { getSession, requireWorkspaceRole } from "@/lib/session";
 import { db } from "@/db";
 import { workspaces, workspaceMembers } from "@/db/schema";
+import {
+  addWorkspaceMember,
+  removeWorkspaceMember,
+  updateMemberRole,
+  type EditableRole,
+} from "@/services/workspace";
 
 const createWorkspaceSchema = z.object({
   name: z.string().trim().min(1, "نام ورک‌اسپیس را وارد کنید").max(60),
@@ -58,4 +65,42 @@ export async function createWorkspaceAction(
   });
 
   redirect("/");
+}
+
+const MEMBER_ROLE_VALUES = ["admin", "manager", "seller", "viewer"] as const;
+
+const addMemberSchema = z.object({
+  email: z.string().trim().email("ایمیل معتبر نیست"),
+  role: z.enum(MEMBER_ROLE_VALUES),
+});
+
+export async function addWorkspaceMemberAction(raw: unknown) {
+  const { user, workspaceId } = await requireWorkspaceRole("admin");
+  const input = addMemberSchema.parse(raw);
+  await addWorkspaceMember(workspaceId, input.email, input.role as EditableRole);
+  revalidatePath("/settings");
+  revalidatePath("/settings/team");
+  return { ok: true, actorName: user.name };
+}
+
+export async function updateMemberRoleAction(
+  userId: string,
+  role: EditableRole
+) {
+  const { user, workspaceId } = await requireWorkspaceRole("admin");
+  if (!MEMBER_ROLE_VALUES.includes(role as (typeof MEMBER_ROLE_VALUES)[number])) {
+    throw new Error("نقش نامعتبر است");
+  }
+  await updateMemberRole(workspaceId, user.id, userId, role);
+  revalidatePath("/settings");
+  revalidatePath("/settings/team");
+  return { ok: true };
+}
+
+export async function removeWorkspaceMemberAction(userId: string) {
+  const { user, workspaceId } = await requireWorkspaceRole("admin");
+  await removeWorkspaceMember(workspaceId, user.id, userId);
+  revalidatePath("/settings");
+  revalidatePath("/settings/team");
+  return { ok: true };
 }
