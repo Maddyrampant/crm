@@ -84,13 +84,6 @@ export async function POST(req: NextRequest) {
 
   const ctx = { workspaceId, userId, conversationId: convId };
 
-  if (requestedModel) {
-    await db
-      .update(aiConversations)
-      .set({ model: requestedModel })
-      .where(eq(aiConversations.id, convId));
-  }
-
   // بارگذاری مجدد تاریخچه تا پیام جاری کاربر هم در پرامپت مدل باشد
   // (در غیر این صورت در اولین پیام، messages خالی و مدل خطا میدهد)
   const updatedHistory = await getConversation(workspaceId, convId);
@@ -134,6 +127,12 @@ export async function POST(req: NextRequest) {
   const uiStream = toUIMessageStream({
     stream: result.stream,
     tools: { ...readTools(ctx), ...writeTools(ctx) },
+    messageMetadata: ({ part }) => {
+      if (part.type === "finish") {
+        return { usage: part.totalUsage, finishReason: part.finishReason };
+      }
+      return undefined;
+    },
   });
 
   return createUIMessageStreamResponse({ stream: uiStream });
