@@ -277,6 +277,56 @@ export async function updateInvoiceStatus(
   return invoice;
 }
 
+/** تبدیل پیش‌فاکتور (draft) به فاکتور رسمی (sent): کسر موجودی + ثبت خودکار در activityLog. */
+export async function convertInvoice(
+  workspaceId: string,
+  userId: string | null,
+  invoiceId: string
+): Promise<{ ok: true; invoice: typeof invoices.$inferSelect } | { ok: false; error: string }> {
+  const [invoice] = await db
+    .select()
+    .from(invoices)
+    .where(and(eq(invoices.id, invoiceId), eq(invoices.workspaceId, workspaceId)))
+    .limit(1);
+  if (!invoice) {
+    return { ok: false, error: "فاکتور یافت نشد" };
+  }
+  if (invoice.status !== "draft") {
+    return { ok: false, error: "فقط پیش‌فاکتور (وضعیت پیش‌نویس) قابل تبدیل به فاکتور است" };
+  }
+
+  const [countRow] = await db
+    .select({ count: sql<string>`count(*)::int` })
+    .from(invoiceItems)
+    .where(eq(invoiceItems.invoiceId, invoiceId));
+  if (!countRow || Number(countRow.count) === 0) {
+    return { ok: false, error: "پیش‌فاکتور بدون آیتم قابل صدور نیست" };
+  }
+
+  const sent = await updateInvoiceStatus(workspaceId, userId, invoiceId, "sent");
+  if (!sent) {
+    return { ok: false, error: "تبدیل فاکتور انجام نشد" };
+  }
+
+  await logActivity(workspaceId, userId, "invoice.converted", invoiceId, {
+    from: "draft",
+    to: "sent",
+  });
+  await dispatchWebhookEvent(workspaceId, "invoice.converted", {
+    id: invoice.id,
+    number: invoice.number,
+  });
+  await notifyWorkspace({
+    workspaceId,
+    type: "invoice",
+    title: "پیش‌فاکتور به فاکتور تبدیل شد",
+    body: `پیش‌فاکتور ${invoice.number} رسماً به فاکتور تبدیل و صادر شد.`,
+    link: `/invoices/${invoice.id}`,
+  });
+
+  return { ok: true, invoice: sent };
+}
+
 export async function recordPayment(
   workspaceId: string,
   userId: string | null,
