@@ -1,17 +1,15 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { toast } from "sonner";
-import { ChevronLeft, Loader2, Pencil, Plus, Send } from "lucide-react";
+import { ChevronLeft, Pencil, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { addNoteAction } from "@/actions/contacts";
 import { ContactFormDialog } from "@/components/contacts/contact-form-dialog";
+import { NotesPanel } from "@/components/notes/notes-panel";
 import {
   ACTION_LABELS,
   ENTITY_LABELS,
@@ -44,26 +42,6 @@ export function ContactDetail({
   canManage,
 }: Props) {
   const [formOpen, setFormOpen] = useState(false);
-  const [noteText, setNoteText] = useState("");
-  const [isPending, startTransition] = useTransition();
-
-  function handleAddNote() {
-    if (!noteText.trim()) return;
-    startTransition(async () => {
-      const result = await addNoteAction({
-        entityType: "contact",
-        entityId: contact.id,
-        body: noteText.trim(),
-      });
-      if (!result.ok) {
-        toast.error(result.error);
-        return;
-      }
-      setNoteText("");
-      toast.success("یادداشت ذخیره شد");
-      window.location.reload();
-    });
-  }
 
   return (
     <div className="space-y-4">
@@ -244,34 +222,7 @@ export function ContactDetail({
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">یادداشت‌ها</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex gap-2">
-                <Input
-                  value={noteText}
-                  onChange={(e) => setNoteText(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleAddNote()}
-                  placeholder="یادداشت جدید..."
-                />
-                <Button size="icon" onClick={handleAddNote} disabled={isPending}>
-                  {isPending ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Send className="size-4" />
-                  )}
-                </Button>
-              </div>
-              {contact.notes && (
-                <p className="rounded-lg border bg-muted/30 p-3 text-sm">{contact.notes}</p>
-              )}
-              <p className="text-xs text-muted-foreground">
-                یادداشت‌های «گفتگو» در این بخش نمایش داده می‌شوند.
-              </p>
-            </CardContent>
-          </Card>
+          <NotesPanel entityType="contact" entityId={contact.id} />
         </div>
 
         <Card>
