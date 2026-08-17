@@ -17,6 +17,8 @@ import { DeliveriesPanel } from "@/components/settings/deliveries-panel";
 import { EmailTemplatesPanel } from "@/components/settings/email-templates-panel";
 import { IntegrationsPanel } from "@/components/settings/integrations-panel";
 import { LogsPanel } from "@/components/settings/logs-panel";
+import { CustomFieldsPanel } from "./custom-fields/custom-fields-panel";
+import { listFieldsAction } from "@/actions/custom-fields";
 import { WebhooksPanel } from "@/components/settings/webhooks-panel";
 
 export const metadata: Metadata = { title: "تنظیمات" };
@@ -27,13 +29,14 @@ export default async function SettingsPage() {
     redirect("/dashboard");
   }
   await processDueDeliveries(workspaceId);
-  const [webhooks, apiKeys, emails, sms, deliveries, templates] = await Promise.all([
+  const [webhooks, apiKeys, emails, sms, deliveries, templates, customFields] = await Promise.all([
     listWebhooks(workspaceId),
     listApiKeys(workspaceId),
     listEmailLogs(workspaceId, 20),
     listSmsLogs(workspaceId, 20),
     listDeliveries(workspaceId, 25),
     listEmailTemplates(workspaceId),
+    listFieldsAction(),
   ]);
 
   const integrations = {
@@ -58,6 +61,7 @@ export default async function SettingsPage() {
           <TabsTrigger value="templates">الگوهای ایمیل</TabsTrigger>
           <TabsTrigger value="integrations">اتصال‌ها</TabsTrigger>
           <TabsTrigger value="logs">لاگ‌ها</TabsTrigger>
+          <TabsTrigger value="customfields">فیلدهای سفارشی</TabsTrigger>
         </TabsList>
         <TabsContent value="webhooks">
           <WebhooksPanel webhooks={webhooks} />
@@ -76,6 +80,9 @@ export default async function SettingsPage() {
         </TabsContent>
         <TabsContent value="logs">
           <LogsPanel emails={emails} sms={sms} />
+        </TabsContent>
+        <TabsContent value="customfields">
+          <CustomFieldsPanel fields={customFields.data ?? []} />
         </TabsContent>
       </Tabs>
     </div>
