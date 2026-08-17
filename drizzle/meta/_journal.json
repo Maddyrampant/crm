@@ -64,6 +64,20 @@
       "when": 1786934736601,
       "tag": "0008_greedy_tombstone",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1786961728364,
+      "tag": "0009_complete_firestar",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1786961813592,
+      "tag": "0010_careless_miss_america",
+      "breakpoints": true
     }
   ]
 }

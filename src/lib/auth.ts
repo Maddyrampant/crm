@@ -30,8 +30,13 @@ const secondaryStorage = {
 export const auth = betterAuth({
   trustedOrigins: [
     process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:3001",
     "http://172.18.0.1:3000",
+    "http://172.18.0.1:3001",
     "http://0.0.0.0:3000",
+    "http://0.0.0.0:3001",
   ],
   database: drizzleAdapter(db, {
     provider: "pg",

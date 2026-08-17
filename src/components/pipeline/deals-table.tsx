@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
 import Link from "next/link";
 import { toast } from "sonner";
 import {
+  ArrowUpDown,
   ChevronLeft,
   ChevronRight,
   ExternalLink,
@@ -15,6 +16,7 @@ import {
   Trash2,
   Trophy,
 } from "lucide-react";
+import { nextSortDirection, type ColumnSort } from "@/lib/sort";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { JalaliDateInput } from "@/components/ui/jalali-date-input";
@@ -118,6 +120,15 @@ export function DealsTable({
   const [lostReason, setLostReason] = useState("");
   const [deleting, setDeleting] = useState<DealRow | null>(null);
   const [busy, setBusy] = useState(false);
+  const [sort, setSort] = useState<ColumnSort | null>(null);
+
+  function toggleSort(col: string) {
+    setSort((prev) => ({
+      column: col,
+      direction: prev?.column === col ? nextSortDirection(prev.direction) : "asc",
+    }));
+    setPage(1);
+  }
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -143,9 +154,11 @@ export function DealsTable({
       closeDateTo: filters.closeDateTo || null,
       page,
       pageSize,
+      sortBy: sort?.column as any,
+      sortDir: sort?.direction,
     });
     if (result.ok && result.data) setData(result.data);
-  }, [filters, page, pageSize]);
+  }, [filters, page, pageSize, sort]);
 
   useEffect(() => {
     startTransition(() => {
@@ -302,13 +315,28 @@ export function DealsTable({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>عنوان</TableHead>
+                  <TableHead>
+                    <button onClick={() => toggleSort("title")} className="inline-flex items-center gap-1 hover:text-foreground">
+                      عنوان
+                      <ArrowUpDown className="size-3" />
+                    </button>
+                  </TableHead>
                   <TableHead>مشتری</TableHead>
                   <TableHead>شرکت</TableHead>
                   <TableHead>مرحله</TableHead>
                   <TableHead>مسئول</TableHead>
-                  <TableHead>مبلغ</TableHead>
-                  <TableHead>تاریخ بستن</TableHead>
+                  <TableHead>
+                    <button onClick={() => toggleSort("amount")} className="inline-flex items-center gap-1 hover:text-foreground">
+                      مبلغ
+                      <ArrowUpDown className="size-3" />
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button onClick={() => toggleSort("closeDate")} className="inline-flex items-center gap-1 hover:text-foreground">
+                      تاریخ بستن
+                      <ArrowUpDown className="size-3" />
+                    </button>
+                  </TableHead>
                   <TableHead>وضعیت</TableHead>
                   <TableHead className="w-12" />
                 </TableRow>

@@ -1,13 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Inbox, Loader2, Pencil, Plus, ScrollText, Trash2 } from "lucide-react";
+import { Inbox, Loader2, Pencil, Plus, ScrollText, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Card,
@@ -22,6 +31,7 @@ import {
   RuleFormDialog,
   type StageOption,
 } from "@/components/rules/rule-form-dialog";
+import { RULE_EVENTS } from "@/lib/rules";
 import { ACTION_LABELS, eventLabel } from "@/components/rules/labels";
 import type { Rule, RuleLog } from "@/db/schema";
 
@@ -35,7 +45,33 @@ export function RulesPanel({ rules, logs, stages }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Rule | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [searchInput, setSearchInput] = useState("");
+  const [eventFilter, setEventFilter] = useState<string>("all");
+  const [rulesPage, setRulesPage] = useState(1);
+  const [rulesPageSize, setRulesPageSize] = useState(10);
+  const [logsPage, setLogsPage] = useState(1);
+  const [logsPageSize, setLogsPageSize] = useState(10);
   const router = useRouter();
+
+  useEffect(() => { setRulesPage(1); }, [searchInput, eventFilter]);
+
+  const filteredRules = rules.filter((r) => {
+    const matchesSearch = !searchInput ||
+      r.name.toLowerCase().includes(searchInput.toLowerCase()) ||
+      (r.description && r.description.toLowerCase().includes(searchInput.toLowerCase()));
+    const matchesEvent = eventFilter === "all" || r.event === eventFilter;
+    return matchesSearch && matchesEvent;
+  });
+
+  const paginatedRules = useMemo(() => {
+    const start = (rulesPage - 1) * rulesPageSize;
+    return filteredRules.slice(start, start + rulesPageSize);
+  }, [filteredRules, rulesPage, rulesPageSize]);
+
+  const paginatedLogs = useMemo(() => {
+    const start = (logsPage - 1) * logsPageSize;
+    return logs.slice(start, start + logsPageSize);
+  }, [logs, logsPage, logsPageSize]);
 
   function openCreate() {
     setEditing(null);
@@ -95,7 +131,36 @@ export function RulesPanel({ rules, logs, stages }: Props) {
             </Button>
           </CardHeader>
           <CardContent>
-            {rules.length === 0 ? (
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  dir="rtl"
+                  className="ps-8"
+                  placeholder="جستجوی نام قانون..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                />
+              </div>
+              <Select
+                value={eventFilter}
+                onValueChange={setEventFilter}
+              >
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="رویداد" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">همه رویدادها</SelectItem>
+                  {RULE_EVENTS.map((e) => (
+                    <SelectItem key={e.key} value={e.key}>
+                      {e.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {filteredRules.length === 0 ? (
               <EmptyState
                 icon={Inbox}
                 title="قانونی ثبت نشده است"
@@ -103,8 +168,9 @@ export function RulesPanel({ rules, logs, stages }: Props) {
                 className="py-10"
               />
             ) : (
+              <>
               <ul className="space-y-3">
-                {rules.map((rule) => (
+                {paginatedRules.map((rule) => (
                   <li
                     key={rule.id}
                     className="rounded-lg border p-4"
@@ -173,6 +239,14 @@ export function RulesPanel({ rules, logs, stages }: Props) {
                   </li>
                 ))}
               </ul>
+              <PaginationControls
+                page={rulesPage}
+                total={filteredRules.length}
+                pageSize={rulesPageSize}
+                onPageChange={setRulesPage}
+                onPageSizeChange={(size) => { setRulesPageSize(size); setRulesPage(1); }}
+              />
+              </>
             )}
           </CardContent>
         </Card>
@@ -193,6 +267,7 @@ export function RulesPanel({ rules, logs, stages }: Props) {
                 className="py-10"
               />
             ) : (
+              <>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -205,7 +280,7 @@ export function RulesPanel({ rules, logs, stages }: Props) {
                     </tr>
                   </thead>
                   <tbody>
-                    {logs.map((log) => (
+                    {paginatedLogs.map((log) => (
                       <tr key={log.id} className="border-b last:border-0">
                         <td className="py-2 pe-3">
                           {eventLabel(log.event)}
@@ -240,6 +315,14 @@ export function RulesPanel({ rules, logs, stages }: Props) {
                   </tbody>
                 </table>
               </div>
+              <PaginationControls
+                page={logsPage}
+                total={logs.length}
+                pageSize={logsPageSize}
+                onPageChange={setLogsPage}
+                onPageSizeChange={(size) => { setLogsPageSize(size); setLogsPage(1); }}
+              />
+              </>
             )}
           </CardContent>
         </Card>

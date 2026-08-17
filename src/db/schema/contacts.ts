@@ -5,6 +5,7 @@ import {
   pgEnum,
   jsonb,
   primaryKey,
+  integer,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { workspaces } from "./workspaces";
@@ -75,6 +76,7 @@ export const contacts = pgTable("contacts", {
   ownerId: text("owner_id").references(() => user.id, {
     onDelete: "set null",
   }),
+  leadScore: integer("lead_score").default(0),
   customFields: jsonb("custom_fields").$type<Record<string, unknown>>().notNull().default({}),
   notes: text("notes"),
   createdAt: timestamp("created_at", { withTimezone: true })

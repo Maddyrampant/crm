@@ -2,6 +2,7 @@ import "server-only";
 
 import {
   and,
+  asc,
   count,
   desc,
   eq,
@@ -62,6 +63,8 @@ export type ProductFilters = {
   active?: "active" | "inactive" | null;
   page?: number;
   pageSize?: number;
+  sortBy?: "name" | "unitPrice" | "totalStock" | "createdAt";
+  sortDir?: "asc" | "desc";
 };
 
 export async function listProducts(filters: ProductFilters) {
@@ -78,6 +81,16 @@ export async function listProducts(filters: ProductFilters) {
     );
   }
 
+  const sortCol =
+    filters.sortBy === "name"
+      ? products.name
+      : filters.sortBy === "unitPrice"
+        ? products.unitPrice
+        : filters.sortBy === "totalStock"
+          ? sql`coalesce(sum(${stockLevels.quantity}::numeric), 0)`
+          : products.createdAt;
+  const sortOrder = filters.sortDir === "asc" ? asc(sortCol) : desc(sortCol);
+
   const [rows, totalRow] = await Promise.all([
     db
       .select({
@@ -90,7 +103,7 @@ export async function listProducts(filters: ProductFilters) {
       .leftJoin(stockLevels, eq(stockLevels.productId, products.id))
       .where(and(...conditions))
       .groupBy(products.id, productCategories.name)
-      .orderBy(desc(products.createdAt))
+      .orderBy(sortOrder)
       .limit(pageSize)
       .offset((page - 1) * pageSize),
     db

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   AlertTriangle,
+  ArrowUpDown,
   Boxes,
   ChevronLeft,
   ChevronRight,
@@ -12,6 +13,7 @@ import {
   Package,
   Search,
 } from "lucide-react";
+import { nextSortDirection, type ColumnSort } from "@/lib/sort";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -95,6 +97,15 @@ export function StockTable({ initialData, lowStockIds }: Props) {
   const [detailId, setDetailId] = useState<string | null>(null);
   const [detail, setDetail] = useState<ProductDetail | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [sort, setSort] = useState<ColumnSort | null>(null);
+
+  function toggleSort(col: string) {
+    setSort((prev) => ({
+      column: col,
+      direction: prev?.column === col ? nextSortDirection(prev.direction) : "asc",
+    }));
+    setPage(1);
+  }
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -118,6 +129,8 @@ export function StockTable({ initialData, lowStockIds }: Props) {
         const result = await listProductsAction({
           search: search || undefined,
           page,
+          sortBy: sort?.column as any,
+          sortDir: sort?.direction,
         });
         setData(result);
         const low = await listLowStockAction();
@@ -126,7 +139,7 @@ export function StockTable({ initialData, lowStockIds }: Props) {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "خطا در بارگذاری موجودی");
     }
-  }, [search, page, lowOnly]);
+  }, [search, page, lowOnly, sort]);
 
   useEffect(() => {
     startTransition(() => {
@@ -188,9 +201,19 @@ export function StockTable({ initialData, lowStockIds }: Props) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>کالا</TableHead>
+                  <TableHead>
+                    <button onClick={() => toggleSort("name")} className="inline-flex items-center gap-1 hover:text-foreground">
+                      کالا
+                      <ArrowUpDown className="size-3" />
+                    </button>
+                  </TableHead>
                   <TableHead>دسته‌بندی</TableHead>
-                  <TableHead className="text-end">موجودی کل</TableHead>
+                  <TableHead className="text-end">
+                    <button onClick={() => toggleSort("totalStock")} className="inline-flex items-center gap-1 hover:text-foreground">
+                      موجودی کل
+                      <ArrowUpDown className="size-3" />
+                    </button>
+                  </TableHead>
                   <TableHead>وضعیت</TableHead>
                   <TableHead className="w-12" />
                 </TableRow>
