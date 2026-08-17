@@ -175,14 +175,14 @@ export async function getDeal(workspaceId: string, id: string) {
 
   if (!row) return null;
 
-  const activity = await getActivityFeed({
+  const activityResult = await getActivityFeed({
     workspaceId,
     entityType: "deal",
     entityId: id,
     limit: 20,
   });
 
-  return { ...row, amount: Number(row.deal.amount), activity };
+  return { ...row, amount: Number(row.deal.amount), activity: activityResult.items };
 }
 
 export type DealInput = {

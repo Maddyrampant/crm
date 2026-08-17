@@ -55,7 +55,7 @@ export function SuppliersTable({ initialData, canManage }: Props) {
   async function reload() {
     try {
       const result = await listSuppliersAction();
-      setSuppliers(result);
+      setSuppliers(result.items);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "خطا در بارگذاری تأمین‌کننده‌ها");
     }

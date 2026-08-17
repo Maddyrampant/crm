@@ -2,6 +2,7 @@ import "server-only";
 
 import {
   and,
+  count,
   desc,
   eq,
   ilike,
@@ -25,6 +26,13 @@ import {
 } from "@/db/schema";
 import { notifyWorkspace } from "./notifications";
 import type { ProductWithStock } from "@/lib/inventory";
+import {
+  normalizePage,
+  normalizePageSize,
+  calculateOffset,
+  buildPaginatedResult,
+  type PaginatedResult,
+} from "@/lib/pagination";
 
 const num = (v: string | number | null | undefined) => Number(v ?? 0);
 const round2 = (v: number) => Math.round(v * 100) / 100;
@@ -285,21 +293,45 @@ async function clearDefaultWarehouse(workspaceId: string, exceptId?: string) {
     .where(and(...conditions));
 }
 
-export async function listWarehouses(workspaceId: string) {
-  const rows = await db
-    .select({
-      warehouse: warehouses,
-      productCount: sql<number>`count(distinct ${stockLevels.productId})::int`,
-    })
-    .from(warehouses)
-    .leftJoin(stockLevels, eq(stockLevels.warehouseId, warehouses.id))
-    .where(eq(warehouses.workspaceId, workspaceId))
-    .groupBy(warehouses.id)
-    .orderBy(desc(warehouses.isDefault));
-  return rows.map((r) => ({
+export async function listWarehouses(
+  workspaceId: string,
+  params?: { page?: number; pageSize?: number; search?: string }
+): Promise<PaginatedResult<typeof warehouses.$inferSelect & { productCount: number }>> {
+  const page = normalizePage(params?.page);
+  const pageSize = normalizePageSize(params?.pageSize);
+  const offset = calculateOffset(page, pageSize);
+
+  const conditions: SQL[] = [eq(warehouses.workspaceId, workspaceId)];
+  if (params?.search?.trim()) {
+    conditions.push(ilike(warehouses.name, `%${params.search.trim()}%`));
+  }
+  const where = and(...conditions);
+
+  const [items, totalRow] = await Promise.all([
+    db
+      .select({
+        warehouse: warehouses,
+        productCount: sql<number>`count(distinct ${stockLevels.productId})::int`,
+      })
+      .from(warehouses)
+      .leftJoin(stockLevels, eq(stockLevels.warehouseId, warehouses.id))
+      .where(where)
+      .groupBy(warehouses.id)
+      .orderBy(desc(warehouses.isDefault))
+      .limit(pageSize)
+      .offset(offset),
+    db
+      .select({ count: count() })
+      .from(warehouses)
+      .where(where),
+  ]);
+
+  const mapped = items.map((r) => ({
     ...r.warehouse,
     productCount: Number(r.productCount),
   }));
+
+  return buildPaginatedResult(mapped, totalRow[0]?.count ?? 0, page, pageSize);
 }
 
 export async function createWarehouse(workspaceId: string, raw: unknown) {
@@ -516,12 +548,35 @@ export const supplierSchema = z.object({
 
 export type SupplierInput = z.infer<typeof supplierSchema>;
 
-export async function listSuppliers(workspaceId: string) {
-  return db
-    .select()
-    .from(suppliers)
-    .where(eq(suppliers.workspaceId, workspaceId))
-    .orderBy(desc(suppliers.createdAt));
+export async function listSuppliers(
+  workspaceId: string,
+  params?: { page?: number; pageSize?: number; search?: string }
+): Promise<PaginatedResult<typeof suppliers.$inferSelect>> {
+  const page = normalizePage(params?.page);
+  const pageSize = normalizePageSize(params?.pageSize);
+  const offset = calculateOffset(page, pageSize);
+
+  const conditions: SQL[] = [eq(suppliers.workspaceId, workspaceId)];
+  if (params?.search?.trim()) {
+    conditions.push(ilike(suppliers.name, `%${params.search.trim()}%`));
+  }
+  const where = and(...conditions);
+
+  const [items, totalRow] = await Promise.all([
+    db
+      .select()
+      .from(suppliers)
+      .where(where)
+      .orderBy(desc(suppliers.createdAt))
+      .limit(pageSize)
+      .offset(offset),
+    db
+      .select({ count: count() })
+      .from(suppliers)
+      .where(where),
+  ]);
+
+  return buildPaginatedResult(items, totalRow[0]?.count ?? 0, page, pageSize);
 }
 
 export async function createSupplier(workspaceId: string, raw: unknown) {
@@ -606,24 +661,51 @@ async function nextPurchaseOrderNumber(workspaceId: string) {
   return `PO-${String((row?.count ?? 0) + 1).padStart(5, "0")}`;
 }
 
-export async function listPurchaseOrders(workspaceId: string) {
-  const rows = await db
-    .select({
-      order: purchaseOrders,
-      supplierName: suppliers.name,
-      itemCount: sql<number>`count(${purchaseOrderItems.id})::int`,
-    })
-    .from(purchaseOrders)
-    .leftJoin(suppliers, eq(suppliers.id, purchaseOrders.supplierId))
-    .leftJoin(purchaseOrderItems, eq(purchaseOrderItems.purchaseOrderId, purchaseOrders.id))
-    .where(eq(purchaseOrders.workspaceId, workspaceId))
-    .groupBy(purchaseOrders.id, suppliers.name)
-    .orderBy(desc(purchaseOrders.createdAt));
-  return rows.map((r) => ({
+export async function listPurchaseOrders(
+  workspaceId: string,
+  params?: { page?: number; pageSize?: number; status?: string; search?: string }
+): Promise<PaginatedResult<typeof purchaseOrders.$inferSelect & { supplierName: string | null; itemCount: number }>> {
+  const page = normalizePage(params?.page);
+  const pageSize = normalizePageSize(params?.pageSize);
+  const offset = calculateOffset(page, pageSize);
+
+  const conditions: SQL[] = [eq(purchaseOrders.workspaceId, workspaceId)];
+  if (params?.status) {
+    conditions.push(eq(purchaseOrders.status, params.status as typeof purchaseOrders.$inferSelect.status));
+  }
+  if (params?.search?.trim()) {
+    conditions.push(ilike(purchaseOrders.number, `%${params.search.trim()}%`));
+  }
+  const where = and(...conditions);
+
+  const [items, totalRow] = await Promise.all([
+    db
+      .select({
+        order: purchaseOrders,
+        supplierName: suppliers.name,
+        itemCount: sql<number>`count(${purchaseOrderItems.id})::int`,
+      })
+      .from(purchaseOrders)
+      .leftJoin(suppliers, eq(suppliers.id, purchaseOrders.supplierId))
+      .leftJoin(purchaseOrderItems, eq(purchaseOrderItems.purchaseOrderId, purchaseOrders.id))
+      .where(where)
+      .groupBy(purchaseOrders.id, suppliers.name)
+      .orderBy(desc(purchaseOrders.createdAt))
+      .limit(pageSize)
+      .offset(offset),
+    db
+      .select({ count: count() })
+      .from(purchaseOrders)
+      .where(where),
+  ]);
+
+  const mapped = items.map((r) => ({
     ...r.order,
     supplierName: r.supplierName,
     itemCount: Number(r.itemCount),
   }));
+
+  return buildPaginatedResult(mapped, totalRow[0]?.count ?? 0, page, pageSize);
 }
 
 export async function getPurchaseOrder(workspaceId: string, orderId: string) {

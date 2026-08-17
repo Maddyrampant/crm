@@ -82,7 +82,7 @@ export function PurchaseOrdersTable({
   async function reload() {
     try {
       const result = await listPurchaseOrdersAction();
-      setOrders(result);
+      setOrders(result.items);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "خطا در بارگذاری سفارش‌ها");
     }

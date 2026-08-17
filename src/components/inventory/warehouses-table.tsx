@@ -57,7 +57,7 @@ export function WarehousesTable({ initialData, canManage }: Props) {
   async function reload() {
     try {
       const result = await listWarehousesAction();
-      setWarehouses(result);
+      setWarehouses(result.items);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "خطا در بارگذاری انبارها");
     }

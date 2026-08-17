@@ -6,9 +6,23 @@ import {
   convertInvoice,
   createInvoice,
   deleteInvoice,
+  listInvoices,
   recordPayment,
   updateInvoiceStatus,
 } from "@/services/invoices";
+
+export async function listInvoicesAction(params?: {
+  page?: number;
+  pageSize?: number;
+  status?: string;
+  sortBy?: string;
+  sortDir?: "asc" | "desc";
+  search?: string;
+}) {
+  const { workspaceId } = await requireWorkspace();
+  const result = await listInvoices(workspaceId, params);
+  return result;
+}
 
 export async function createInvoiceAction(raw: unknown) {
   const { user, workspaceId } = await requireWorkspace();

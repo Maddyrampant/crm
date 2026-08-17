@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import { requireWorkspace } from "@/lib/session";
 import { getDeal } from "@/services/deals";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +28,7 @@ export default async function DealDetailPage({
   const { id } = await params;
 
   const data = await getDeal(workspaceId, id);
-  if (!data) notFound();
+  if (!data) redirect("/pipeline/deals");
 
   const { deal, activity } = data;
   const fullName = [data.contactName, data.contactLastName]

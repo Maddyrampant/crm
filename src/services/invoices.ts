@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, like, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import {
@@ -9,6 +9,13 @@ import {
   payments,
   type InvoiceStatus,
 } from "@/db/schema";
+import {
+  normalizePage,
+  normalizePageSize,
+  calculateOffset,
+  buildPaginatedResult,
+  type PaginatedResult,
+} from "@/lib/pagination";
 import { dispatchWebhookEvent } from "./automation";
 import { notifyWorkspace } from "./notifications";
 import { dispatchRuleEvent } from "./rules";
@@ -106,24 +113,83 @@ async function adjustStockForInvoice(
   }
 }
 
-export async function listInvoices(workspaceId: string) {
-  const rows = await db
-    .select({
-      invoice: invoices,
-      contactName: sql<string>`concat(${contacts.firstName}, ' ', coalesce(${contacts.lastName}, ''))`,
-      paidTotal: sql<string>`coalesce((
-        select sum(payments.amount::numeric) from payments
-        where payments.invoice_id = ${invoices.id}
-      ), 0)::text`,
-    })
-    .from(invoices)
-    .innerJoin(contacts, eq(contacts.id, invoices.contactId))
-    .where(eq(invoices.workspaceId, workspaceId))
-    .orderBy(desc(invoices.issuedAt));
-  return rows;
+export async function listInvoices(
+  workspaceId: string,
+  params?: {
+    page?: number;
+    pageSize?: number;
+    status?: string;
+    sortBy?: string;
+    sortDir?: "asc" | "desc";
+    search?: string;
+  }
+): Promise<PaginatedResult<{
+  invoice: typeof invoices.$inferSelect;
+  contactName: string;
+  paidTotal: string;
+}>> {
+  const page = normalizePage(params?.page);
+  const pageSize = normalizePageSize(params?.pageSize);
+  const offset = calculateOffset(page, pageSize);
+
+  const conditions = [eq(invoices.workspaceId, workspaceId)];
+
+  if (params?.status) {
+    conditions.push(eq(invoices.status, params.status as typeof invoices.$inferSelect.status));
+  }
+  if (params?.search?.trim()) {
+    const q = `%${params.search.trim()}%`;
+    conditions.push(
+      or(like(invoices.number, q), like(contacts.firstName, q))!
+    );
+  }
+
+  const where = and(...conditions);
+
+  const orderByClause =
+    params?.sortBy === "total"
+      ? params?.sortDir === "asc"
+        ? asc(invoices.total)
+        : desc(invoices.total)
+      : params?.sortBy === "number"
+        ? params?.sortDir === "asc"
+          ? asc(invoices.number)
+          : desc(invoices.number)
+        : params?.sortDir === "asc"
+          ? asc(invoices.issuedAt)
+          : desc(invoices.issuedAt);
+
+  const [items, totalRow] = await Promise.all([
+    db
+      .select({
+        invoice: invoices,
+        contactName: sql<string>`concat(${contacts.firstName}, ' ', coalesce(${contacts.lastName}, ''))`,
+        paidTotal: sql<string>`coalesce((
+          select sum(payments.amount::numeric) from payments
+          where payments.invoice_id = ${invoices.id}
+        ), 0)::text`,
+      })
+      .from(invoices)
+      .innerJoin(contacts, eq(contacts.id, invoices.contactId))
+      .where(where)
+      .orderBy(orderByClause)
+      .limit(pageSize)
+      .offset(offset),
+    db
+      .select({ count: count() })
+      .from(invoices)
+      .innerJoin(contacts, eq(contacts.id, invoices.contactId))
+      .where(where),
+  ]);
+
+  return buildPaginatedResult(items, totalRow[0]?.count ?? 0, page, pageSize);
 }
 
-export type InvoiceRow = Awaited<ReturnType<typeof listInvoices>>[number];
+export type InvoiceRow = {
+  invoice: typeof invoices.$inferSelect;
+  contactName: string;
+  paidTotal: string;
+};
 
 /** فاکتورهای سررسید‌گذشته برای داشبورد */
 export async function getOverdueInvoices(workspaceId: string, limit = 8) {

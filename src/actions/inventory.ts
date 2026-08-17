@@ -88,9 +88,14 @@ export async function deleteProductCategoryAction(categoryId: string) {
   return { ok: Boolean(row) };
 }
 
-export async function listWarehousesAction() {
+export async function listWarehousesAction(params?: {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+}) {
   const { workspaceId } = await requireWorkspace();
-  return listWarehouses(workspaceId);
+  const result = await listWarehouses(workspaceId, params);
+  return { items: result.items, total: result.total, page: result.page, pageSize: result.pageSize, totalPages: result.totalPages };
 }
 
 export async function createWarehouseAction(raw: unknown) {
@@ -119,9 +124,14 @@ export async function listLowStockAction() {
   return listLowStock(workspaceId);
 }
 
-export async function listSuppliersAction() {
+export async function listSuppliersAction(params?: {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+}) {
   const { workspaceId } = await requireWorkspace();
-  return listSuppliers(workspaceId);
+  const result = await listSuppliers(workspaceId, params);
+  return { items: result.items, total: result.total, page: result.page, pageSize: result.pageSize, totalPages: result.totalPages };
 }
 
 export async function createSupplierAction(raw: unknown) {
@@ -145,9 +155,15 @@ export async function deleteSupplierAction(supplierId: string) {
   return { ok: Boolean(row) };
 }
 
-export async function listPurchaseOrdersAction() {
+export async function listPurchaseOrdersAction(params?: {
+  page?: number;
+  pageSize?: number;
+  status?: string;
+  search?: string;
+}) {
   const { workspaceId } = await requireWorkspace();
-  return listPurchaseOrders(workspaceId);
+  const result = await listPurchaseOrders(workspaceId, params);
+  return { items: result.items, total: result.total, page: result.page, pageSize: result.pageSize, totalPages: result.totalPages };
 }
 
 export async function getPurchaseOrderAction(orderId: string) {

@@ -10,7 +10,7 @@ import { PurchaseOrdersTable } from "@/components/inventory/purchase-orders-tabl
 export default async function PurchasesPage() {
   const { workspaceId, membership } = await requireWorkspace();
 
-  const [orders, suppliers, products] = await Promise.all([
+  const [ordersResult, suppliersResult, products] = await Promise.all([
     listPurchaseOrders(workspaceId),
     listSuppliers(workspaceId),
     listProducts({ workspaceId, active: "active", pageSize: 100 }),
@@ -23,8 +23,8 @@ export default async function PurchasesPage() {
         description="سفارش‌های خرید از تأمین‌کنندگان و رسید کالا."
       />
       <PurchaseOrdersTable
-        initialData={orders}
-        suppliers={suppliers}
+        initialData={ordersResult.items}
+        suppliers={suppliersResult.items}
         products={products.items}
         canManage={hasPermission(membership, "manager")}
       />
