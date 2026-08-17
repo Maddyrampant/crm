@@ -15,7 +15,7 @@ export default async function WarehousesPage() {
         description="انبارهای شما و تعداد کالاهای هر انبار."
       />
       <WarehousesTable
-        initialData={warehousesResult.items}
+        initialData={warehousesResult}
         canManage={hasPermission(membership, "manager")}
       />
     </div>

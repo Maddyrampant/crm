@@ -3,10 +3,18 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Inbox, Loader2, Pencil, Plus, ScrollText, Trash2 } from "lucide-react";
+import { Inbox, Loader2, Pencil, Plus, ScrollText, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -22,6 +30,7 @@ import {
   RuleFormDialog,
   type StageOption,
 } from "@/components/rules/rule-form-dialog";
+import { RULE_EVENTS } from "@/lib/rules";
 import { ACTION_LABELS, eventLabel } from "@/components/rules/labels";
 import type { Rule, RuleLog } from "@/db/schema";
 
@@ -35,7 +44,17 @@ export function RulesPanel({ rules, logs, stages }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Rule | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [searchInput, setSearchInput] = useState("");
+  const [eventFilter, setEventFilter] = useState<string>("all");
   const router = useRouter();
+
+  const filteredRules = rules.filter((r) => {
+    const matchesSearch = !searchInput ||
+      r.name.toLowerCase().includes(searchInput.toLowerCase()) ||
+      (r.description && r.description.toLowerCase().includes(searchInput.toLowerCase()));
+    const matchesEvent = eventFilter === "all" || r.event === eventFilter;
+    return matchesSearch && matchesEvent;
+  });
 
   function openCreate() {
     setEditing(null);
@@ -95,7 +114,36 @@ export function RulesPanel({ rules, logs, stages }: Props) {
             </Button>
           </CardHeader>
           <CardContent>
-            {rules.length === 0 ? (
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  dir="rtl"
+                  className="ps-8"
+                  placeholder="جستجوی نام قانون..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                />
+              </div>
+              <Select
+                value={eventFilter}
+                onValueChange={setEventFilter}
+              >
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="رویداد" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">همه رویدادها</SelectItem>
+                  {RULE_EVENTS.map((e) => (
+                    <SelectItem key={e.key} value={e.key}>
+                      {e.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {filteredRules.length === 0 ? (
               <EmptyState
                 icon={Inbox}
                 title="قانونی ثبت نشده است"
@@ -104,7 +152,7 @@ export function RulesPanel({ rules, logs, stages }: Props) {
               />
             ) : (
               <ul className="space-y-3">
-                {rules.map((rule) => (
+                {filteredRules.map((rule) => (
                   <li
                     key={rule.id}
                     className="rounded-lg border p-4"
