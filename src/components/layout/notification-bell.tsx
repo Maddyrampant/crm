@@ -237,6 +237,13 @@ export function NotificationBell() {
           </ul>
         )}
         <DropdownMenuSeparator />
+        <Link
+          href="/notifications"
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+        >
+          <Inbox className="size-4" />
+          مشاهده همهٔ اعلان‌ها
+        </Link>
         <p className="px-4 py-2 text-center text-[11px] text-muted-foreground">
           به‌روزرسانی خودکار هر ۳۰ ثانیه
         </p>
