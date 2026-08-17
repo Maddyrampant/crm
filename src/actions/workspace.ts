@@ -4,9 +4,9 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { getSession, requireWorkspaceRole } from "@/lib/session";
+import { getSession, requireWorkspace, requireWorkspaceRole } from "@/lib/session";
 import { db } from "@/db";
-import { workspaces, workspaceMembers } from "@/db/schema";
+import { workspaces, workspaceMembers, user } from "@/db/schema";
 import {
   addWorkspaceMember,
   removeWorkspaceMember,
@@ -122,4 +122,14 @@ export async function removeWorkspaceMemberAction(userId: string) {
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "خطا در حذف عضو" };
   }
+}
+
+export async function listWorkspaceMembersAction() {
+  const { workspaceId } = await requireWorkspace();
+  const members = await db
+    .select({ id: workspaceMembers.userId, name: user.name })
+    .from(workspaceMembers)
+    .innerJoin(user, eq(user.id, workspaceMembers.userId))
+    .where(eq(workspaceMembers.workspaceId, workspaceId));
+  return { ok: true, data: members };
 }
