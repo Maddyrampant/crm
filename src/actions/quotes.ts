@@ -1,8 +1,24 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { requireWorkspace } from "@/lib/session";
 import * as quotesService from "@/services/quotes";
+
+const quoteItemSchema = z.object({
+  description: z.string().min(1).max(500),
+  quantity: z.number().positive(),
+  unitPrice: z.number().min(0),
+  taxRate: z.number().min(0).max(100).optional(),
+});
+
+const quoteSchema = z.object({
+  contactId: z.string().min(1),
+  validUntil: z.string().nullable().optional(),
+  taxRate: z.number().min(0).max(100).optional(),
+  notes: z.string().max(1000).nullable().optional(),
+  items: z.array(quoteItemSchema).min(1),
+});
 
 export async function listQuotesAction() {
   const { workspaceId } = await requireWorkspace();
@@ -19,16 +35,18 @@ export async function getQuoteAction(id: string) {
 
 export async function createQuoteAction(input: unknown) {
   const { workspaceId } = await requireWorkspace();
-  const data = input as quotesService.QuoteInput;
-  const row = await quotesService.createQuote(workspaceId, data);
+  const parsed = quoteSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "ورودی نامعتبر" };
+  const row = await quotesService.createQuote(workspaceId, parsed.data);
   revalidatePath("/quotes");
   return { ok: true, data: row };
 }
 
 export async function updateQuoteAction(id: string, input: unknown) {
   const { workspaceId } = await requireWorkspace();
-  const data = input as Partial<quotesService.QuoteInput>;
-  const row = await quotesService.updateQuote(workspaceId, id, data);
+  const parsed = quoteSchema.partial().safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "ورودی نامعتبر" };
+  const row = await quotesService.updateQuote(workspaceId, id, parsed.data);
   if (!row) return { ok: false, error: "پیش‌فاکتور یافت نشد" };
   revalidatePath("/quotes");
   return { ok: true, data: row };
