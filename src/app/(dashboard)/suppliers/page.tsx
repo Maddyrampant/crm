@@ -15,7 +15,7 @@ export default async function SuppliersPage() {
         description="تأمین‌کنندگان کالا برای سفارش‌های خرید."
       />
       <SuppliersTable
-        initialData={suppliersResult.items}
+        initialData={suppliersResult}
         canManage={hasPermission(membership, "manager")}
       />
     </div>

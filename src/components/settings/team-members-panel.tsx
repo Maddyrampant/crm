@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, Trash2, UserPlus } from "lucide-react";
+import { Loader2, Search, Trash2, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -67,7 +67,17 @@ export function TeamMembersPanel({ members, currentUserId }: Props) {
   const [newRole, setNewRole] = useState<EditableRole>("seller");
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [searchInput, setSearchInput] = useState("");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
   const router = useRouter();
+
+  const filteredMembers = members.filter((m) => {
+    const matchesSearch = !searchInput ||
+      m.name.toLowerCase().includes(searchInput.toLowerCase()) ||
+      m.email.toLowerCase().includes(searchInput.toLowerCase());
+    const matchesRole = roleFilter === "all" || m.role === roleFilter;
+    return matchesSearch && matchesRole;
+  });
 
   async function handleAdd() {
     if (!email.trim() || saving) return;
@@ -163,11 +173,40 @@ export function TeamMembersPanel({ members, currentUserId }: Props) {
           </Button>
         </div>
 
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              dir="rtl"
+              className="ps-8"
+              placeholder="جستجوی نام یا ایمیل..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+            />
+          </div>
+          <Select
+            value={roleFilter}
+            onValueChange={setRoleFilter}
+          >
+            <SelectTrigger className="w-32">
+              <SelectValue placeholder="نقش" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">همه نقش‌ها</SelectItem>
+              {Object.entries(ROLE_LABELS).map(([value, label]) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <ul className="space-y-2">
-          {members.length === 0 && (
-            <p className="text-sm text-muted-foreground">عضوی در تیم نیست.</p>
+          {filteredMembers.length === 0 && (
+            <p className="text-sm text-muted-foreground">عضوی یافت نشد.</p>
           )}
-          {members.map((member) => {
+          {filteredMembers.map((member) => {
             const isSelf = member.id === currentUserId;
             const isOwner = member.role === "owner";
             const editable = !isSelf && !isOwner;

@@ -23,7 +23,7 @@ export default async function PurchasesPage() {
         description="سفارش‌های خرید از تأمین‌کنندگان و رسید کالا."
       />
       <PurchaseOrdersTable
-        initialData={ordersResult.items}
+        initialData={ordersResult}
         suppliers={suppliersResult.items}
         products={products.items}
         canManage={hasPermission(membership, "manager")}
