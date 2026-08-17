@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Inbox, Loader2, Pencil, Plus, ScrollText, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ export function RulesPanel({ rules, logs, stages }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Rule | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const router = useRouter();
 
   function openCreate() {
     setEditing(null);
@@ -54,7 +56,7 @@ export function RulesPanel({ rules, logs, stages }: Props) {
       toast.error("خطا در تغییر وضعیت قانون");
       return;
     }
-    window.location.reload();
+    router.refresh();
   }
 
   async function handleDelete(rule: Rule) {
@@ -68,7 +70,7 @@ export function RulesPanel({ rules, logs, stages }: Props) {
       return;
     }
     toast.success("قانون حذف شد");
-    window.location.reload();
+    router.refresh();
   }
 
   return (

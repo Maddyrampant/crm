@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, FileDown, Printer } from "lucide-react";
 import { toast } from "sonner";
@@ -51,6 +52,7 @@ export function InvoiceDetail({ data }: { data: InvoiceDetailData }) {
   const { invoice, contact, items, payments } = data;
   const [payOpen, setPayOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
   const [payment, setPayment] = useState({
     amount: invoice.total,
     method: "card",
@@ -64,7 +66,7 @@ export function InvoiceDetail({ data }: { data: InvoiceDetailData }) {
     const res = await updateInvoiceStatusAction(invoice.id, status);
     if (res.ok) {
       toast.success("وضعیت به‌روزرسانی شد");
-      window.location.reload();
+      router.refresh();
     } else {
       toast.error("خطا");
     }
@@ -81,7 +83,7 @@ export function InvoiceDetail({ data }: { data: InvoiceDetailData }) {
     if (res.ok) {
       toast.success("پرداخت ثبت شد");
       setPayOpen(false);
-      window.location.reload();
+      router.refresh();
     } else {
       toast.error("خطا در ثبت پرداخت");
     }

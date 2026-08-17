@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Copy, KeyRound, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { createApiKeyAction, revokeApiKeyAction } from "@/actions/automation";
@@ -29,6 +30,7 @@ export function ApiKeysPanel({ keys }: { keys: ApiKey[] }) {
   const [name, setName] = useState("");
   const [secret, setSecret] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const router = useRouter();
 
   async function create() {
     if (!name.trim()) return;
@@ -38,7 +40,7 @@ export function ApiKeysPanel({ keys }: { keys: ApiKey[] }) {
     if (res.ok) {
       setSecret(res.secret);
       setName("");
-      window.location.reload();
+      router.refresh();
     } else {
       toast.error("خطا در ساخت کلید");
     }
@@ -47,7 +49,7 @@ export function ApiKeysPanel({ keys }: { keys: ApiKey[] }) {
   async function revoke(key: ApiKey) {
     if (!confirm("این کلید غیرفعال شود؟")) return;
     await revokeApiKeyAction(key.id);
-    window.location.reload();
+    router.refresh();
   }
 
   return (

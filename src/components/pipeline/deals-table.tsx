@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { JalaliDateInput } from "@/components/ui/jalali-date-input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -281,22 +282,18 @@ export function DealsTable({
               </SelectContent>
             </Select>
             <div className="flex w-full flex-wrap items-center gap-1 sm:w-auto">
-              <Input
-                dir="rtl"
-                type="date"
+              <JalaliDateInput
                 className="w-full min-w-0 flex-1 sm:w-40 sm:flex-none"
                 aria-label="تاریخ بستن از"
                 value={filters.closeDateFrom}
-                onChange={(e) => updateFilter("closeDateFrom", e.target.value)}
+                onChange={(v) => updateFilter("closeDateFrom", v ?? "")}
               />
               <span className="text-xs text-muted-foreground">تا</span>
-              <Input
-                dir="rtl"
-                type="date"
+              <JalaliDateInput
                 className="w-full min-w-0 flex-1 sm:w-40 sm:flex-none"
                 aria-label="تاریخ بستن تا"
                 value={filters.closeDateTo}
-                onChange={(e) => updateFilter("closeDateTo", e.target.value)}
+                onChange={(v) => updateFilter("closeDateTo", v ?? "")}
               />
             </div>
           </div>

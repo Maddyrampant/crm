@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { JalaliDateTimeInput } from "@/components/ui/jalali-date-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -211,7 +212,7 @@ export function PurchaseOrderFormDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="grid gap-4">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-2">
               <Label>تأمین‌کننده</Label>
               <Select value={supplierId} onValueChange={setSupplierId}>
@@ -230,14 +231,7 @@ export function PurchaseOrderFormDialog({
             </div>
             <div className="grid gap-2">
               <Label htmlFor="expectedAt">تاریخ دریافت مورد انتظار</Label>
-              <Input
-                id="expectedAt"
-                dir="ltr"
-                type="datetime-local"
-                className="text-end"
-                value={expectedAt}
-                onChange={(e) => setExpectedAt(e.target.value)}
-              />
+              <JalaliDateTimeInput value={expectedAt} onChange={(v) => setExpectedAt(v ?? "")} id="expectedAt" />
             </div>
           </div>
 
@@ -248,7 +242,7 @@ export function PurchaseOrderFormDialog({
                 return (
                   <div
                     key={index}
-                    className="grid grid-cols-[1fr_5rem_7rem_auto] items-start gap-2 rounded-lg border p-2"
+                    className="grid grid-cols-2 sm:grid-cols-[1fr_5rem_7rem_auto] items-start gap-2 rounded-lg border p-2"
                   >
                     <div className="min-w-0">
                       <ProductPicker

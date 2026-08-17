@@ -81,7 +81,7 @@ export function WarehouseFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{warehouse ? "ویرایش انبار" : "انبار جدید"}</DialogTitle>
           <DialogDescription>
@@ -100,7 +100,7 @@ export function WarehouseFormDialog({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-2">
               <Label htmlFor="warehouseCode">کد انبار</Label>
               <Input

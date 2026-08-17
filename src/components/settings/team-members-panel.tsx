@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2, Trash2, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -66,6 +67,7 @@ export function TeamMembersPanel({ members, currentUserId }: Props) {
   const [newRole, setNewRole] = useState<EditableRole>("seller");
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const router = useRouter();
 
   async function handleAdd() {
     if (!email.trim() || saving) return;
@@ -78,7 +80,7 @@ export function TeamMembersPanel({ members, currentUserId }: Props) {
     if (result.ok) {
       toast.success("عضو با موفقیت اضافه شد");
       setEmail("");
-      window.location.reload();
+      router.refresh();
     } else {
       toast.error(result.error ?? "خطا در افزودن عضو");
     }
@@ -91,7 +93,7 @@ export function TeamMembersPanel({ members, currentUserId }: Props) {
     setBusyId(null);
     if (result.ok) {
       toast.success("نقش با موفقیت تغییر کرد");
-      window.location.reload();
+      router.refresh();
     } else {
       toast.error(result.error ?? "خطا در تغییر نقش");
     }
@@ -105,7 +107,7 @@ export function TeamMembersPanel({ members, currentUserId }: Props) {
     setBusyId(null);
     if (result.ok) {
       toast.success("عضو حذف شد");
-      window.location.reload();
+      router.refresh();
     } else {
       toast.error(result.error ?? "خطا در حذف عضو");
     }

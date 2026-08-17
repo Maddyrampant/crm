@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft, Pencil, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ export function ContactDetail({
   canManage,
 }: Props) {
   const [formOpen, setFormOpen] = useState(false);
+  const router = useRouter();
 
   return (
     <div className="space-y-4">
@@ -265,7 +267,7 @@ export function ContactDetail({
         companies={companies}
         members={members}
         customFields={customFields}
-        onSaved={() => window.location.reload()}
+        onSaved={() => router.refresh()}
       />
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   Check,
@@ -82,6 +83,7 @@ export function BookingLinksPanel({ links }: Props) {
   const [description, setDescription] = useState("");
   const [slug, setSlug] = useState("");
   const [saving, setSaving] = useState(false);
+  const router = useRouter();
 
   function resetForm() {
     setTitle("");
@@ -117,7 +119,7 @@ export function BookingLinksPanel({ links }: Props) {
       toast.error("خطا در تغییر وضعیت");
       return;
     }
-    window.location.reload();
+    router.refresh();
   }
 
   async function handleDelete(link: BookingLinkRow) {
@@ -131,7 +133,7 @@ export function BookingLinksPanel({ links }: Props) {
       return;
     }
     toast.success("لینک حذف شد");
-    window.location.reload();
+    router.refresh();
   }
 
   async function handleSave() {
@@ -158,7 +160,7 @@ export function BookingLinksPanel({ links }: Props) {
     toast.success("لینک ساخته شد");
     setDialogOpen(false);
     resetForm();
-    window.location.reload();
+    router.refresh();
   }
 
   return (

@@ -14,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { JalaliDateInput } from "@/components/ui/jalali-date-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -246,11 +247,7 @@ export function InvoiceForm({
           </div>
           <div className="grid gap-2">
             <Label>سررسید</Label>
-            <Input
-              type="date"
-              value={dueAt}
-              onChange={(e) => setDueAt(e.target.value)}
-            />
+            <JalaliDateInput value={dueAt} onChange={(v) => setDueAt(v ?? "")} id="dueAt" />
           </div>
         </CardContent>
       </Card>

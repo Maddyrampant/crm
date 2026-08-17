@@ -383,7 +383,7 @@ export function KanbanBoard({
               if (result.ok && result.data) setBoard(result.data);
             }}
           >
-            <SelectTrigger className="w-52">
+            <SelectTrigger className="w-full sm:w-52">
               <SelectValue placeholder="انتخاب فانل" />
             </SelectTrigger>
             <SelectContent>
@@ -410,7 +410,7 @@ export function KanbanBoard({
         )}
       </div>
 
-      <div className="flex gap-3 overflow-x-auto pb-4">
+      <div className="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory">
         {board.stages.map((stage) => (
           <StageColumn
             key={stage.id}
