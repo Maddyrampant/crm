@@ -9,6 +9,7 @@ import {
   payments,
   pipelines,
   stages,
+  user,
 } from "@/db/schema";
 
 const num = (v: string | number | null | undefined) => Number(v ?? 0);
@@ -147,4 +148,120 @@ export async function getRecentActivity(workspaceId: string, limit = 15) {
     .where(eq(activityLog.workspaceId, workspaceId))
     .orderBy(desc(activityLog.createdAt))
     .limit(limit);
+}
+
+export async function getDashboardData(workspaceId: string) {
+  return cacheRemember(
+    cacheKey("dashboard", workspaceId),
+    KPIS_TTL,
+    async () => {
+      const [kpis, salesChart, teamPerformance, recentActivity, pipelineStats] = await Promise.all([
+        getKpis(workspaceId),
+        getSalesChart(workspaceId),
+        getTeamPerformance(workspaceId),
+        getTodayActivity(workspaceId),
+        getPipelineStats(workspaceId),
+      ]);
+      return { kpis, salesChart, teamPerformance, recentActivity, pipelineStats };
+    },
+  );
+}
+
+export async function getSalesChart(workspaceId: string, months = 12) {
+  const from = new Date();
+  from.setMonth(from.getMonth() - (months - 1));
+  from.setDate(1);
+  from.setHours(0, 0, 0, 0);
+
+  const [invoicedRows, collectedRows] = await Promise.all([
+    db
+      .select({
+        month: sql<string>`to_char(invoices.issued_at, 'YYYY-MM')`,
+        invoiced: sql<string>`coalesce(sum(invoices.total::numeric), 0)::text`,
+      })
+      .from(invoices)
+      .where(and(eq(invoices.workspaceId, workspaceId), gte(invoices.issuedAt, from)))
+      .groupBy(sql`to_char(invoices.issued_at, 'YYYY-MM')`)
+      .orderBy(sql`to_char(invoices.issued_at, 'YYYY-MM')`),
+    db
+      .select({
+        month: sql<string>`to_char(payments.paid_at, 'YYYY-MM')`,
+        collected: sql<string>`coalesce(sum(payments.amount::numeric), 0)::text`,
+      })
+      .from(payments)
+      .innerJoin(invoices, eq(invoices.id, payments.invoiceId))
+      .where(and(eq(invoices.workspaceId, workspaceId), gte(payments.paidAt, from)))
+      .groupBy(sql`to_char(payments.paid_at, 'YYYY-MM')`)
+      .orderBy(sql`to_char(payments.paid_at, 'YYYY-MM')`),
+  ]);
+
+  const map = new Map<string, { month: string; invoiced: number; collected: number }>();
+  for (const r of invoicedRows) {
+    map.set(r.month, { month: r.month, invoiced: num(r.invoiced), collected: 0 });
+  }
+  for (const r of collectedRows) {
+    const existing = map.get(r.month);
+    if (existing) {
+      existing.collected = num(r.collected);
+    } else {
+      map.set(r.month, { month: r.month, invoiced: 0, collected: num(r.collected) });
+    }
+  }
+
+  return Array.from(map.values()).sort((a, b) => a.month.localeCompare(b.month));
+}
+
+export async function getTeamPerformance(workspaceId: string) {
+  const rows = await db
+    .select({
+      userId: deals.ownerId,
+      userName: user.name,
+      wonCount: sql<number>`count(*) filter (where ${deals.status} = 'won')::int`,
+      wonValue: sql<string>`coalesce(sum(case when ${deals.status} = 'won' then ${deals.amount}::numeric else 0 end), 0)::text`,
+      openCount: sql<number>`count(*) filter (where ${deals.status} = 'open')::int`,
+      openValue: sql<string>`coalesce(sum(case when ${deals.status} = 'open' then ${deals.amount}::numeric else 0 end), 0)::text`,
+    })
+    .from(deals)
+    .leftJoin(user, eq(user.id, deals.ownerId))
+    .where(eq(deals.workspaceId, workspaceId))
+    .groupBy(deals.ownerId, user.name);
+
+  return rows.map((r) => ({
+    userId: r.userId,
+    userName: r.userName,
+    wonCount: r.wonCount,
+    wonValue: num(r.wonValue),
+    openCount: r.openCount,
+    openValue: num(r.openValue),
+  }));
+}
+
+export async function getTodayActivity(workspaceId: string) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return db
+    .select()
+    .from(activityLog)
+    .where(and(eq(activityLog.workspaceId, workspaceId), gte(activityLog.createdAt, today)))
+    .orderBy(desc(activityLog.createdAt));
+}
+
+export async function getSalesSummary(workspaceId: string) {
+  const [row] = await db
+    .select({
+      openCount: sql<number>`count(*) filter (where ${deals.status} = 'open')::int`,
+      openValue: sql<string>`coalesce(sum(case when ${deals.status} = 'open' then ${deals.amount}::numeric else 0 end), 0)::text`,
+      wonCount: sql<number>`count(*) filter (where ${deals.status} = 'won')::int`,
+      wonValue: sql<string>`coalesce(sum(case when ${deals.status} = 'won' then ${deals.amount}::numeric else 0 end), 0)::text`,
+      lostCount: sql<number>`count(*) filter (where ${deals.status} = 'lost')::int`,
+      lostValue: sql<string>`coalesce(sum(case when ${deals.status} = 'lost' then ${deals.amount}::numeric else 0 end), 0)::text`,
+    })
+    .from(deals)
+    .where(eq(deals.workspaceId, workspaceId));
+
+  return {
+    open: { count: row?.openCount ?? 0, value: num(row?.openValue) },
+    won: { count: row?.wonCount ?? 0, value: num(row?.wonValue) },
+    lost: { count: row?.lostCount ?? 0, value: num(row?.lostValue) },
+  };
 }
