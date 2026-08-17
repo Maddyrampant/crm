@@ -41,6 +41,8 @@ export type DealFilters = {
   search?: string;
   page?: number;
   pageSize?: number;
+  sortBy?: "title" | "amount" | "updatedAt" | "closeDate";
+  sortDir?: "asc" | "desc";
 };
 
 export async function listDeals(filters: DealFilters) {
@@ -70,6 +72,16 @@ export async function listDeals(filters: DealFilters) {
     if (searchCond) conditions.push(searchCond);
   }
 
+  const sortCol =
+    filters.sortBy === "title"
+      ? deals.title
+      : filters.sortBy === "amount"
+        ? deals.amount
+        : filters.sortBy === "closeDate"
+          ? deals.closeDate
+          : deals.updatedAt;
+  const sortOrder = filters.sortDir === "asc" ? asc(sortCol) : desc(sortCol);
+
   const [rows, totalRow] = await Promise.all([
     db
       .select(DEAL_SELECT)
@@ -79,7 +91,7 @@ export async function listDeals(filters: DealFilters) {
       .leftJoin(stages, eq(stages.id, deals.stageId))
       .leftJoin(user, eq(user.id, deals.ownerId))
       .where(and(...conditions))
-      .orderBy(desc(deals.updatedAt))
+      .orderBy(sortOrder)
       .limit(pageSize)
       .offset((page - 1) * pageSize),
     db

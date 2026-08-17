@@ -32,6 +32,8 @@ export async function listProductsAction(raw?: {
   categoryId?: string;
   active?: "active" | "inactive";
   page?: number;
+  sortBy?: "name" | "unitPrice" | "totalStock" | "createdAt";
+  sortDir?: "asc" | "desc";
 }) {
   const { workspaceId } = await requireWorkspace();
   return listProducts({
@@ -40,6 +42,8 @@ export async function listProductsAction(raw?: {
     categoryId: raw?.categoryId ?? null,
     active: raw?.active ?? null,
     page: raw?.page ?? 1,
+    sortBy: raw?.sortBy,
+    sortDir: raw?.sortDir,
   });
 }
 

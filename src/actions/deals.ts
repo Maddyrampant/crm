@@ -29,6 +29,8 @@ const listQuerySchema = z.object({
   search: z.string().trim().max(200).optional(),
   page: z.coerce.number().int().min(1).optional(),
   pageSize: z.coerce.number().int().min(1).max(100).optional(),
+  sortBy: z.enum(["title", "amount", "updatedAt", "closeDate"]).optional(),
+  sortDir: z.enum(["asc", "desc"]).optional(),
 });
 
 function parseDateOnly(value: string | null | undefined, endOfDay: boolean) {
