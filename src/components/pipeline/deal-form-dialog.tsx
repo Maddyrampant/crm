@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { JalaliDateInput } from "@/components/ui/jalali-date-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -123,7 +124,7 @@ export function DealFormDialog({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-2">
               <Label htmlFor="amount">مبلغ (تومان)</Label>
               <Input
@@ -139,17 +140,11 @@ export function DealFormDialog({
             </div>
             <div className="grid gap-2">
               <Label htmlFor="closeDate">تاریخ بسته‌شدن</Label>
-              <Input
-                id="closeDate"
-                dir="ltr"
-                type="date"
-                value={closeDate}
-                onChange={(e) => setCloseDate(e.target.value)}
-              />
+              <JalaliDateInput value={closeDate} onChange={(v) => setCloseDate(v ?? "")} id="closeDate" />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-2">
               <Label>فانل فروش</Label>
               <Select value={pipelineId} onValueChange={handlePipelineChange}>
@@ -182,7 +177,7 @@ export function DealFormDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-2">
               <Label>مشتری</Label>
               <Select value={contactId || "none"} onValueChange={(v) => setContactId(v === "none" ? "" : v)}>

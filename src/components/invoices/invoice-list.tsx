@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Eye, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -21,6 +22,7 @@ import { InvoiceStatusBadge } from "./status-badge";
 
 export function InvoiceList({ initialData }: { initialData: InvoiceRow[] }) {
   const [search, setSearch] = useState("");
+  const router = useRouter();
 
   const filtered = initialData.filter(
     (row) =>
@@ -33,7 +35,7 @@ export function InvoiceList({ initialData }: { initialData: InvoiceRow[] }) {
     const result = await deleteInvoiceAction(invoiceId);
     if (result.ok) {
       toast.success("فاکتور حذف شد");
-      window.location.reload();
+      router.refresh();
     } else {
       toast.error("خطا در حذف");
     }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -38,6 +39,7 @@ export function WebhooksPanel({ webhooks }: { webhooks: Webhook[] }) {
   const [url, setUrl] = useState("");
   const [events, setEvents] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const router = useRouter();
 
   async function create() {
     setSaving(true);
@@ -48,7 +50,7 @@ export function WebhooksPanel({ webhooks }: { webhooks: Webhook[] }) {
       setName("");
       setUrl("");
       setEvents([]);
-      window.location.reload();
+      router.refresh();
     } else {
       toast.error("خطا در ساخت وب‌هاوک");
     }
@@ -56,13 +58,13 @@ export function WebhooksPanel({ webhooks }: { webhooks: Webhook[] }) {
 
   async function toggle(w: Webhook, active: boolean) {
     await toggleWebhookAction(w.id, active);
-    window.location.reload();
+    router.refresh();
   }
 
   async function remove(w: Webhook) {
     if (!confirm("این وب‌هاوک حذف شود؟")) return;
     await deleteWebhookAction(w.id);
-    window.location.reload();
+    router.refresh();
   }
 
   return (

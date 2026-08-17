@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   addDays,
   addMonths,
@@ -87,6 +88,7 @@ export function CalendarView({
   });
   const [taskTitle, setTaskTitle] = useState("");
   const [saving, setSaving] = useState(false);
+  const router = useRouter();
 
   const grid = useMemo(() => {
     const first = startOfMonth(month);
@@ -130,7 +132,7 @@ export function CalendarView({
     if (res.ok) {
       toast.success("قرار ثبت شد");
       setSelectedDay(null);
-      window.location.reload();
+      router.refresh();
     } else {
       toast.error("خطا در ثبت قرار");
     }
@@ -142,7 +144,7 @@ export function CalendarView({
     if (res.ok) {
       toast.success("تسک ساخته شد");
       setTaskTitle("");
-      window.location.reload();
+      router.refresh();
     }
   }
 
@@ -151,7 +153,7 @@ export function CalendarView({
       task.id,
       task.status === "done" ? "open" : "done"
     );
-    window.location.reload();
+    router.refresh();
   }
 
   const todayAppointments = appointments
@@ -262,7 +264,7 @@ export function CalendarView({
                     className="text-destructive"
                     onClick={async () => {
                       await deleteAppointmentAction(a.id);
-                      window.location.reload();
+                      router.refresh();
                     }}
                   >
                     <Plus className="size-4 rotate-45" />

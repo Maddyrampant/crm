@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Pencil, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -42,6 +43,7 @@ export function EmailTemplatesPanel({ templates }: { templates: EmailTemplate[] 
   const [form, setForm] = useState<FormState>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const router = useRouter();
 
   function startEdit(t: EmailTemplate) {
     setEditingId(t.id);
@@ -66,7 +68,7 @@ export function EmailTemplatesPanel({ templates }: { templates: EmailTemplate[] 
     if (res.ok) {
       toast.success(editingId ? "الگو به‌روزرسانی شد" : "الگو ساخته شد");
       reset();
-      window.location.reload();
+      router.refresh();
     } else {
       toast.error("خطا در ذخیره الگو");
     }
@@ -77,7 +79,7 @@ export function EmailTemplatesPanel({ templates }: { templates: EmailTemplate[] 
     const res = await deleteEmailTemplateAction(t.id);
     if (res.ok) {
       toast.success("الگو حذف شد");
-      window.location.reload();
+      router.refresh();
     } else {
       toast.error("خطا در حذف الگو");
     }
