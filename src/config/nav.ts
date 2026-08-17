@@ -92,6 +92,13 @@ export const navSections: NavSection[] = [
         owner: "part1",
         ready: true,
       },
+      {
+        title: "پیشنهاد فروش",
+        href: "/quotes",
+        icon: FileText,
+        owner: "part1",
+        ready: true,
+      },
     ],
   },
   {
