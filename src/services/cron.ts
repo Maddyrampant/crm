@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq, lt } from "drizzle-orm";
+import { and, eq, inArray, lt } from "drizzle-orm";
 import { db } from "@/db";
 import { invoices, tasks, workspaces } from "@/db/schema";
 import { listLowStock } from "./inventory";
@@ -34,11 +34,15 @@ export async function runDailyMaintenance(): Promise<DailyCronResult> {
     .where(and(eq(invoices.status, "sent"), lt(invoices.dueAt, new Date())))
     .limit(500);
 
-  for (const row of overdueRows) {
+  if (overdueRows.length > 0) {
+    const overdueIds = overdueRows.map((r) => r.id);
     await db
       .update(invoices)
       .set({ status: "overdue", updatedAt: new Date() })
-      .where(eq(invoices.id, row.id));
+      .where(inArray(invoices.id, overdueIds));
+  }
+
+  for (const row of overdueRows) {
     dispatchRuleEvent(row.workspaceId, "invoice.overdue", {
       entityId: row.id,
       invoiceId: row.id,
@@ -78,33 +82,32 @@ export async function runDailyMaintenance(): Promise<DailyCronResult> {
   // ── تسکهای سررسید شده ──
   let overdueTasks = 0;
   const now = new Date();
-  for (const ws of allWorkspaces) {
-    const overdue = await db
-      .select({ id: tasks.id, title: tasks.title, dueAt: tasks.dueAt })
-      .from(tasks)
-      .where(
-        and(
-          eq(tasks.workspaceId, ws.id),
-          eq(tasks.status, "open"),
-          lt(tasks.dueAt, now)
-        )
-      )
-      .limit(50);
+  const allOverdue = await db
+    .select({ id: tasks.id, title: tasks.title, dueAt: tasks.dueAt, workspaceId: tasks.workspaceId })
+    .from(tasks)
+    .where(and(eq(tasks.status, "open"), lt(tasks.dueAt, now)))
+    .limit(500);
 
+  const overdueByWorkspace = new Map<string, typeof allOverdue>();
+  for (const t of allOverdue) {
+    const list = overdueByWorkspace.get(t.workspaceId) || [];
+    list.push(t);
+    overdueByWorkspace.set(t.workspaceId, list);
+  }
+
+  for (const [wsId, overdue] of overdueByWorkspace) {
     overdueTasks += overdue.length;
-    if (overdue.length > 0) {
-      const titles = overdue.slice(0, 5).map((t) => t.title).join("، ");
-      await notifyWorkspace({
-        workspaceId: ws.id,
-        type: "task",
-        title: "تسکهای سررسید شده",
-        body:
-          overdue.length <= 5
-            ? `${overdue.length} تسک از موعد گذشته: ${titles}`
-            : `${overdue.length} تسک از موعد گذشته (نمونه: ${titles}).`,
-        link: "/tasks",
-      });
-    }
+    const titles = overdue.slice(0, 5).map((t) => t.title).join("، ");
+    await notifyWorkspace({
+      workspaceId: wsId,
+      type: "task",
+      title: "تسکهای سررسید شده",
+      body:
+        overdue.length <= 5
+          ? `${overdue.length} تسک از موعد گذشته: ${titles}`
+          : `${overdue.length} تسک از موعد گذشته (نمونه: ${titles}).`,
+      link: "/tasks",
+    });
   }
 
   return { remindersProcessed, overdueInvoices: overdueRows.length, overdueTasks, lowStockWorkspaces };

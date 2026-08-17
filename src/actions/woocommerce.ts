@@ -87,6 +87,14 @@ export async function disconnectWooStore(storeId: string) {
   if (!hasPermission(ctx.membership, "admin"))
     return { ok: false as const, error: "عدم دسترسی" };
 
+  const existing = await db
+    .select({ id: wooStores.id })
+    .from(wooStores)
+    .where(and(eq(wooStores.id, storeId), eq(wooStores.workspaceId, ctx.workspaceId)))
+    .limit(1);
+
+  if (!existing[0]) return { ok: false as const, error: "فروشگاه یافت نشد" };
+
   await db
     .delete(wooStores)
     .where(and(eq(wooStores.id, storeId), eq(wooStores.workspaceId, ctx.workspaceId)));
@@ -100,6 +108,14 @@ export async function toggleWooStore(storeId: string, active: boolean) {
   if (!ctx) return { ok: false as const, error: "ورک‌اسپیس یافت نشد" };
   if (!hasPermission(ctx.membership, "admin"))
     return { ok: false as const, error: "عدم دسترسی" };
+
+  const existing = await db
+    .select({ id: wooStores.id })
+    .from(wooStores)
+    .where(and(eq(wooStores.id, storeId), eq(wooStores.workspaceId, ctx.workspaceId)))
+    .limit(1);
+
+  if (!existing[0]) return { ok: false as const, error: "فروشگاه یافت نشد" };
 
   await db
     .update(wooStores)
