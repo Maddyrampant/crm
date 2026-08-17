@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  Activity,
   BarChart3,
   Bot,
   Boxes,
@@ -118,6 +119,14 @@ export const navSections: NavSection[] = [
         icon: BarChart3,
         owner: "part2",
         ready: true,
+      },
+      {
+        title: "فعالیت‌ها",
+        href: "/activity",
+        icon: Activity,
+        owner: "part1",
+        ready: true,
+        minRole: "seller",
       },
     ],
   },
