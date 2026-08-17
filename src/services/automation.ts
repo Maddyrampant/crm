@@ -2,14 +2,8 @@ import { createHmac, randomBytes, createHash } from "node:crypto";
 import { and, desc, eq, inArray, isNull, lt, lte, or } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import {
-  apiKeys,
-  emailLogs,
-  emailTemplates,
-  smsLogs,
-  webhookDeliveries,
-  webhooks,
-} from "@/db/schema";
+import { apiKeys, emailLogs, emailTemplates, smsLogs, webhookDeliveries, webhooks } from "@/db/schema";
+import { createTrackingToken } from "./tracking";
 
 /* ─────────────────── وب‌هاوک ─────────────────── */
 
@@ -304,6 +298,27 @@ export async function sendEmail(
       ? "smtp"
       : "log";
 
+  let emailBody = input.body;
+  let trackingToken: string | null = null;
+
+  if (input.contactId) {
+    try {
+      trackingToken = await createTrackingToken(workspaceId, {
+        contactId: input.contactId,
+        type: "email_open",
+        entityType: "email",
+        meta: input.subject,
+      });
+      const baseUrl = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
+      const pixel = `<img src="${baseUrl}/t/${trackingToken}" width="1" height="1" style="display:none" alt="" />`;
+      emailBody = emailBody.includes("<")
+        ? `${emailBody}${pixel}`
+        : `<html><body><pre style="font-family:sans-serif;white-space:pre-wrap">${emailBody.replace(/</g, "&lt;")}</pre>${pixel}</body></html>`;
+    } catch {
+      // tracking failure should not block email
+    }
+  }
+
   try {
     let providerMessageId: string | null = null;
 
@@ -318,7 +333,7 @@ export async function sendEmail(
           from: process.env.EMAIL_FROM ?? "CRM <onboarding@resend.dev>",
           to: [input.to],
           subject: input.subject,
-          text: input.body,
+          html: emailBody,
         }),
       });
       if (!res.ok) {
@@ -341,7 +356,7 @@ export async function sendEmail(
         from: process.env.EMAIL_FROM ?? process.env.SMTP_USER,
         to: input.to,
         subject: input.subject,
-        text: input.body,
+        html: emailBody,
       });
       providerMessageId = info.messageId ?? null;
     }
