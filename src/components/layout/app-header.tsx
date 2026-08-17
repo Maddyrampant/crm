@@ -5,6 +5,7 @@ import { PageTitle } from "@/components/layout/page-title";
 import { GlobalSearch } from "@/components/layout/global-search";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { LocaleToggle } from "@/components/layout/locale-toggle";
 
 export function AppHeader({ userName, userEmail }: { userName: string; userEmail: string }) {
   return (
@@ -17,6 +18,7 @@ export function AppHeader({ userName, userEmail }: { userName: string; userEmail
         <GlobalSearch />
       </div>
       <ThemeToggle />
+      <LocaleToggle />
       <NotificationBell />
       <UserMenu name={userName} email={userEmail} />
     </header>
