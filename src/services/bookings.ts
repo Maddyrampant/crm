@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, desc, eq, gte, lt } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, ilike, lt, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import { appointments, bookingLinks, user } from "@/db/schema";
 import {
@@ -9,26 +9,73 @@ import {
   type BookingLinkInput,
   type BookingSlot,
 } from "@/lib/bookings";
+import {
+  normalizePage,
+  normalizePageSize,
+  calculateOffset,
+  buildPaginatedResult,
+  type PaginatedResult,
+} from "@/lib/pagination";
 
 /* ─────────────── CRUD ─────────────── */
 
-export async function listBookingLinks(workspaceId: string) {
-  return db
-    .select({
-      id: bookingLinks.id,
-      title: bookingLinks.title,
-      slug: bookingLinks.slug,
-      userId: bookingLinks.userId,
-      userName: user.name,
-      durationMinutes: bookingLinks.durationMinutes,
-      location: bookingLinks.location,
-      active: bookingLinks.active,
-      createdAt: bookingLinks.createdAt,
-    })
-    .from(bookingLinks)
-    .leftJoin(user, eq(user.id, bookingLinks.userId))
-    .where(eq(bookingLinks.workspaceId, workspaceId))
-    .orderBy(desc(bookingLinks.createdAt));
+export type BookingLinkRow = {
+  id: string;
+  title: string;
+  slug: string;
+  userId: string;
+  userName: string | null;
+  durationMinutes: number;
+  location: string | null;
+  active: boolean;
+  createdAt: Date;
+};
+
+const baseBookingLinkSelect = {
+  id: bookingLinks.id,
+  title: bookingLinks.title,
+  slug: bookingLinks.slug,
+  userId: bookingLinks.userId,
+  userName: user.name,
+  durationMinutes: bookingLinks.durationMinutes,
+  location: bookingLinks.location,
+  active: bookingLinks.active,
+  createdAt: bookingLinks.createdAt,
+};
+
+export async function listBookingLinks(
+  workspaceId: string,
+  params?: { page?: number; pageSize?: number; search?: string; active?: boolean }
+): Promise<PaginatedResult<BookingLinkRow>> {
+  const page = normalizePage(params?.page);
+  const pageSize = normalizePageSize(params?.pageSize);
+  const offset = calculateOffset(page, pageSize);
+
+  const conditions: SQL[] = [eq(bookingLinks.workspaceId, workspaceId)];
+  if (params?.search) {
+    conditions.push(ilike(bookingLinks.title, `%${params.search.trim()}%`));
+  }
+  if (params?.active !== undefined) {
+    conditions.push(eq(bookingLinks.active, params.active));
+  }
+  const where = and(...conditions);
+
+  const [items, totalRow] = await Promise.all([
+    db
+      .select(baseBookingLinkSelect)
+      .from(bookingLinks)
+      .leftJoin(user, eq(user.id, bookingLinks.userId))
+      .where(where)
+      .orderBy(desc(bookingLinks.createdAt))
+      .limit(pageSize)
+      .offset(offset),
+    db
+      .select({ count: count() })
+      .from(bookingLinks)
+      .where(where),
+  ]);
+
+  return buildPaginatedResult(items, totalRow[0]?.count ?? 0, page, pageSize);
 }
 
 export async function createBookingLink(workspaceId: string, input: BookingLinkInput) {

@@ -23,7 +23,7 @@ export default async function ContactDetailPage({
   const contact = await getContact(workspaceId, id);
   if (!contact) redirect("/contacts");
 
-  const [companies, members, customFields, dealsResult] = await Promise.all([
+  const [companies, membersResult, customFields, dealsResult] = await Promise.all([
     listCompanies({ workspaceId, pageSize: 100, sortBy: "name", sortDir: "asc" }),
     getWorkspaceMembers(workspaceId),
     listCustomFields(workspaceId),
@@ -52,7 +52,7 @@ export default async function ContactDetailPage({
         })
       )}
       companies={companies.items.map((c) => ({ id: c.id, name: c.name }))}
-      members={members}
+      members={membersResult.items}
       canManage={hasPermission(membership, "seller")}
     />
   );

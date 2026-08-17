@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "اعضای تیم" };
 
 export default async function TeamPage() {
   const { user, workspaceId } = await requireWorkspaceRole("admin");
-  const members = await getWorkspaceMembers(workspaceId);
+  const membersResult = await getWorkspaceMembers(workspaceId);
 
   return (
     <div className="space-y-6">
@@ -16,7 +16,7 @@ export default async function TeamPage() {
         title="اعضای تیم"
         description="مدیریت اعضا و نقش‌های فضای کاری"
       />
-      <TeamMembersPanel members={members} currentUserId={user.id} />
+      <TeamMembersPanel members={membersResult.items} currentUserId={user.id} />
     </div>
   );
 }

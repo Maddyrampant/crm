@@ -1,24 +1,66 @@
 import "server-only";
 
-import { and, eq } from "drizzle-orm";
+import { and, count, eq, ilike, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import { workspaceMembers, user, type WorkspaceMember } from "@/db/schema";
+import {
+  normalizePage,
+  normalizePageSize,
+  calculateOffset,
+  buildPaginatedResult,
+  type PaginatedResult,
+} from "@/lib/pagination";
 
-export async function getWorkspaceMembers(workspaceId: string) {
-  return db
-    .select({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: workspaceMembers.role,
-    })
-    .from(workspaceMembers)
-    .innerJoin(user, eq(user.id, workspaceMembers.userId))
-    .where(eq(workspaceMembers.workspaceId, workspaceId))
-    .orderBy(user.name);
+const baseMemberSelect = {
+  id: user.id,
+  name: user.name,
+  email: user.email,
+  role: workspaceMembers.role,
+};
+
+export type WorkspaceMemberRow = {
+  id: string;
+  name: string;
+  email: string;
+  role: WorkspaceMember["role"];
+};
+
+export async function getWorkspaceMembers(
+  workspaceId: string,
+  params?: { page?: number; pageSize?: number; search?: string; role?: string }
+): Promise<PaginatedResult<WorkspaceMemberRow>> {
+  const page = normalizePage(params?.page);
+  const pageSize = normalizePageSize(params?.pageSize);
+  const offset = calculateOffset(page, pageSize);
+
+  const conditions: SQL[] = [eq(workspaceMembers.workspaceId, workspaceId)];
+  if (params?.search) {
+    const q = `%${params.search.trim()}%`;
+    conditions.push(ilike(user.name, q));
+  }
+  if (params?.role) {
+    conditions.push(eq(workspaceMembers.role, params.role as WorkspaceMember["role"]));
+  }
+  const where = and(...conditions);
+
+  const [items, totalRow] = await Promise.all([
+    db
+      .select(baseMemberSelect)
+      .from(workspaceMembers)
+      .innerJoin(user, eq(user.id, workspaceMembers.userId))
+      .where(where)
+      .orderBy(user.name)
+      .limit(pageSize)
+      .offset(offset),
+    db
+      .select({ count: count() })
+      .from(workspaceMembers)
+      .innerJoin(user, eq(user.id, workspaceMembers.userId))
+      .where(where),
+  ]);
+
+  return buildPaginatedResult(items, totalRow[0]?.count ?? 0, page, pageSize);
 }
-
-export type WorkspaceMemberRow = Awaited<ReturnType<typeof getWorkspaceMembers>>[number];
 
 export type EditableRole = Exclude<WorkspaceMember["role"], "owner">;
 

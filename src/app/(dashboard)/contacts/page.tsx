@@ -10,7 +10,7 @@ import { ImportCsvDialog } from "@/components/contacts/import-csv-dialog";
 export default async function ContactsPage() {
   const { workspaceId, membership } = await requireWorkspace();
 
-  const [contactsResult, companies, tags, members, customFields] = await Promise.all([
+  const [contactsResult, companies, tags, membersResult, customFields] = await Promise.all([
     listContacts({ workspaceId, page: 1, pageSize: 20 }),
     listCompanies({ workspaceId, pageSize: 100, sortBy: "name", sortDir: "asc" }),
     listTags(workspaceId),
@@ -33,7 +33,7 @@ export default async function ContactsPage() {
         }}
         companies={companies.items.map((c) => ({ id: c.id, name: c.name }))}
         tags={tags.map((t) => ({ id: t.id, name: t.name, color: t.color }))}
-        members={members}
+        members={membersResult.items}
         customFields={customFields.map(toCustomFieldRow)}
         canManage={hasPermission(membership, "seller")}
         canDelete={hasPermission(membership, "manager")}

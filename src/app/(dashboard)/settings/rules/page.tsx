@@ -10,9 +10,9 @@ export const metadata: Metadata = { title: "قوانین اتوماسیون" };
 export default async function RulesPage() {
   const { workspaceId } = await requireWorkspaceRole("manager");
 
-  const [rules, logs, pipelines] = await Promise.all([
+  const [rulesResult, logsResult, pipelines] = await Promise.all([
     listRules(workspaceId),
-    listRuleLogs(workspaceId, 25),
+    listRuleLogs(workspaceId),
     listPipelines(workspaceId),
   ]);
 
@@ -26,7 +26,7 @@ export default async function RulesPage() {
         title="قوانین اتوماسیون"
         description="رویدادها، شرایط و اکشن‌های خودکار — انجین قوانین (Workflow/Blueprint)"
       />
-      <RulesPanel rules={rules} logs={logs} stages={stages} />
+      <RulesPanel rules={rulesResult.items} logs={logsResult.items} stages={stages} />
     </div>
   );
 }

@@ -62,9 +62,9 @@ export async function buildSystemPrompt(workspaceId: string) {
     );
   }
 
-  if (members.status === "fulfilled" && members.value.length > 0) {
+  if (members.status === "fulfilled" && members.value.items.length > 0) {
     parts.push(
-      `اعضای تیم (برای تعیین مالک): ${members.value
+      `اعضای تیم (برای تعیین مالک): ${members.value.items
         .map((m) => `${m.name ?? m.email}${m.role ? ` (${m.role})` : ""}`)
         .join("، ")}`
     );

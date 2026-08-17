@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: "فروش‌ها" };
 export default async function DealsPage() {
   const { workspaceId, membership } = await requireWorkspace();
 
-  const [dealsResult, pipelines, members] = await Promise.all([
+  const [dealsResult, pipelines, membersResult] = await Promise.all([
     listDeals({ workspaceId, page: 1, pageSize: 20 }),
     listPipelines(workspaceId),
     getWorkspaceMembers(workspaceId),
@@ -41,7 +41,7 @@ export default async function DealsPage() {
           total: dealsResult.total,
         }}
         pipelines={pipelines.map(toPipelineRow)}
-        members={members}
+        members={membersResult.items}
         canManageDeal={hasPermission(membership, "seller")}
         canDelete={hasPermission(membership, "manager")}
       />

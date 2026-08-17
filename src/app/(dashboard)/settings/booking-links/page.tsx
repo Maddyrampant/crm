@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "لینک‌های رزرو" };
 
 export default async function BookingLinksPage() {
   const { workspaceId } = await requireWorkspaceRole("seller");
-  const links = await listBookingLinks(workspaceId);
+  const linksResult = await listBookingLinks(workspaceId);
 
   return (
     <div className="space-y-6">
@@ -16,7 +16,7 @@ export default async function BookingLinksPage() {
         title="لینک‌های رزرو"
         description="لینکهای عمومی رزرو جلسه برای اشتراک‌گذاری با مشتریان"
       />
-      <BookingLinksPanel links={links} />
+      <BookingLinksPanel links={linksResult.items} />
     </div>
   );
 }
