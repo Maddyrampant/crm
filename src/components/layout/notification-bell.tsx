@@ -83,7 +83,7 @@ export function NotificationBell() {
     let active = true;
     const run = async () => {
       try {
-        const data = await listNotificationsAction(20);
+        const data = await listNotificationsAction({ pageSize: 20 });
         if (!active) return;
         setItems(data.items);
         setUnread(data.unread);

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import { requireWorkspace } from "@/lib/session";
 import { getInvoice } from "@/services/invoices";
 import { InvoiceDetail } from "@/components/invoices/invoice-detail";
@@ -14,7 +14,7 @@ export default async function InvoiceDetailPage({
   const { id } = await params;
   const { workspaceId } = await requireWorkspace();
   const data = await getInvoice(workspaceId, id);
-  if (!data) notFound();
+  if (!data) redirect("/invoices");
 
   return <InvoiceDetail data={data} />;
 }

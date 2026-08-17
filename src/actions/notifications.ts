@@ -8,13 +8,17 @@ import {
   markNotificationRead,
 } from "@/services/notifications";
 
-export async function listNotificationsAction(limit = 20) {
+export async function listNotificationsAction(params?: {
+  page?: number;
+  pageSize?: number;
+  type?: string;
+}) {
   const { user, workspaceId } = await requireWorkspace();
-  const [items, unread] = await Promise.all([
-    listNotifications(workspaceId, user.id, limit),
+  const [result, unread] = await Promise.all([
+    listNotifications(workspaceId, user.id, params),
     getUnreadNotificationsCount(workspaceId, user.id),
   ]);
-  return { items, unread };
+  return { items: result.items, total: result.total, page: result.page, pageSize: result.pageSize, totalPages: result.totalPages, unread };
 }
 
 export async function markNotificationReadAction(notificationId: string) {

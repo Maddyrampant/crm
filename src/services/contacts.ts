@@ -158,7 +158,7 @@ export async function getContact(workspaceId: string, id: string) {
     .from(customFields)
     .where(eq(customFields.workspaceId, workspaceId));
 
-  const activity = await getActivityFeed({
+  const activityResult = await getActivityFeed({
     workspaceId,
     entityType: "contact",
     entityId: id,
@@ -171,7 +171,7 @@ export async function getContact(workspaceId: string, id: string) {
     owner: row.owner,
     tags: tagsForContact.map((t) => t.tag),
     customFieldDefs: fieldDefs,
-    activity,
+    activity: activityResult.items,
   };
 }
 

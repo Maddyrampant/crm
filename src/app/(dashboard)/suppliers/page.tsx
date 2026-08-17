@@ -6,7 +6,7 @@ import { SuppliersTable } from "@/components/inventory/suppliers-table";
 export default async function SuppliersPage() {
   const { workspaceId, membership } = await requireWorkspace();
 
-  const suppliers = await listSuppliers(workspaceId);
+  const suppliersResult = await listSuppliers(workspaceId);
 
   return (
     <div className="space-y-6">
@@ -15,7 +15,7 @@ export default async function SuppliersPage() {
         description="تأمین‌کنندگان کالا برای سفارش‌های خرید."
       />
       <SuppliersTable
-        initialData={suppliers}
+        initialData={suppliersResult.items}
         canManage={hasPermission(membership, "manager")}
       />
     </div>

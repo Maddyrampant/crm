@@ -1,8 +1,15 @@
 import "server-only";
 
-import { and, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { activityLog, notes, type ActivityLog } from "@/db/schema";
+import {
+  normalizePage,
+  normalizePageSize,
+  calculateOffset,
+  buildPaginatedResult,
+  type PaginatedResult,
+} from "@/lib/pagination";
 
 export type ActivityEntity = ActivityLog["entityType"];
 
@@ -40,20 +47,38 @@ type ActivityFeedOptions = {
   entityType?: ActivityEntity;
   entityId?: string;
   limit?: number;
+  page?: number;
+  pageSize?: number;
 };
 
 /** فید فعالیت یک موجودیت (یا کل ورک‌اسپیس) — جدیدترین اول. */
-export async function getActivityFeed(options: ActivityFeedOptions): Promise<ActivityLog[]> {
+export async function getActivityFeed(
+  options: ActivityFeedOptions
+): Promise<PaginatedResult<ActivityLog>> {
+  const page = normalizePage(options.page);
+  const pageSize = normalizePageSize(options.pageSize ?? options.limit);
+  const offset = calculateOffset(page, pageSize);
+
   const conditions = [eq(activityLog.workspaceId, options.workspaceId)];
   if (options.entityType) conditions.push(eq(activityLog.entityType, options.entityType));
   if (options.entityId) conditions.push(eq(activityLog.entityId, options.entityId));
+  const where = and(...conditions);
 
-  return db
-    .select()
-    .from(activityLog)
-    .where(and(...conditions))
-    .orderBy(desc(activityLog.createdAt))
-    .limit(options.limit ?? 50);
+  const [items, totalRow] = await Promise.all([
+    db
+      .select()
+      .from(activityLog)
+      .where(where)
+      .orderBy(desc(activityLog.createdAt))
+      .limit(pageSize)
+      .offset(offset),
+    db
+      .select({ count: count() })
+      .from(activityLog)
+      .where(where),
+  ]);
+
+  return buildPaginatedResult(items, totalRow[0]?.count ?? 0, page, pageSize);
 }
 
 /** افزودن یادداشت به یک موجودیت. */

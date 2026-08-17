@@ -96,7 +96,7 @@ export function NotificationCenterPanel() {
     let active = true;
     const run = async () => {
       try {
-        const data = await listNotificationsAction(50);
+        const data = await listNotificationsAction({ pageSize: 50 });
         if (!active) return;
         setItems(data.items);
         setUnread(data.unread);

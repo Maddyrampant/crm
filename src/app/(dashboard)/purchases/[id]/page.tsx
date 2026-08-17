@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import { requireWorkspace, hasPermission } from "@/lib/session";
 import { getPurchaseOrder } from "@/services/inventory";
 import { PurchaseOrderDetail } from "@/components/inventory/purchase-order-detail";
@@ -12,7 +12,7 @@ export default async function PurchaseOrderDetailPage({
   const { id } = await params;
 
   const order = await getPurchaseOrder(workspaceId, id);
-  if (!order) notFound();
+  if (!order) redirect("/purchases");
 
   return (
     <PurchaseOrderDetail

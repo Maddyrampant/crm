@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, desc, eq, inArray, isNull, lte, ne, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNull, lte, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   appointments,
@@ -14,6 +14,13 @@ import {
   type NotificationType,
 } from "@/db/schema";
 import { sendEmail, sendSms } from "./automation";
+import {
+  normalizePage,
+  normalizePageSize,
+  calculateOffset,
+  buildPaginatedResult,
+  type PaginatedResult,
+} from "@/lib/pagination";
 
 export type NotificationInput = {
   workspaceId: string;
@@ -75,19 +82,36 @@ export async function notifyWorkspace(
 export async function listNotifications(
   workspaceId: string,
   userId: string,
-  limit = 20
-): Promise<Notification[]> {
-  return db
-    .select()
-    .from(notifications)
-    .where(
-      and(
-        eq(notifications.workspaceId, workspaceId),
-        eq(notifications.userId, userId)
-      )
-    )
-    .orderBy(desc(notifications.createdAt))
-    .limit(limit);
+  params?: { page?: number; pageSize?: number; type?: string }
+): Promise<PaginatedResult<Notification>> {
+  const page = normalizePage(params?.page);
+  const pageSize = normalizePageSize(params?.pageSize);
+  const offset = calculateOffset(page, pageSize);
+
+  const conditions = [
+    eq(notifications.workspaceId, workspaceId),
+    eq(notifications.userId, userId),
+  ];
+  if (params?.type) {
+    conditions.push(eq(notifications.type, params.type as typeof notifications.$inferSelect.type));
+  }
+  const where = and(...conditions);
+
+  const [items, totalRow] = await Promise.all([
+    db
+      .select()
+      .from(notifications)
+      .where(where)
+      .orderBy(desc(notifications.createdAt))
+      .limit(pageSize)
+      .offset(offset),
+    db
+      .select({ count: count() })
+      .from(notifications)
+      .where(where),
+  ]);
+
+  return buildPaginatedResult(items, totalRow[0]?.count ?? 0, page, pageSize);
 }
 
 /** علامت‌گذاری یک اعلان به‌عنوان خوانده. */

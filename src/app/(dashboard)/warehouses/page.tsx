@@ -6,7 +6,7 @@ import { WarehousesTable } from "@/components/inventory/warehouses-table";
 export default async function WarehousesPage() {
   const { workspaceId, membership } = await requireWorkspace();
 
-  const warehouses = await listWarehouses(workspaceId);
+  const warehousesResult = await listWarehouses(workspaceId);
 
   return (
     <div className="space-y-6">
@@ -15,7 +15,7 @@ export default async function WarehousesPage() {
         description="انبارهای شما و تعداد کالاهای هر انبار."
       />
       <WarehousesTable
-        initialData={warehouses}
+        initialData={warehousesResult.items}
         canManage={hasPermission(membership, "manager")}
       />
     </div>

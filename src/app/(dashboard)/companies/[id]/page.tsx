@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import { requireWorkspace } from "@/lib/session";
 import { getCompany } from "@/services/companies";
 import { listContacts } from "@/services/contacts";
@@ -19,7 +19,7 @@ export default async function CompanyDetailPage({
   const { id } = await params;
 
   const company = await getCompany(workspaceId, id);
-  if (!company) notFound();
+  if (!company) redirect("/companies");
 
   const contactsResult = await listContacts({
     workspaceId,

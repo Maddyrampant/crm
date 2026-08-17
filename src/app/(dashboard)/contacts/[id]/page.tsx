@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import { requireWorkspace, hasPermission } from "@/lib/session";
 import { getContact, listCustomFields } from "@/services/contacts";
 import { listCompanies } from "@/services/companies";
@@ -21,7 +21,7 @@ export default async function ContactDetailPage({
   const { id } = await params;
 
   const contact = await getContact(workspaceId, id);
-  if (!contact) notFound();
+  if (!contact) redirect("/contacts");
 
   const [companies, members, customFields, dealsResult] = await Promise.all([
     listCompanies({ workspaceId, pageSize: 100, sortBy: "name", sortDir: "asc" }),
