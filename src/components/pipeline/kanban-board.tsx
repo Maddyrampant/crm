@@ -5,6 +5,7 @@ import {
   DndContext,
   DragOverlay,
   PointerSensor,
+  TouchSensor,
   closestCorners,
   useDraggable,
   useDroppable,
@@ -17,6 +18,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { toast } from "sonner";
 import {
   CheckCircle2,
+  GripVertical,
   Loader2,
   MoreHorizontal,
   Pencil,
@@ -26,6 +28,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -94,27 +98,54 @@ function DealCard({
     <div
       ref={setNodeRef}
       style={style}
-      {...attributes}
-      {...listeners}
       className={`group relative rounded-lg border bg-card p-3 shadow-sm transition-shadow hover:shadow-md ${
         isDragging ? "opacity-40" : ""
-      } ${isClosed ? "opacity-70" : ""} cursor-grab active:cursor-grabbing`}
+      } ${isClosed ? "opacity-70" : ""} cursor-grab active:cursor-grabbing touch-none`}
     >
-      <div className="flex items-start justify-between gap-2">
-        <button
-          type="button"
-          onClick={onOpen}
-          className="min-w-0 flex-1 text-start"
-        >
-          <p className="truncate text-sm font-medium">{deal.title}</p>
-        </button>
+      <div className="flex items-start gap-2">
+        {canManage && (
+          <span className="mt-0.5 text-muted-foreground/50" {...attributes} {...listeners}>
+            <GripVertical className="size-4" />
+          </span>
+        )}
+        <div className="min-w-0 flex-1">
+          <button
+            type="button"
+            onClick={onOpen}
+            className="w-full text-start"
+          >
+            <p className="truncate text-sm font-medium">{deal.title}</p>
+          </button>
+
+          {(deal.contactName || deal.companyName) && (
+            <p className="mt-0.5 truncate text-xs text-muted-foreground">
+              {[deal.contactName ? `${deal.contactName} ${deal.contactLastName ?? ""}` : null, deal.companyName]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+          )}
+
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <span className="text-sm font-semibold">{formatCurrency(deal.amount)}</span>
+            {isClosed ? (
+              <Badge variant={deal.status === "won" ? "default" : "destructive"}>
+                {STATUS_LABELS[deal.status]}
+              </Badge>
+            ) : (
+              <span className="text-xs text-muted-foreground">
+                {deal.ownerName || "بدون مسئول"}
+              </span>
+            )}
+          </div>
+        </div>
+
         {canManage && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon-xs"
-                className="opacity-0 group-hover:opacity-100 focus:opacity-100"
+                className="opacity-0 group-hover:opacity-100 focus:opacity-100 shrink-0"
               >
                 <MoreHorizontal className="size-3.5" />
               </Button>
@@ -124,42 +155,25 @@ function DealCard({
                 <Pencil className="size-4" />
                 ویرایش
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onWon}>
-                <CheckCircle2 className="size-4 text-success" />
-                برنده شد
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onLost}>
-                <XCircle className="size-4 text-destructive" />
-                باخته شد
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
+              {!isClosed && (
+                <>
+                  <DropdownMenuItem onClick={onWon}>
+                    <CheckCircle2 className="size-4 text-success" />
+                    برنده شد
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onLost}>
+                    <XCircle className="size-4 text-destructive" />
+                    باخته شد
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
               <DropdownMenuItem variant="destructive" onClick={onDelete}>
                 <Trash2 className="size-4" />
                 حذف
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        )}
-      </div>
-
-      {(deal.contactName || deal.companyName) && (
-        <p className="mt-1 truncate text-xs text-muted-foreground">
-          {[deal.contactName ? `${deal.contactName} ${deal.contactLastName ?? ""}` : null, deal.companyName]
-            .filter(Boolean)
-            .join(" · ")}
-        </p>
-      )}
-
-      <div className="mt-2 flex items-center justify-between gap-2">
-        <span className="text-sm font-semibold">{formatCurrency(deal.amount)}</span>
-        {isClosed ? (
-          <Badge variant={deal.status === "won" ? "default" : "destructive"}>
-            {STATUS_LABELS[deal.status]}
-          </Badge>
-        ) : (
-          <span className="text-xs text-muted-foreground">
-            {deal.ownerName || "بدون مسئول"}
-          </span>
         )}
       </div>
     </div>
@@ -190,21 +204,21 @@ function StageColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`flex w-72 shrink-0 flex-col rounded-xl border bg-muted/40 ${
+      className={`flex min-w-[260px] max-w-[340px] flex-1 flex-col rounded-xl border bg-muted/40 transition-colors ${
         isOver ? "border-primary ring-2 ring-primary/30" : ""
       }`}
     >
       <div className="flex items-center justify-between gap-2 border-b p-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <span
-            className="size-2.5 rounded-full"
+            className="size-2.5 shrink-0 rounded-full"
             style={{ backgroundColor: stage.color }}
           />
-          <span className="text-sm font-semibold">{stage.name}</span>
-          <Badge variant="secondary">{formatNumber(stage.deals.length)}</Badge>
+          <span className="truncate text-sm font-semibold">{stage.name}</span>
+          <Badge variant="secondary" className="shrink-0">{formatNumber(stage.deals.length)}</Badge>
         </div>
         {canManage && (
-          <Button variant="ghost" size="icon-xs" onClick={onNewDeal}>
+          <Button variant="ghost" size="icon-xs" onClick={onNewDeal} className="shrink-0">
             <Plus className="size-3.5" />
           </Button>
         )}
@@ -230,12 +244,12 @@ function StageColumn({
       </div>
 
       {Number(stage.winProbability) > 0 && (
-        <div className="border-t p-2.5 text-xs text-muted-foreground">
-          احتمال موفقیت: {formatNumber(stage.winProbability)}٪
+        <div className="border-t px-3 py-2 text-xs text-muted-foreground">
+          احتمال: {formatNumber(stage.winProbability)}٪
         </div>
       )}
       {total > 0 && (
-        <div className="border-t p-2.5 text-xs text-muted-foreground">
+        <div className="border-t px-3 py-2 text-xs text-muted-foreground">
           مجموع: {formatCurrency(total)}
         </div>
       )}
@@ -266,8 +280,13 @@ export function KanbanBoard({
   const [busy, setBusy] = useState(false);
   const [newDealStageId, setNewDealStageId] = useState<string | undefined>(undefined);
 
+  const [lostDeal, setLostDeal] = useState<DealRow | null>(null);
+  const [lostReason, setLostReason] = useState("");
+  const [losing, setLosing] = useState(false);
+
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
   );
 
   const dealById = useMemo(() => {
@@ -345,15 +364,23 @@ export function KanbanBoard({
     reloadBoard();
   }
 
-  async function handleLost(deal: DealRow) {
-    const reason = window.prompt("دلیل باخت فروش:");
-    if (reason === null) return;
-    const result = await setDealOutcomeAction(deal.id, "lost", reason || null);
+  function handleLost(deal: DealRow) {
+    setLostDeal(deal);
+    setLostReason("");
+  }
+
+  async function confirmLost() {
+    if (!lostDeal) return;
+    setLosing(true);
+    const result = await setDealOutcomeAction(lostDeal.id, "lost", lostReason || null);
+    setLosing(false);
     if (!result.ok) {
       toast.error(result.error);
       return;
     }
     toast.success("فروش به عنوان باخته ثبت شد");
+    setLostDeal(null);
+    setLostReason("");
     reloadBoard();
   }
 
@@ -430,7 +457,7 @@ export function KanbanBoard({
           <button
             type="button"
             onClick={() => setNewStageOpen(true)}
-            className="flex h-16 w-72 shrink-0 items-center justify-center gap-2 rounded-xl border border-dashed text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+            className="flex h-16 min-w-[260px] max-w-[340px] flex-1 items-center justify-center gap-2 rounded-xl border border-dashed text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
           >
             <Plus className="size-4" />
             افزودن مرحله
@@ -455,7 +482,7 @@ export function KanbanBoard({
       >
         <DragOverlay>
           {activeDeal ? (
-            <div className="w-72 cursor-grabbing">
+            <div className="min-w-[260px] max-w-[340px] cursor-grabbing">
               <Card className="p-3 shadow-lg">
                 <p className="text-sm font-medium">{activeDeal.title}</p>
                 <p className="mt-1 text-sm font-semibold">{formatCurrency(activeDeal.amount)}</p>
@@ -498,6 +525,7 @@ export function KanbanBoard({
         />
       )}
 
+      {/* حذف فروش */}
       <Dialog open={!!deletingDeal} onOpenChange={(o) => !o && setDeletingDeal(null)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
@@ -513,6 +541,39 @@ export function KanbanBoard({
             <Button variant="destructive" onClick={handleDeleteDeal} disabled={busy}>
               {busy && <Loader2 className="size-4 animate-spin" />}
               حذف
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* دلیل باخت */}
+      <Dialog open={!!lostDeal} onOpenChange={(o) => { if (!o) { setLostDeal(null); setLostReason(""); } }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>ثبت باخت فروش</DialogTitle>
+            <DialogDescription>
+              آیا مطمئنید که «{lostDeal?.title}» باخته شود؟
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <label htmlFor="lostReason" className="text-sm font-medium">
+              دلیل باخت <span className="text-muted-foreground">(اختیاری)</span>
+            </label>
+            <Textarea
+              id="lostReason"
+              placeholder="مثلاً: قیمت رقیب پایین‌تر بود..."
+              value={lostReason}
+              onChange={(e) => setLostReason(e.target.value)}
+              rows={3}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setLostDeal(null); setLostReason(""); }} disabled={losing}>
+              انصراف
+            </Button>
+            <Button variant="destructive" onClick={confirmLost} disabled={losing}>
+              {losing && <Loader2 className="size-4 animate-spin" />}
+              ثبت باخت
             </Button>
           </DialogFooter>
         </DialogContent>
