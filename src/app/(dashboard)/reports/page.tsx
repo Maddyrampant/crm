@@ -6,11 +6,15 @@ import {
   getPipelineStats,
   getRecentActivity,
   getRevenueByMonth,
+  getSalesChart,
+  getTeamPerformance,
 } from "@/services/reports";
 import { DashboardCharts } from "@/components/reports/dashboard-charts";
 import { RangeSelector } from "@/components/reports/range-selector";
 import { StatCard } from "@/components/reports/stat-card";
 import { ActivityFeed } from "@/components/reports/activity-feed";
+import { SalesChart } from "@/components/reports/sales-chart";
+import { TeamPerformanceTable } from "@/components/reports/team-performance-table";
 import { PageHeader } from "@/components/ui/page-header";
 import { Contact, Package, Banknote, TrendingUp, Clock3 } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
@@ -28,13 +32,16 @@ export default async function ReportsPage({
   const { months: monthsParam } = await searchParams;
   const months = VALID_MONTHS.includes(monthsParam ?? "") ? Number(monthsParam) : 6;
 
-  const [kpis, revenue, pipeline, leadSources, activity] = await Promise.all([
-    getKpis(workspaceId),
-    getRevenueByMonth(workspaceId, months),
-    getPipelineStats(workspaceId),
-    getLeadSourceStats(workspaceId),
-    getRecentActivity(workspaceId),
-  ]);
+  const [kpis, revenue, pipeline, leadSources, activity, salesChart, teamPerformance] =
+    await Promise.all([
+      getKpis(workspaceId),
+      getRevenueByMonth(workspaceId, months),
+      getPipelineStats(workspaceId),
+      getLeadSourceStats(workspaceId),
+      getRecentActivity(workspaceId),
+      getSalesChart(workspaceId, months),
+      getTeamPerformance(workspaceId),
+    ]);
 
   return (
     <div className="space-y-6">
@@ -67,6 +74,8 @@ export default async function ReportsPage({
         />
       </div>
 
+      <SalesChart data={salesChart} months={months} />
+
       <div className="grid gap-4 lg:grid-cols-2">
         <DashboardCharts
           revenue={revenue}
@@ -76,6 +85,8 @@ export default async function ReportsPage({
           months={months}
         />
       </div>
+
+      <TeamPerformanceTable data={teamPerformance} />
 
       <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
         <div className="flex items-center gap-2 rounded-lg border bg-card p-4">
