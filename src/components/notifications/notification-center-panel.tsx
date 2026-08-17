@@ -1,0 +1,271 @@
+"use client";
+
+import { useEffect, useState, useTransition } from "react";
+import Link from "next/link";
+import { toast } from "sonner";
+import {
+  Banknote,
+  Bell,
+  CalendarDays,
+  Check,
+  CheckCheck,
+  FileText,
+  Inbox,
+  LoaderCircle,
+  Settings,
+  Sparkles,
+  SquareCheckBig,
+  Trophy,
+  User,
+  type LucideIcon,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { cn } from "@/lib/utils";
+import { formatDate, toFaDigits } from "@/lib/format";
+import { NOTIFICATION_TYPE_META } from "@/lib/notifications";
+import {
+  listNotificationsAction,
+  markAllNotificationsReadAction,
+  markNotificationReadAction,
+} from "@/actions/notifications";
+import type { Notification } from "@/db/schema";
+
+const ICON_BY_NAME: Record<string, LucideIcon> = {
+  "file-text": FileText,
+  banknote: Banknote,
+  trophy: Trophy,
+  "check-square": SquareCheckBig,
+  calendar: CalendarDays,
+  "smart-toy": Sparkles,
+  user: User,
+  settings: Settings,
+};
+
+const TYPE_STYLE: Record<string, string> = {
+  invoice: "bg-blue-500/10 text-blue-600",
+  payment: "bg-emerald-500/10 text-emerald-600",
+  deal: "bg-violet-500/10 text-violet-600",
+  task: "bg-sky-500/10 text-sky-600",
+  appointment: "bg-amber-500/10 text-amber-600",
+  ai: "bg-fuchsia-500/10 text-fuchsia-600",
+  contact: "bg-teal-500/10 text-teal-600",
+  system: "bg-slate-500/10 text-slate-600",
+};
+
+function formatRelativeTime(value: Date | string | null | undefined): string {
+  if (!value) return "—";
+  const diffMin = Math.floor((Date.now() - new Date(value).getTime()) / 60_000);
+  if (diffMin < 1) return "لحظاتی پیش";
+  if (diffMin < 60) return `${toFaDigits(diffMin)} دقیقه پیش`;
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24) return `${toFaDigits(diffHours)} ساعت پیش`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) return `${toFaDigits(diffDays)} روز پیش`;
+  return formatDate(value);
+}
+
+function startOfDay(value: Date): number {
+  return new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime();
+}
+
+type Group = { key: string; label: string; items: Notification[] };
+
+function groupByDay(items: Notification[]): Group[] {
+  const now = new Date();
+  const today = startOfDay(now);
+  const yesterday = today - 86_400_000;
+  const groups: Group[] = [];
+  for (const item of items) {
+    const day = startOfDay(new Date(item.createdAt));
+    const key = day === today ? "today" : day === yesterday ? "yesterday" : formatDate(item.createdAt);
+    const label = day === today ? "امروز" : day === yesterday ? "دیروز" : formatDate(item.createdAt);
+    const group = groups.find((g) => g.key === key);
+    if (group) group.items.push(item);
+    else groups.push({ key, label, items: [item] });
+  }
+  return groups;
+}
+
+export function NotificationCenterPanel() {
+  const [items, setItems] = useState<Notification[] | null>(null);
+  const [unread, setUnread] = useState(0);
+  const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    let active = true;
+    const run = async () => {
+      try {
+        const data = await listNotificationsAction(50);
+        if (!active) return;
+        setItems(data.items);
+        setUnread(data.unread);
+      } catch {
+        if (active) setItems((prev) => prev ?? []);
+      }
+    };
+    void run();
+    const id = setInterval(run, 30_000);
+    return () => {
+      active = false;
+      clearInterval(id);
+    };
+  }, []);
+
+  const markRead = (id: string) => {
+    startTransition(async () => {
+      const res = await markNotificationReadAction(id);
+      if (!res.ok) {
+        toast.error("خطا در علامت‌گذاری اعلان");
+        return;
+      }
+      setItems((prev) =>
+        (prev ?? []).map((n) => (n.id === id ? { ...n, readAt: new Date() } : n))
+      );
+      setUnread((u) => Math.max(0, u - 1));
+    });
+  };
+
+  const markAllRead = () => {
+    startTransition(async () => {
+      const res = await markAllNotificationsReadAction();
+      if (!res.ok) {
+        toast.error("خطا در خواندن همهٔ اعلان‌ها");
+        return;
+      }
+      setItems((prev) =>
+        (prev ?? []).map((n) => (n.readAt ? n : { ...n, readAt: new Date() }))
+      );
+      setUnread(0);
+    });
+  };
+
+  const groups = items ? groupByDay(items) : [];
+
+  return (
+    <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
+      <div className="flex items-center justify-between gap-2 border-b p-4">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <Bell className="size-4" />
+          اعلان‌ها
+          {unread > 0 ? (
+            <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-bold text-red-600">
+              {toFaDigits(unread)} نخوانده
+            </span>
+          ) : null}
+        </div>
+        {unread > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1 text-xs"
+            onClick={markAllRead}
+            disabled={isPending}
+          >
+            <CheckCheck className="size-3.5" />
+            خواندن همه
+          </Button>
+        )}
+      </div>
+
+      {items === null ? (
+        <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
+          <LoaderCircle className="size-4 animate-spin" />
+          در حال بارگذاری…
+        </div>
+      ) : items.length === 0 ? (
+        <EmptyState
+          icon={Inbox}
+          title="اعلانی ثبت نشده است"
+          description="اعلان‌های وظایف، قرارها، فاکتورها و فروش‌ها در اینجا نمایش داده می‌شوند."
+          className="py-16"
+        />
+      ) : (
+        <div className="divide-y divide-border">
+          {groups.map((group) => (
+            <div key={group.key} className="p-4">
+              <h2 className="mb-2 text-xs font-semibold uppercase text-muted-foreground">
+                {group.label}
+              </h2>
+              <ul className="space-y-1">
+                {group.items.map((n) => {
+                  const meta = NOTIFICATION_TYPE_META[n.type];
+                  const Icon = ICON_BY_NAME[meta?.icon ?? ""] ?? Bell;
+                  return (
+                    <li
+                      key={n.id}
+                      className={cn(
+                        "flex items-start gap-3 rounded-md px-3 py-2.5",
+                        !n.readAt && "bg-accent/40"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full",
+                          TYPE_STYLE[n.type] ?? "bg-muted text-muted-foreground"
+                        )}
+                      >
+                        <Icon className="size-4" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {n.link ? (
+                            <Link
+                              href={n.link}
+                              className="text-sm font-medium hover:underline"
+                              onClick={() => {
+                                if (!n.readAt) markRead(n.id);
+                              }}
+                            >
+                              {n.title}
+                            </Link>
+                          ) : (
+                            <span className="text-sm font-medium">{n.title}</span>
+                          )}
+                          {meta ? (
+                            <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                              {meta.label}
+                            </span>
+                          ) : null}
+                        </div>
+                        {n.body ? (
+                          <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+                            {n.body}
+                          </p>
+                        ) : null}
+                        <p className="mt-1 text-[11px] text-muted-foreground">
+                          {formatRelativeTime(n.createdAt)}
+                        </p>
+                      </div>
+                      <span className="mt-1 flex items-center gap-1">
+                        {!n.readAt && (
+                          <span className="size-2 rounded-full bg-red-500" />
+                        )}
+                        {!n.readAt && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="size-7 shrink-0"
+                            aria-label="علامت‌گذاری به‌عنوان خوانده"
+                            onClick={() => markRead(n.id)}
+                            disabled={isPending}
+                          >
+                            <Check className="size-3.5" />
+                          </Button>
+                        )}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="border-t px-4 py-2 text-center text-[11px] text-muted-foreground">
+        به‌روزرسانی خودکار هر ۳۰ ثانیه
+      </div>
+    </div>
+  );
+}
