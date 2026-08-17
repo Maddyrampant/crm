@@ -9,12 +9,13 @@ import {
   Link2,
   Loader2,
   Plus,
+  Search,
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -77,6 +78,8 @@ export function BookingLinksPanel({ links }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [searchInput, setSearchInput] = useState("");
+  const [activeFilter, setActiveFilter] = useState<string>("all");
   const [title, setTitle] = useState("");
   const [duration, setDuration] = useState<BookingDuration>(30);
   const [location, setLocation] = useState("");
@@ -84,6 +87,16 @@ export function BookingLinksPanel({ links }: Props) {
   const [slug, setSlug] = useState("");
   const [saving, setSaving] = useState(false);
   const router = useRouter();
+
+  const filteredLinks = links.filter((l) => {
+    const matchesSearch = !searchInput ||
+      l.title.toLowerCase().includes(searchInput.toLowerCase()) ||
+      l.slug.toLowerCase().includes(searchInput.toLowerCase());
+    const matchesActive = activeFilter === "all" ||
+      (activeFilter === "active" && l.active) ||
+      (activeFilter === "inactive" && !l.active);
+    return matchesSearch && matchesActive;
+  });
 
   function resetForm() {
     setTitle("");
@@ -179,7 +192,33 @@ export function BookingLinksPanel({ links }: Props) {
           </Button>
         </div>
         <div className="p-4">
-          {links.length === 0 ? (
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                dir="rtl"
+                className="ps-8"
+                placeholder="جستجوی عنوان یا slug..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+              />
+            </div>
+            <Select
+              value={activeFilter}
+              onValueChange={setActiveFilter}
+            >
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder="وضعیت" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">همه</SelectItem>
+                <SelectItem value="active">فعال</SelectItem>
+                <SelectItem value="inactive">غیرفعال</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {filteredLinks.length === 0 ? (
             <EmptyState
               icon={Link2}
               title="لینکی ثبت نشده"
@@ -188,7 +227,7 @@ export function BookingLinksPanel({ links }: Props) {
             />
           ) : (
             <ul className="space-y-3">
-              {links.map((link) => (
+              {filteredLinks.map((link) => (
                 <li key={link.id} className="rounded-lg border p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="grid gap-1.5">
