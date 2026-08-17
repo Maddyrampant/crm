@@ -287,6 +287,14 @@ export const navSections: NavSection[] = [
         ready: true,
         minRole: "seller",
       },
+      {
+        title: "اتصال فروشگاه",
+        href: "/settings/integrations/woocommerce",
+        icon: Package,
+        owner: "part1",
+        ready: true,
+        minRole: "admin",
+      },
     ],
   },
 ];
