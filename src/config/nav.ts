@@ -15,6 +15,7 @@ import {
   Mail,
   Package,
   Settings,
+  TrendingUp,
   Truck,
   UserCog,
   Users,
@@ -120,6 +121,13 @@ export const navSections: NavSection[] = [
         href: "/reports",
         icon: BarChart3,
         owner: "part2",
+        ready: true,
+      },
+      {
+        title: "پیش‌بینی فروش",
+        href: "/reports/forecast",
+        icon: TrendingUp,
+        owner: "part1",
         ready: true,
       },
       {
