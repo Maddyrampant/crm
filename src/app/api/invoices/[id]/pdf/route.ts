@@ -23,7 +23,7 @@ export async function GET(
     });
   } catch (err) {
     return Response.json(
-      { error: "فاکتور یافت نشد", detail: err instanceof Error ? err.message : String(err) },
+      { error: "فاکتور یافت نشد" },
       { status: 404 }
     );
   }

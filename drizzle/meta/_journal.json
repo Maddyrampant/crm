@@ -57,6 +57,13 @@
       "when": 1786934061748,
       "tag": "0007_lyrical_sabretooth",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1786934736601,
+      "tag": "0008_greedy_tombstone",
+      "breakpoints": true
     }
   ]
 }
