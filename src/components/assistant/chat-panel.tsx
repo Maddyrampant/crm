@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useChat, type UIMessage } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
@@ -55,6 +55,7 @@ export function ChatPanel({
   const [input, setInput] = useState("");
   const [approving, setApproving] = useState<string | null>(null);
   const [model, setModel] = useState<string>(getStoredModel);
+  const abortRef = useRef<AbortController | null>(null);
 
   const transportState = { conversationId, model };
   const transport = useMemo(
@@ -107,15 +108,20 @@ export function ChatPanel({
   }
 
   async function decide(run: AiToolRun, approved: boolean) {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     setApproving(run.id);
-    const res = await fetch(`/api/ai/tools/${run.id}`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ approved }),
-    });
-    setApproving(null);
-    if (res.ok) {
-      router.refresh();
+    try {
+      const res = await fetch(`/api/ai/tools/${run.id}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ approved }),
+        signal: controller.signal,
+      });
+      if (res.ok) router.refresh();
+    } finally {
+      setApproving(null);
     }
   }
 
@@ -283,7 +289,7 @@ export function ChatPanel({
   );
 }
 
-function MessageBubble({ message }: { message: UIMessage }) {
+const MessageBubble = memo(function MessageBubble({ message }: { message: UIMessage }) {
   const isUser = message.role === "user";
   const text =
     message.parts
@@ -339,4 +345,4 @@ function MessageBubble({ message }: { message: UIMessage }) {
       )}
     </div>
   );
-}
+});

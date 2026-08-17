@@ -82,6 +82,7 @@ export function NotificationBell() {
   useEffect(() => {
     let active = true;
     const run = async () => {
+      if (document.hidden) return;
       try {
         const data = await listNotificationsAction({ pageSize: 20 });
         if (!active) return;

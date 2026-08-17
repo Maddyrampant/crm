@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -69,7 +69,7 @@ type Props = {
   canManagePipeline: boolean;
 };
 
-function DealCard({
+const DealCard = memo(function DealCard({
   deal,
   onOpen,
   onWon,
@@ -178,9 +178,9 @@ function DealCard({
       </div>
     </div>
   );
-}
+});
 
-function StageColumn({
+const StageColumn = memo(function StageColumn({
   stage,
   onNewDeal,
   onOpenDeal,
@@ -255,7 +255,7 @@ function StageColumn({
       )}
     </div>
   );
-}
+});
 
 export function KanbanBoard({
   initialBoard,
@@ -283,6 +283,11 @@ export function KanbanBoard({
   const [lostDeal, setLostDeal] = useState<DealRow | null>(null);
   const [lostReason, setLostReason] = useState("");
   const [losing, setLosing] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => { abortRef.current?.abort(); };
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -405,9 +410,12 @@ export function KanbanBoard({
           <Select
             value={selectedPipelineId}
             onValueChange={async (v) => {
+              abortRef.current?.abort();
+              const controller = new AbortController();
+              abortRef.current = controller;
               setSelectedPipelineId(v);
               const result = await getKanbanBoardAction(v);
-              if (result.ok && result.data) setBoard(result.data);
+              if (!controller.signal.aborted && result.ok && result.data) setBoard(result.data);
             }}
           >
             <SelectTrigger className="w-full sm:w-52">

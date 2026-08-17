@@ -383,24 +383,27 @@ export async function syncWooOrder(
       })
       .returning();
 
-    for (const item of order.line_items) {
-      const sku = item.sku || `WOO-${item.product_id}`;
-      const existingProduct = await db
-        .select({ id: products.id })
-        .from(products)
-        .where(and(eq(products.workspaceId, workspaceId), eq(products.sku, sku)))
-        .limit(1);
+    const skus = order.line_items.map((item) => item.sku || `WOO-${item.product_id}`);
+    const existingProducts = await db
+      .select({ id: products.id, sku: products.sku })
+      .from(products)
+      .where(and(eq(products.workspaceId, workspaceId), sql`${products.sku} IN ${skus}`));
+    const skuToId = new Map(existingProducts.map((p) => [p.sku, p.id]));
 
-      await db.insert(invoiceItems).values({
-        invoiceId: invoice.id,
-        productId: existingProduct[0]?.id ?? null,
-        description: item.name,
-        quantity: String(item.quantity),
-        unitPrice: item.price || "0",
-        taxRate: "0",
-        amount: item.total || "0",
-      });
-    }
+    await db.insert(invoiceItems).values(
+      order.line_items.map((item) => {
+        const sku = item.sku || `WOO-${item.product_id}`;
+        return {
+          invoiceId: invoice.id,
+          productId: skuToId.get(sku) ?? null,
+          description: item.name,
+          quantity: String(item.quantity),
+          unitPrice: item.price || "0",
+          taxRate: "0",
+          amount: item.total || "0",
+        };
+      })
+    );
   }
 
   return deal.id;

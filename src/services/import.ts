@@ -2,9 +2,9 @@ import "server-only";
 
 import { asc, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { companies, contacts, pipelines, stages, tags, type Contact, type Deal } from "@/db/schema";
+import { companies, contacts, contactTags, pipelines, stages, tags, type Contact, type Deal } from "@/db/schema";
 import { createCompany } from "./companies";
-import { addTagToContact, createContact, createTag } from "./contacts";
+import { createContact, createTag } from "./contacts";
 import { createDeal } from "./deals";
 import {
   normalizePersian,
@@ -222,13 +222,18 @@ export async function importCsvData(
         const existingContact = email ? contactIdByEmail.get(email) : null;
 
         if (existingContact) {
-          const tagIds = await Promise.all(
-            (row.values.tags ?? "")
-              .split(/[;،,]/)
-              .map((t) => getOrCreateTag(t))
-          );
-          for (const tagId of tagIds) {
-            if (tagId) await addTagToContact(workspaceId, existingContact, tagId);
+          const tagIds = (
+            await Promise.all(
+              (row.values.tags ?? "")
+                .split(/[;،,]/)
+                .map((t) => getOrCreateTag(t))
+            )
+          ).filter((t): t is string => !!t);
+          if (tagIds.length > 0) {
+            await db
+              .insert(contactTags)
+              .values(tagIds.map((tagId) => ({ contactId: existingContact, tagId })))
+              .onConflictDoNothing();
           }
           continue;
         }
@@ -245,13 +250,18 @@ export async function importCsvData(
           notes: (row.values.notes ?? "").trim() || null,
         });
 
-        const tagIds = await Promise.all(
-          (row.values.tags ?? "")
-            .split(/[;،,]/)
-            .map((t) => getOrCreateTag(t))
-        );
-        for (const tagId of tagIds) {
-          if (tagId) await addTagToContact(workspaceId, contact.id, tagId);
+        const tagIds = (
+          await Promise.all(
+            (row.values.tags ?? "")
+              .split(/[;،,]/)
+              .map((t) => getOrCreateTag(t))
+          )
+        ).filter((t): t is string => !!t);
+        if (tagIds.length > 0) {
+          await db
+            .insert(contactTags)
+            .values(tagIds.map((tagId) => ({ contactId: contact.id, tagId })))
+            .onConflictDoNothing();
         }
 
         if (email) contactIdByEmail.set(email, contact.id);

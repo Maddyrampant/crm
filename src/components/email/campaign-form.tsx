@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { createCampaignAction } from "@/actions/email-campaign";
@@ -43,17 +43,24 @@ export function CampaignFormDialog({ open, onOpenChange, onSaved }: Props) {
   const [recipientIds, setRecipientIds] = useState<string[]>([]);
   const [contacts, setContacts] = useState<ContactOption[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
+    abortRef.current?.abort();
     if (!open) return;
     if (recipientType === "specific") {
+      const controller = new AbortController();
+      abortRef.current = controller;
       setLoadingContacts(true);
       getContactsAction({ pageSize: 100 })
         .then((res) => {
-          if (res.ok && res.data) setContacts(res.data.items);
+          if (!controller.signal.aborted && res.ok && res.data) setContacts(res.data.items);
         })
-        .finally(() => setLoadingContacts(false));
+        .finally(() => {
+          if (!controller.signal.aborted) setLoadingContacts(false);
+        });
     }
+    return () => { abortRef.current?.abort(); };
   }, [open, recipientType]);
 
   function reset() {
