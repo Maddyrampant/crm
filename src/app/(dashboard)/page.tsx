@@ -1,75 +1,123 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import {
   ArrowLeft,
   Building2,
-  DollarSign,
   Handshake,
   Kanban,
-  Target,
-  TrendingUp,
   Users,
   Zap,
 } from "lucide-react";
 import { and, count, desc, eq, gte, sql } from "drizzle-orm";
-import { addMonths, startOfMonth } from "date-fns-jalali";
+import {
+  startOfDay,
+  startOfWeek,
+  startOfMonth,
+  startOfQuarter,
+  startOfYear,
+  addMonths,
+} from "date-fns-jalali";
 import { format as formatJalali } from "date-fns-jalali";
 import { requireWorkspace } from "@/lib/session";
 import { db } from "@/db";
-import { companies, contacts, deals, stages, user } from "@/db/schema";
+import { companies, contacts, deals, stages } from "@/db/schema";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/format";
+import { getKpis, getRevenueByMonth, getLeadSourceStats, getRecentActivity } from "@/services/reports";
+import { getStalledDeals } from "@/services/forecast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { StatCard } from "@/components/ui/stat-card";
 import { PageHeader } from "@/components/ui/page-header";
+import { KpiCards } from "@/components/dashboard/kpi-cards";
 import { RevenueChart } from "@/components/dashboard/revenue-chart";
 import { StageFunnel } from "@/components/dashboard/stage-funnel";
+import { LeadSourcePie } from "@/components/dashboard/lead-source-pie";
+import { ActivityTimeline } from "@/components/dashboard/activity-timeline";
+import { StalledDealsTable } from "@/components/dashboard/stalled-deals-table";
+import { DateRangeFilter } from "@/components/dashboard/date-range-filter";
 
 export const metadata: Metadata = { title: "داشبورد" };
 
-const MONTH_LABEL = ["فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"];
+const MONTH_LABEL = [
+  "فروردین",
+  "اردیبهشت",
+  "خرداد",
+  "تیر",
+  "مرداد",
+  "شهریور",
+  "مهر",
+  "آبان",
+  "آذر",
+  "دی",
+  "بهمن",
+  "اسفند",
+];
 
-export default async function DashboardPage() {
+type RangeKey = "today" | "week" | "month" | "quarter" | "year" | "all";
+
+function getDateRange(range: RangeKey): { start: Date; end: Date } {
+  const now = new Date();
+  const end = now;
+  let start: Date;
+
+  switch (range) {
+    case "today":
+      start = startOfDay(now);
+      break;
+    case "week":
+      start = startOfWeek(now, { weekStartsOn: 6 });
+      break;
+    case "quarter":
+      start = startOfQuarter(now);
+      break;
+    case "year":
+      start = startOfYear(now);
+      break;
+    case "all":
+      start = new Date(2020, 0, 1);
+      break;
+    case "month":
+    default:
+      start = startOfMonth(now);
+      break;
+  }
+
+  return { start, end };
+}
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string }>;
+}) {
   const { workspaceId } = await requireWorkspace();
+  const params = await searchParams;
+  const range = (params.range as RangeKey) || "month";
+  const { start: dateStart } = getDateRange(range);
 
-  const monthStart = startOfMonth(new Date());
   const sixMonthsAgo = startOfMonth(addMonths(new Date(), -5));
 
   const [
-    contactTotal,
-    newContacts,
-    openDeals,
-    wonDeals,
-    pipelineValue,
-    wonValue,
+    kpis,
+    newContactsRow,
     wonRows,
     stageRows,
+    revenueByMonth,
+    leadSources,
+    recentActivity,
+    stalledDeals,
     recentContacts,
     recentDeals,
   ] = await Promise.all([
+    getKpis(workspaceId),
     db
       .select({ value: count() })
       .from(contacts)
-      .where(eq(contacts.workspaceId, workspaceId)),
-    db
-      .select({ value: count() })
-      .from(contacts)
-      .where(and(eq(contacts.workspaceId, workspaceId), gte(contacts.createdAt, monthStart))),
-    db
-      .select({ value: count() })
-      .from(deals)
-      .where(and(eq(deals.workspaceId, workspaceId), eq(deals.status, "open"))),
-    db
-      .select({ value: count() })
-      .from(deals)
-      .where(and(eq(deals.workspaceId, workspaceId), eq(deals.status, "won"))),
-    db
-      .select({ value: sql<string>`coalesce(sum(${deals.amount}), 0)` })
-      .from(deals)
-      .where(and(eq(deals.workspaceId, workspaceId), eq(deals.status, "open"))),
-    db
-      .select({ value: sql<string>`coalesce(sum(${deals.amount}), 0)` })
-      .from(deals)
-      .where(and(eq(deals.workspaceId, workspaceId), eq(deals.status, "won"))),
+      .where(
+        and(
+          eq(contacts.workspaceId, workspaceId),
+          gte(contacts.createdAt, dateStart),
+        ),
+      ),
     db
       .select({ wonAt: deals.wonAt, amount: deals.amount })
       .from(deals)
@@ -77,12 +125,11 @@ export default async function DashboardPage() {
         and(
           eq(deals.workspaceId, workspaceId),
           eq(deals.status, "won"),
-          gte(deals.wonAt, sixMonthsAgo)
-        )
+          gte(deals.wonAt, sixMonthsAgo),
+        ),
       ),
     db
       .select({
-        stageId: stages.id,
         stageName: stages.name,
         stageColor: stages.color,
         count: count(),
@@ -93,15 +140,17 @@ export default async function DashboardPage() {
       .where(and(eq(deals.workspaceId, workspaceId), eq(deals.status, "open")))
       .groupBy(stages.id, stages.name, stages.color)
       .orderBy(sql`count desc`),
+    getRevenueByMonth(workspaceId),
+    getLeadSourceStats(workspaceId),
+    getRecentActivity(workspaceId, 8),
+    getStalledDeals(workspaceId),
     db
       .select({
         contact: contacts,
         companyName: companies.name,
-        ownerName: user.name,
       })
       .from(contacts)
       .leftJoin(companies, eq(companies.id, contacts.companyId))
-      .leftJoin(user, eq(user.id, contacts.ownerId))
       .where(eq(contacts.workspaceId, workspaceId))
       .orderBy(desc(contacts.createdAt))
       .limit(5),
@@ -110,9 +159,7 @@ export default async function DashboardPage() {
         deal: deals,
         contactName: contacts.firstName,
         contactLastName: contacts.lastName,
-        contactId: contacts.id,
         stageName: stages.name,
-        stageColor: stages.color,
       })
       .from(deals)
       .leftJoin(contacts, eq(contacts.id, deals.contactId))
@@ -122,7 +169,7 @@ export default async function DashboardPage() {
       .limit(5),
   ]);
 
-  const revenueByMonth = (() => {
+  const revenueChartData = (() => {
     const months: { key: string; label: string; value: number }[] = [];
     for (let i = 5; i >= 0; i--) {
       const m = startOfMonth(addMonths(new Date(), -i));
@@ -139,33 +186,6 @@ export default async function DashboardPage() {
     return months;
   })();
 
-  const stats = [
-    {
-      title: "مشتریان",
-      value: formatNumber(contactTotal[0]?.value ?? 0),
-      icon: Users,
-      hint: `${formatNumber(newContacts[0]?.value ?? 0)} نفر این ماه`,
-    },
-    {
-      title: "فروش‌های باز",
-      value: formatNumber(openDeals[0]?.value ?? 0),
-      icon: Target,
-      hint: "فرصت‌های در حال مذاکره",
-    },
-    {
-      title: "ارزش فانل فروش",
-      value: formatCurrency(pipelineValue[0]?.value ?? 0),
-      icon: DollarSign,
-      hint: "مجموع مبلغ فروش‌های باز",
-    },
-    {
-      title: "ارزش بردها",
-      value: formatCurrency(wonValue[0]?.value ?? 0),
-      icon: TrendingUp,
-      hint: `${formatNumber(wonDeals[0]?.value ?? 0)} فروش بسته شده`,
-    },
-  ];
-
   const quickActions = [
     { title: "مشتری جدید", href: "/contacts", icon: Users },
     { title: "فانل فروش", href: "/pipeline", icon: Kanban },
@@ -175,24 +195,20 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="داشبورد"
-        description="نمای کلی از وضعیت فروش و مشتریان شما"
+      <PageHeader title="داشبورد" description="نمای کلی از وضعیت فروش و مشتریان شما">
+        <Suspense>
+          <DateRangeFilter defaultValue="month" />
+        </Suspense>
+      </PageHeader>
+
+      <KpiCards
+        data={{
+          ...kpis,
+          newContacts: newContactsRow[0]?.value ?? 0,
+        }}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((s) => (
-          <StatCard
-            key={s.title}
-            title={s.title}
-            value={s.value}
-            hint={s.hint}
-            icon={s.icon}
-          />
-        ))}
-      </div>
-
-      <div className="grid gap-4 grid-cols-2 sm:grid-cols-4">
         {quickActions.map((a) => (
           <Link
             key={a.title}
@@ -216,7 +232,7 @@ export default async function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <RevenueChart data={revenueByMonth} />
+            <RevenueChart data={revenueChartData} />
           </CardContent>
         </Card>
 
@@ -234,6 +250,44 @@ export default async function DashboardPage() {
                 color: r.stageColor || "#888888",
               }))}
             />
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">منابع مخاطبین</CardTitle>
+            <CardDescription>توزیع مخاطبین بر اساس منبع ورود</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <LeadSourcePie data={leadSources} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex-row items-center justify-between space-y-0">
+            <div>
+              <CardTitle className="text-base">فعالیت‌های اخیر</CardTitle>
+              <CardDescription>آخرین رویدادهای ثبت‌شده</CardDescription>
+            </div>
+            <ButtonLink href="/activity" />
+          </CardHeader>
+          <CardContent>
+            <ActivityTimeline activities={recentActivity} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex-row items-center justify-between space-y-0">
+            <div>
+              <CardTitle className="text-base">فروش‌های در خطر</CardTitle>
+              <CardDescription>فرصت‌های متوقف‌شده بیش از ۱۴ روز</CardDescription>
+            </div>
+            <ButtonLink href="/pipeline/deals" />
+          </CardHeader>
+          <CardContent>
+            <StalledDealsTable deals={stalledDeals} />
           </CardContent>
         </Card>
       </div>
@@ -258,7 +312,9 @@ export default async function DashboardPage() {
                 >
                   <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">
                     {r.contact.firstName.charAt(0)}
-                    {r.contact.lastName ? r.contact.lastName.charAt(0) : ""}
+                    {r.contact.lastName
+                      ? r.contact.lastName.charAt(0)
+                      : ""}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">
@@ -298,7 +354,9 @@ export default async function DashboardPage() {
                     <Zap className="size-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{r.deal.title}</p>
+                    <p className="truncate text-sm font-medium">
+                      {r.deal.title}
+                    </p>
                     <p className="truncate text-xs text-muted-foreground">
                       {r.contactName
                         ? `${r.contactName} ${r.contactLastName ?? ""}`.trim()
@@ -309,7 +367,9 @@ export default async function DashboardPage() {
                     <p className="text-sm font-medium">
                       {formatCurrency(r.deal.amount)}
                     </p>
-                    <p className="text-xs text-muted-foreground">{r.stageName || "—"}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {r.stageName || "—"}
+                    </p>
                   </div>
                 </Link>
               ))
