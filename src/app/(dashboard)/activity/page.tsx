@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "فعالیت‌ها" };
 
 export default async function ActivityPage() {
   const { workspaceId } = await requireWorkspaceRole("seller");
-  const [activitiesResult, members] = await Promise.all([
+  const [activitiesResult, membersResult] = await Promise.all([
     getActivityFeed({ workspaceId, limit: 100 }),
     getWorkspaceMembers(workspaceId),
   ]);
@@ -22,7 +22,7 @@ export default async function ActivityPage() {
       />
       <ActivityFeedPanel
         activities={activitiesResult.items}
-        members={members.map((m) => ({ id: m.id, name: m.name }))}
+        members={membersResult.items.map((m) => ({ id: m.id, name: m.name }))}
       />
     </div>
   );

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, ilike, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import {
   contacts,
@@ -11,7 +11,15 @@ import {
   tasks,
   user,
   type Rule,
+  type RuleLog,
 } from "@/db/schema";
+import {
+  normalizePage,
+  normalizePageSize,
+  calculateOffset,
+  buildPaginatedResult,
+  type PaginatedResult,
+} from "@/lib/pagination";
 import { validateRuleInput, type RuleAction, type RuleCondition, type RuleInput } from "@/lib/rules";
 import { dispatchWebhookEvent, renderTemplate, sendEmail, sendSms } from "./automation";
 import { createNotification, notifyWorkspace } from "./notifications";
@@ -274,12 +282,38 @@ export function dispatchRuleEvent(workspaceId: string, event: string, payload: R
 
 /* ─────────────────── CRUD ─────────────────── */
 
-export async function listRules(workspaceId: string) {
-  return db
-    .select()
-    .from(rules)
-    .where(eq(rules.workspaceId, workspaceId))
-    .orderBy(desc(rules.createdAt));
+export async function listRules(
+  workspaceId: string,
+  params?: { page?: number; pageSize?: number; search?: string; event?: string }
+): Promise<PaginatedResult<Rule>> {
+  const page = normalizePage(params?.page);
+  const pageSize = normalizePageSize(params?.pageSize);
+  const offset = calculateOffset(page, pageSize);
+
+  const conditions: SQL[] = [eq(rules.workspaceId, workspaceId)];
+  if (params?.search) {
+    conditions.push(ilike(rules.name, `%${params.search.trim()}%`));
+  }
+  if (params?.event) {
+    conditions.push(eq(rules.event, params.event as Rule["event"]));
+  }
+  const where = and(...conditions);
+
+  const [items, totalRow] = await Promise.all([
+    db
+      .select()
+      .from(rules)
+      .where(where)
+      .orderBy(desc(rules.createdAt))
+      .limit(pageSize)
+      .offset(offset),
+    db
+      .select({ count: count() })
+      .from(rules)
+      .where(where),
+  ]);
+
+  return buildPaginatedResult(items, totalRow[0]?.count ?? 0, page, pageSize);
 }
 
 export async function getRule(workspaceId: string, id: string) {
@@ -358,13 +392,31 @@ export async function deleteRule(workspaceId: string, id: string) {
   return row ?? null;
 }
 
-export async function listRuleLogs(workspaceId: string, limit = 25) {
-  return db
-    .select()
-    .from(ruleLogs)
-    .where(eq(ruleLogs.workspaceId, workspaceId))
-    .orderBy(desc(ruleLogs.createdAt))
-    .limit(limit);
+export async function listRuleLogs(
+  workspaceId: string,
+  params?: { page?: number; pageSize?: number }
+): Promise<PaginatedResult<RuleLog>> {
+  const page = normalizePage(params?.page);
+  const pageSize = normalizePageSize(params?.pageSize);
+  const offset = calculateOffset(page, pageSize);
+
+  const where = eq(ruleLogs.workspaceId, workspaceId);
+
+  const [items, totalRow] = await Promise.all([
+    db
+      .select()
+      .from(ruleLogs)
+      .where(where)
+      .orderBy(desc(ruleLogs.createdAt))
+      .limit(pageSize)
+      .offset(offset),
+    db
+      .select({ count: count() })
+      .from(ruleLogs)
+      .where(where),
+  ]);
+
+  return buildPaginatedResult(items, totalRow[0]?.count ?? 0, page, pageSize);
 }
 
 /** پیش‌نمایش خشک — ارزیابی شرط‌ها بدون اجرای اکشن‌ها. */

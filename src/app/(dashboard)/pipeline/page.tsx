@@ -11,7 +11,7 @@ import { ImportCsvDialog } from "@/components/contacts/import-csv-dialog";
 export default async function PipelinePage() {
   const { workspaceId, membership } = await requireWorkspace();
 
-  const [board, pipelines, contactsResult, members] = await Promise.all([
+  const [board, pipelines, contactsResult, membersResult] = await Promise.all([
     getKanbanBoard(workspaceId),
     listPipelines(workspaceId),
     listContacts({ workspaceId, pageSize: 200, sortBy: "firstName", sortDir: "asc" }),
@@ -33,7 +33,7 @@ export default async function PipelinePage() {
           id: c.id,
           name: `${c.firstName} ${c.lastName ?? ""}`.trim(),
         }))}
-        members={members}
+        members={membersResult.items}
         canManageDeal={hasPermission(membership, "seller")}
         canManagePipeline={hasPermission(membership, "manager")}
       />

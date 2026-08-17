@@ -11,9 +11,9 @@ import {
 } from "@/services/bookings";
 import type { BookingLinkInput } from "@/lib/bookings";
 
-export async function getBookingLinksAction() {
+export async function getBookingLinksAction(params?: { page?: number; pageSize?: number; search?: string; active?: boolean }) {
   const { workspaceId } = await requireWorkspace();
-  return listBookingLinks(workspaceId);
+  return listBookingLinks(workspaceId, params);
 }
 
 export async function createBookingLinkAction(raw: unknown) {

@@ -14,9 +14,9 @@ import {
 } from "@/services/rules";
 import type { RuleInput } from "@/lib/rules";
 
-export async function getRulesAction() {
+export async function getRulesAction(params?: { page?: number; pageSize?: number; search?: string; event?: string }) {
   const { workspaceId } = await requireWorkspace();
-  return listRules(workspaceId);
+  return listRules(workspaceId, params);
 }
 
 export async function getRuleAction(ruleId: string) {
@@ -60,9 +60,9 @@ export async function deleteRuleAction(ruleId: string) {
   return { ok: Boolean(row) };
 }
 
-export async function getRuleLogsAction() {
+export async function getRuleLogsAction(params?: { page?: number; pageSize?: number }) {
   const { workspaceId } = await requireWorkspace();
-  return listRuleLogs(workspaceId);
+  return listRuleLogs(workspaceId, params);
 }
 
 export async function testRuleAction(input: RuleInput, payload: Record<string, unknown>) {
