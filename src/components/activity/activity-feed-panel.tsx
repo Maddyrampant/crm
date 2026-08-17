@@ -23,6 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { StatCard } from "@/components/reports/stat-card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import {
   Dialog,
   DialogContent,
@@ -116,6 +117,8 @@ export function ActivityFeedPanel({ activities, members }: Props) {
   const [entityFilter, setEntityFilter] = useState("_all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(20);
   const [quickActionOpen, setQuickActionOpen] = useState(false);
   const [quickActionType, setQuickActionType] = useState<"call" | "meeting">("call");
   const [quickTitle, setQuickTitle] = useState("");
@@ -154,6 +157,12 @@ export function ActivityFeedPanel({ activities, members }: Props) {
       return true;
     });
   }, [activities, entityFilter, dateFrom, dateTo]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paginatedItems = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, page, pageSize]);
 
   function openQuickAction(type: "call" | "meeting") {
     setQuickActionType(type);
@@ -206,7 +215,7 @@ export function ActivityFeedPanel({ activities, members }: Props) {
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <Select value={entityFilter} onValueChange={setEntityFilter}>
+        <Select value={entityFilter} onValueChange={(v) => { setEntityFilter(v); setPage(1); }}>
           <SelectTrigger className="w-44">
             <SelectValue />
           </SelectTrigger>
@@ -221,14 +230,14 @@ export function ActivityFeedPanel({ activities, members }: Props) {
         <Input
           type="date"
           value={dateFrom}
-          onChange={(e) => setDateFrom(e.target.value)}
+          onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
           className="w-36"
           placeholder="از تاریخ"
         />
         <Input
           type="date"
           value={dateTo}
-          onChange={(e) => setDateTo(e.target.value)}
+          onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
           className="w-36"
           placeholder="تا تاریخ"
         />
@@ -252,8 +261,9 @@ export function ActivityFeedPanel({ activities, members }: Props) {
           className="py-10"
         />
       ) : (
-        <ol className="relative space-y-4 border-s ps-4">
-          {filtered.map((a) => {
+        <>
+          <ol className="relative space-y-4 border-s ps-4">
+            {paginatedItems.map((a) => {
             const Icon = ENTITY_ICONS[a.entityType] ?? Inbox;
             const colorClass = ENTITY_COLORS[a.entityType] ?? "bg-gray-100 text-gray-600";
             const dotColor = ENTITY_DOT_COLORS[a.entityType] ?? "bg-gray-500";
@@ -315,7 +325,17 @@ export function ActivityFeedPanel({ activities, members }: Props) {
               </li>
             );
           })}
-        </ol>
+          </ol>
+          {filtered.length > pageSize && (
+            <PaginationControls
+              page={page}
+              total={filtered.length}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={() => {}}
+            />
+          )}
+        </>
       )}
 
       <Dialog open={quickActionOpen} onOpenChange={setQuickActionOpen}>
