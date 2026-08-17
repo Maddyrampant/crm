@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
+  ArrowUpDown,
   ChevronLeft,
   ChevronRight,
   Loader2,
@@ -14,6 +15,7 @@ import {
   Tags,
   Trash2,
 } from "lucide-react";
+import { nextSortDirection, type ColumnSort } from "@/lib/sort";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -85,6 +87,15 @@ export function ProductsTable({ initialData, categories, canManage }: Props) {
   const [deleting, setDeleting] = useState<ProductWithStock | null>(null);
   const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [sort, setSort] = useState<ColumnSort | null>(null);
+
+  function toggleSort(col: string) {
+    setSort((prev) => ({
+      column: col,
+      direction: prev?.column === col ? nextSortDirection(prev.direction) : "asc",
+    }));
+    setPage(1);
+  }
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -101,12 +112,14 @@ export function ProductsTable({ initialData, categories, canManage }: Props) {
         categoryId: filters.categoryId === "all" ? undefined : filters.categoryId,
         active: filters.active === "all" ? undefined : (filters.active as "active" | "inactive"),
         page,
+        sortBy: sort?.column as any,
+        sortDir: sort?.direction,
       });
       setData(result);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "خطا در بارگذاری کالاها");
     }
-  }, [filters, page]);
+  }, [filters, page, sort]);
 
   useEffect(() => {
     startTransition(() => {
@@ -229,11 +242,26 @@ export function ProductsTable({ initialData, categories, canManage }: Props) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>کالا</TableHead>
+                  <TableHead>
+                    <button onClick={() => toggleSort("name")} className="inline-flex items-center gap-1 hover:text-foreground">
+                      کالا
+                      <ArrowUpDown className="size-3" />
+                    </button>
+                  </TableHead>
                   <TableHead>دسته‌بندی</TableHead>
                   <TableHead>واحد</TableHead>
-                  <TableHead className="text-end">قیمت فروش</TableHead>
-                  <TableHead className="text-end">موجودی کل</TableHead>
+                  <TableHead className="text-end">
+                    <button onClick={() => toggleSort("unitPrice")} className="inline-flex items-center gap-1 hover:text-foreground">
+                      قیمت فروش
+                      <ArrowUpDown className="size-3" />
+                    </button>
+                  </TableHead>
+                  <TableHead className="text-end">
+                    <button onClick={() => toggleSort("totalStock")} className="inline-flex items-center gap-1 hover:text-foreground">
+                      موجودی کل
+                      <ArrowUpDown className="size-3" />
+                    </button>
+                  </TableHead>
                   <TableHead>وضعیت</TableHead>
                   <TableHead className="w-12" />
                 </TableRow>
