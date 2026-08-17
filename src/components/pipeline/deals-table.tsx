@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
 import Link from "next/link";
 import { toast } from "sonner";
 import {
+  ArrowUpDown,
   ChevronLeft,
   ChevronRight,
   ExternalLink,
@@ -110,6 +111,8 @@ export function DealsTable({
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [sortBy, setSortBy] = useState<"amount" | "updatedAt">("updatedAt");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [data, setData] = useState(initialData);
   const [isPending, startTransition] = useTransition();
 
@@ -152,6 +155,32 @@ export function DealsTable({
       load();
     });
   }, [load]);
+
+  const sortedItems = useMemo(() => {
+    const items = [...data.items];
+    items.sort((a, b) => {
+      const valA = a[sortBy];
+      const valB = b[sortBy];
+      if (valA == null && valB == null) return 0;
+      if (valA == null) return 1;
+      if (valB == null) return -1;
+      if (typeof valA === "number" && typeof valB === "number") {
+        return sortDir === "asc" ? valA - valB : valB - valA;
+      }
+      const cmp = String(valA).localeCompare(String(valB), "fa");
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return items;
+  }, [data.items, sortBy, sortDir]);
+
+  function toggleSort(col: "amount" | "updatedAt") {
+    if (sortBy === col) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(col);
+      setSortDir("desc");
+    }
+  }
 
   function updateFilter<K extends keyof Filters>(key: K, value: Filters[K]) {
     setFilters((f) => ({ ...f, [key]: value }));
@@ -307,8 +336,18 @@ export function DealsTable({
                   <TableHead>شرکت</TableHead>
                   <TableHead>مرحله</TableHead>
                   <TableHead>مسئول</TableHead>
-                  <TableHead>مبلغ</TableHead>
-                  <TableHead>تاریخ بستن</TableHead>
+                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("amount")}>
+                    <span className="inline-flex items-center gap-1">
+                      مبلغ
+                      {sortBy === "amount" && <ArrowUpDown className="size-3.5" />}
+                    </span>
+                  </TableHead>
+                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("updatedAt")}>
+                    <span className="inline-flex items-center gap-1">
+                      تاریخ بستن
+                      {sortBy === "updatedAt" && <ArrowUpDown className="size-3.5" />}
+                    </span>
+                  </TableHead>
                   <TableHead>وضعیت</TableHead>
                   <TableHead className="w-12" />
                 </TableRow>
@@ -332,7 +371,7 @@ export function DealsTable({
                     </TableCell>
                   </TableRow>
                 ) : (
-                  data.items.map((d) => (
+                  sortedItems.map((d) => (
                     <TableRow key={d.id}>
                       <TableCell>
                         <div className="min-w-0">

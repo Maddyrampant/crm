@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
+  ArrowUpDown,
   ChevronLeft,
   ChevronRight,
   Loader2,
@@ -57,6 +58,8 @@ export function CompaniesTable({ initialData, canManage, canDelete }: Props) {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize] = useState(20);
+  const [sortBy, setSortBy] = useState<"name" | "createdAt">("name");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [data, setData] = useState(initialData);
   const [isPending, startTransition] = useTransition();
 
@@ -78,17 +81,27 @@ export function CompaniesTable({ initialData, canManage, canDelete }: Props) {
       search: search || undefined,
       page,
       pageSize,
-      sortBy: "name",
-      sortDir: "asc",
+      sortBy,
+      sortDir,
     });
     if (result.ok && result.data) setData(result.data);
-  }, [search, page, pageSize]);
+  }, [search, page, pageSize, sortBy, sortDir]);
 
   useEffect(() => {
     startTransition(() => {
       load();
     });
   }, [load]);
+
+  function toggleSort(col: "name" | "createdAt") {
+    if (sortBy === col) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(col);
+      setSortDir("asc");
+    }
+    setPage(1);
+  }
 
   async function handleDelete() {
     if (!deleting) return;
@@ -143,11 +156,21 @@ export function CompaniesTable({ initialData, canManage, canDelete }: Props) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>نام شرکت</TableHead>
+                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("name")}>
+                    <span className="inline-flex items-center gap-1">
+                      نام شرکت
+                      {sortBy === "name" && <ArrowUpDown className="size-3.5" />}
+                    </span>
+                  </TableHead>
                   <TableHead>صنعت</TableHead>
                   <TableHead>دامنه</TableHead>
                   <TableHead className="text-center">تعداد مشتری</TableHead>
-                  <TableHead>تاریخ افزودن</TableHead>
+                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("createdAt")}>
+                    <span className="inline-flex items-center gap-1">
+                      تاریخ افزودن
+                      {sortBy === "createdAt" && <ArrowUpDown className="size-3.5" />}
+                    </span>
+                  </TableHead>
                   <TableHead className="w-12" />
                 </TableRow>
               </TableHeader>

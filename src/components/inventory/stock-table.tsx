@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   AlertTriangle,
+  ArrowUpDown,
   Boxes,
   ChevronLeft,
   ChevronRight,
@@ -88,6 +89,8 @@ export function StockTable({ initialData, lowStockIds }: Props) {
   const [search, setSearch] = useState("");
   const [lowOnly, setLowOnly] = useState(false);
   const [page, setPage] = useState(1);
+  const [sortBy, setSortBy] = useState<"totalStock" | "name">("totalStock");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [data, setData] = useState(initialData);
   const [lowSet, setLowSet] = useState<Set<string>>(new Set(lowStockIds));
   const [isPending, startTransition] = useTransition();
@@ -133,6 +136,29 @@ export function StockTable({ initialData, lowStockIds }: Props) {
       load();
     });
   }, [load]);
+
+  const sortedItems = useMemo(() => {
+    const items = [...data.items];
+    items.sort((a, b) => {
+      const valA = a[sortBy];
+      const valB = b[sortBy];
+      if (typeof valA === "number" && typeof valB === "number") {
+        return sortDir === "asc" ? valA - valB : valB - valA;
+      }
+      const cmp = String(valA ?? "").localeCompare(String(valB ?? ""), "fa");
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return items;
+  }, [data.items, sortBy, sortDir]);
+
+  function toggleSort(col: "totalStock" | "name") {
+    if (sortBy === col) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(col);
+      setSortDir("asc");
+    }
+  }
 
   async function openDetail(productId: string) {
     setDetailId(productId);
@@ -188,9 +214,19 @@ export function StockTable({ initialData, lowStockIds }: Props) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>کالا</TableHead>
+                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("name")}>
+                    <span className="inline-flex items-center gap-1">
+                      کالا
+                      {sortBy === "name" && <ArrowUpDown className="size-3.5" />}
+                    </span>
+                  </TableHead>
                   <TableHead>دسته‌بندی</TableHead>
-                  <TableHead className="text-end">موجودی کل</TableHead>
+                  <TableHead className="cursor-pointer select-none text-end" onClick={() => toggleSort("totalStock")}>
+                    <span className="inline-flex items-center gap-1">
+                      موجودی کل
+                      {sortBy === "totalStock" && <ArrowUpDown className="size-3.5" />}
+                    </span>
+                  </TableHead>
                   <TableHead>وضعیت</TableHead>
                   <TableHead className="w-12" />
                 </TableRow>
@@ -211,7 +247,7 @@ export function StockTable({ initialData, lowStockIds }: Props) {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  data.items.map((p) => {
+                    sortedItems.map((p) => {
                     const isLow = lowSet.has(p.id);
                     return (
                       <TableRow key={p.id}>

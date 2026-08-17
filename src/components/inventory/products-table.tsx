@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
+  ArrowUpDown,
   ChevronLeft,
   ChevronRight,
   Loader2,
@@ -76,6 +77,8 @@ export function ProductsTable({ initialData, categories, canManage }: Props) {
     active: string;
   }>({ search: "", categoryId: "all", active: "all" });
   const [page, setPage] = useState(1);
+  const [sortBy, setSortBy] = useState<"name" | "totalStock" | "unitPrice">("name");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [data, setData] = useState(initialData);
   const [categoryList, setCategoryList] = useState(categories);
   const [isPending, startTransition] = useTransition();
@@ -113,6 +116,29 @@ export function ProductsTable({ initialData, categories, canManage }: Props) {
       load();
     });
   }, [load]);
+
+  const sortedItems = useMemo(() => {
+    const items = [...data.items];
+    items.sort((a, b) => {
+      const valA = a[sortBy];
+      const valB = b[sortBy];
+      if (typeof valA === "number" && typeof valB === "number") {
+        return sortDir === "asc" ? valA - valB : valB - valA;
+      }
+      const cmp = String(valA ?? "").localeCompare(String(valB ?? ""), "fa");
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return items;
+  }, [data.items, sortBy, sortDir]);
+
+  function toggleSort(col: "name" | "totalStock" | "unitPrice") {
+    if (sortBy === col) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(col);
+      setSortDir("asc");
+    }
+  }
 
   async function handleDelete() {
     if (!deleting) return;
@@ -229,11 +255,26 @@ export function ProductsTable({ initialData, categories, canManage }: Props) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>کالا</TableHead>
+                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("name")}>
+                    <span className="inline-flex items-center gap-1">
+                      کالا
+                      {sortBy === "name" && <ArrowUpDown className="size-3.5" />}
+                    </span>
+                  </TableHead>
                   <TableHead>دسته‌بندی</TableHead>
                   <TableHead>واحد</TableHead>
-                  <TableHead className="text-end">قیمت فروش</TableHead>
-                  <TableHead className="text-end">موجودی کل</TableHead>
+                  <TableHead className="cursor-pointer select-none text-end" onClick={() => toggleSort("unitPrice")}>
+                    <span className="inline-flex items-center gap-1">
+                      قیمت فروش
+                      {sortBy === "unitPrice" && <ArrowUpDown className="size-3.5" />}
+                    </span>
+                  </TableHead>
+                  <TableHead className="cursor-pointer select-none text-end" onClick={() => toggleSort("totalStock")}>
+                    <span className="inline-flex items-center gap-1">
+                      موجودی کل
+                      {sortBy === "totalStock" && <ArrowUpDown className="size-3.5" />}
+                    </span>
+                  </TableHead>
                   <TableHead>وضعیت</TableHead>
                   <TableHead className="w-12" />
                 </TableRow>
@@ -250,7 +291,7 @@ export function ProductsTable({ initialData, categories, canManage }: Props) {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  data.items.map((p) => (
+                    sortedItems.map((p) => (
                     <TableRow key={p.id}>
                       <TableCell>
                         <div className="min-w-0">
