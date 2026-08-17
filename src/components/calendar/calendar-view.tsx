@@ -23,6 +23,7 @@ import {
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/lib/format";
 import type { Appointment, Task } from "@/db/schema";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -88,6 +89,8 @@ export function CalendarView({
   });
   const [taskTitle, setTaskTitle] = useState("");
   const [saving, setSaving] = useState(false);
+  const [appointmentsPage, setAppointmentsPage] = useState(1);
+  const [appointmentsPageSize, setAppointmentsPageSize] = useState(20);
   const router = useRouter();
 
   const grid = useMemo(() => {
@@ -156,9 +159,16 @@ export function CalendarView({
     router.refresh();
   }
 
-  const todayAppointments = appointments
-    .filter((a) => isSameDay(a.startsAt, new Date()))
-    .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
+  const todayAppointments = useMemo(() => {
+    return appointments
+      .filter((a) => isSameDay(a.startsAt, new Date()))
+      .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
+  }, [appointments]);
+
+  const paginatedTodayAppointments = useMemo(() => {
+    const start = (appointmentsPage - 1) * appointmentsPageSize;
+    return todayAppointments.slice(start, start + appointmentsPageSize);
+  }, [todayAppointments, appointmentsPage, appointmentsPageSize]);
 
   const openTasks = tasks
     .filter((t) => t.status !== "done" && t.status !== "cancelled")
@@ -247,7 +257,7 @@ export function CalendarView({
             {todayAppointments.length === 0 ? (
               <p className="text-sm text-muted-foreground">قرار امروزی ندارید</p>
             ) : (
-              todayAppointments.map((a) => (
+              paginatedTodayAppointments.map((a) => (
                 <div
                   key={a.id}
                   className="flex items-center justify-between gap-2 rounded-lg border p-2 text-sm"
@@ -271,6 +281,15 @@ export function CalendarView({
                   </Button>
                 </div>
               ))
+            )}
+            {todayAppointments.length > 0 && (
+              <PaginationControls
+                page={appointmentsPage}
+                total={todayAppointments.length}
+                pageSize={appointmentsPageSize}
+                onPageChange={setAppointmentsPage}
+                onPageSizeChange={(size) => { setAppointmentsPageSize(size); setAppointmentsPage(1); }}
+              />
             )}
           </CardContent>
         </Card>

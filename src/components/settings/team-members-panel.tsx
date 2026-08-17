@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2, Search, Trash2, UserPlus } from "lucide-react";
@@ -27,6 +27,7 @@ import {
   removeWorkspaceMemberAction,
   updateMemberRoleAction,
 } from "@/actions/workspace";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import type { EditableRole, WorkspaceMemberRow } from "@/services/workspace";
 
 type MemberRole = WorkspaceMemberRow["role"];
@@ -69,7 +70,11 @@ export function TeamMembersPanel({ members, currentUserId }: Props) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const router = useRouter();
+
+  useEffect(() => { setPage(1); }, [searchInput, roleFilter]);
 
   const filteredMembers = members.filter((m) => {
     const matchesSearch = !searchInput ||
@@ -78,6 +83,11 @@ export function TeamMembersPanel({ members, currentUserId }: Props) {
     const matchesRole = roleFilter === "all" || m.role === roleFilter;
     return matchesSearch && matchesRole;
   });
+
+  const paginatedMembers = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredMembers.slice(start, start + pageSize);
+  }, [filteredMembers, page, pageSize]);
 
   async function handleAdd() {
     if (!email.trim() || saving) return;
@@ -206,7 +216,7 @@ export function TeamMembersPanel({ members, currentUserId }: Props) {
           {filteredMembers.length === 0 && (
             <p className="text-sm text-muted-foreground">عضوی یافت نشد.</p>
           )}
-          {filteredMembers.map((member) => {
+          {paginatedMembers.map((member) => {
             const isSelf = member.id === currentUserId;
             const isOwner = member.role === "owner";
             const editable = !isSelf && !isOwner;
@@ -270,6 +280,15 @@ export function TeamMembersPanel({ members, currentUserId }: Props) {
             );
           })}
         </ul>
+        {filteredMembers.length > 0 && (
+          <PaginationControls
+            page={page}
+            total={filteredMembers.length}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
+          />
+        )}
       </CardContent>
     </Card>
   );
