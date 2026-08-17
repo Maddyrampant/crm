@@ -145,6 +145,13 @@ export const navSections: NavSection[] = [
         owner: "part1",
         ready: true,
       },
+      {
+        title: "ایمیل‌مارکتینگ",
+        href: "/email",
+        icon: Mail,
+        owner: "part1",
+        ready: true,
+      },
     ],
   },
   {
