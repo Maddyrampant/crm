@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq, ilike, sql } from "drizzle-orm";
+import { and, eq, gte, ilike, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   companies,
@@ -33,11 +33,6 @@ const ORDER_STATUS_MAP: Record<string, "open" | "won" | "lost"> = {
   refunded: "lost",
   failed: "lost",
 };
-
-function parsePrice(v: string): number {
-  const n = parseFloat(v);
-  return isNaN(n) ? 0 : Math.round(n * 100) / 100;
-}
 
 export async function verifyWebhookSignature(
   body: string,
@@ -131,25 +126,37 @@ async function findOrCreateContact(
 
   const companyId = await getOrCreateCompany(workspaceId, billing);
 
-  const [contact] = await db
-    .insert(contacts)
-    .values({
-      workspaceId,
-      firstName: billing.first_name || "مشتری",
-      lastName: billing.last_name || null,
-      email: email || null,
-      phone: billing.phone || null,
-      companyId: companyId || null,
-      source: "other",
-      lifecycleStage: "customer",
-      customFields: {
-        wooCustomerId: wooId,
-        wooRegisteredAt: dateCreated ?? null,
-      },
-    })
-    .returning();
+  try {
+    const [contact] = await db
+      .insert(contacts)
+      .values({
+        workspaceId,
+        firstName: billing.first_name || "مشتری",
+        lastName: billing.last_name || null,
+        email: email || null,
+        phone: billing.phone || null,
+        companyId: companyId || null,
+        source: "other",
+        lifecycleStage: "customer",
+        customFields: {
+          wooCustomerId: wooId,
+          wooRegisteredAt: dateCreated ?? null,
+        },
+      })
+      .returning();
 
-  return contact.id;
+    return contact.id;
+  } catch {
+    if (email) {
+      const existing = await db
+        .select({ id: contacts.id })
+        .from(contacts)
+        .where(and(eq(contacts.workspaceId, workspaceId), eq(contacts.email, email)))
+        .limit(1);
+      if (existing[0]) return existing[0].id;
+    }
+    throw new Error("Failed to create contact");
+  }
 }
 
 async function findOrCreateProduct(
@@ -350,6 +357,53 @@ export async function syncWooOrder(
         updatedAt: new Date(),
       })
       .where(eq(deals.id, existingDeal[0].id));
+
+    if (dealStatus === "won" && order.line_items?.length) {
+      const existingInvoice = await db
+        .select({ id: invoices.id })
+        .from(invoices)
+        .where(eq(invoices.number, `WOO-${order.number || order.id}`))
+        .limit(1);
+
+      if (!existingInvoice[0]) {
+        const [invoice] = await db
+          .insert(invoices)
+          .values({
+            workspaceId,
+            contactId,
+            number: `WOO-${order.number || order.id}`,
+            status: "paid",
+            issuedAt: new Date(order.date_created),
+            discount: order.discount_total || "0",
+            taxRate: "0",
+            total: order.total,
+          })
+          .returning();
+
+        const skus = order.line_items.map((item) => item.sku || `WOO-${item.product_id}`);
+        const existingProducts = await db
+          .select({ id: products.id, sku: products.sku })
+          .from(products)
+          .where(and(eq(products.workspaceId, workspaceId), sql`${products.sku} IN ${skus}`));
+        const skuToId = new Map(existingProducts.map((p) => [p.sku, p.id]));
+
+        await db.insert(invoiceItems).values(
+          order.line_items.map((item) => {
+            const sku = item.sku || `WOO-${item.product_id}`;
+            return {
+              invoiceId: invoice.id,
+              productId: skuToId.get(sku) ?? null,
+              description: item.name,
+              quantity: String(item.quantity),
+              unitPrice: item.price || "0",
+              taxRate: "0",
+              amount: item.total || "0",
+            };
+          })
+        );
+      }
+    }
+
     return existingDeal[0].id;
   }
 
@@ -455,6 +509,26 @@ export async function handleWooWebhook(
 
   const verified = await verifyWebhookSignature(rawBody, signature, store[0].webhookSecret);
   if (!verified) return { ok: false, error: "Invalid signature" };
+
+  const resourceId = String((payload as Record<string, unknown>).id ?? "");
+  const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000);
+  const duplicate = await db
+    .select({ id: wooSyncLogs.id })
+    .from(wooSyncLogs)
+    .where(
+      and(
+        eq(wooSyncLogs.storeId, storeId),
+        eq(wooSyncLogs.topic, topic),
+        eq(wooSyncLogs.resourceId, resourceId),
+        eq(wooSyncLogs.action, event),
+        gte(wooSyncLogs.createdAt, fiveMinAgo)
+      )
+    )
+    .limit(1);
+
+  if (duplicate.length > 0) {
+    return { ok: true };
+  }
 
   try {
     if (resource === "customer") {

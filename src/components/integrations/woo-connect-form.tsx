@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2, TestTube2 } from "lucide-react";
@@ -26,6 +26,7 @@ export function WooConnectForm({ open, onOpenChange }: Props) {
   const [pending, startTransition] = useTransition();
   const [testing, setTesting] = useState(false);
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -51,7 +52,7 @@ export function WooConnectForm({ open, onOpenChange }: Props) {
   }
 
   async function handleTest() {
-    const form = document.querySelector<HTMLFormElement>("[data-woo-form]");
+    const form = formRef.current;
     if (!form) return;
     const fd = new FormData(form);
 
@@ -86,7 +87,7 @@ export function WooConnectForm({ open, onOpenChange }: Props) {
         </DialogHeader>
 
         <form
-          data-woo-form
+          ref={formRef}
           onSubmit={handleSubmit}
           className="space-y-4"
         >

@@ -128,12 +128,36 @@ interface WooApiListResponse<T> {
   };
 }
 
+function isPrivateIP(ip: string): boolean {
+  if (ip === "127.0.0.1" || ip === "::1" || ip === "localhost") return true;
+  if (ip.startsWith("10.")) return true;
+  if (ip.startsWith("172.")) {
+    const second = parseInt(ip.split(".")[1], 10);
+    if (second >= 16 && second <= 31) return true;
+  }
+  if (ip.startsWith("192.168.")) return true;
+  if (ip.startsWith("0.")) return true;
+  return false;
+}
+
+function assertSafeUrl(urlStr: string): void {
+  const parsed = new URL(urlStr);
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+    throw new Error(`Unsafe protocol: ${parsed.protocol}`);
+  }
+  const hostname = parsed.hostname;
+  if (isPrivateIP(hostname)) {
+    throw new Error(`SSRF blocked: ${hostname} is a private/internal IP`);
+  }
+}
+
 class WooCommerceApiClient {
   private baseUrl: string;
   private auth: string;
 
   constructor(url: string, consumerKey: string, consumerSecret: string) {
     const cleanUrl = url.replace(/\/+$/, "");
+    assertSafeUrl(cleanUrl);
     this.baseUrl = `${cleanUrl}/wp-json/wc/v3`;
     this.auth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString("base64");
   }
@@ -151,6 +175,7 @@ class WooCommerceApiClient {
         Authorization: `Basic ${this.auth}`,
         "Content-Type": "application/json",
       },
+      signal: AbortSignal.timeout(30_000),
     });
 
     if (!response.ok) {
@@ -177,6 +202,7 @@ class WooCommerceApiClient {
         Authorization: `Basic ${this.auth}`,
         "Content-Type": "application/json",
       },
+      signal: AbortSignal.timeout(30_000),
     });
 
     if (!response.ok) {
@@ -209,7 +235,7 @@ class WooCommerceApiClient {
   ): Promise<WooApiListResponse<WooCustomer>> {
     return this.requestList<WooCustomer>("/customers", {
       page: String(page),
-      per_page: String(perPage),
+      per_page: String(Math.min(perPage, 100)),
     });
   }
 
@@ -224,7 +250,7 @@ class WooCommerceApiClient {
   ): Promise<WooApiListResponse<WooOrder>> {
     const params: Record<string, string> = {
       page: String(page),
-      per_page: String(perPage),
+      per_page: String(Math.min(perPage, 100)),
     };
     if (status) params.status = status;
     return this.requestList<WooOrder>("/orders", params);
@@ -240,7 +266,7 @@ class WooCommerceApiClient {
   ): Promise<WooApiListResponse<WooProduct>> {
     return this.requestList<WooProduct>("/products", {
       page: String(page),
-      per_page: String(perPage),
+      per_page: String(Math.min(perPage, 100)),
     });
   }
 
