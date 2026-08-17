@@ -244,6 +244,13 @@ export const navSections: NavSection[] = [
         owner: "part1",
         ready: true,
       },
+      {
+        title: "ورک‌اسپیس",
+        href: "/settings/workspace",
+        icon: Building2,
+        owner: "part1",
+        ready: true,
+      },
     ],
   },
   {

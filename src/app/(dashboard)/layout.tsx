@@ -18,7 +18,7 @@ export default async function DashboardLayout({
       <SidebarProvider>
         <AppSidebar role={membership.role} />
         <SidebarInset>
-          <AppHeader userName={user.name} userEmail={user.email} />
+          <AppHeader userName={user.name} userEmail={user.email} workspaceId={membership.workspaceId} />
           <main className="flex-1 p-4 md:p-6">{children}</main>
         </SidebarInset>
       </SidebarProvider>

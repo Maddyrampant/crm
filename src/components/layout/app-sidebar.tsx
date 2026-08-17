@@ -18,7 +18,6 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { navSections, type NavRole } from "@/config/nav";
-import { WorkspaceSwitcher } from "@/components/layout/workspace-switcher";
 
 const ROLE_LEVEL: Record<NavRole, number> = {
   viewer: 0,
@@ -51,7 +50,6 @@ export function AppSidebar({ role }: { role: NavRole }) {
     <Sidebar side="right" collapsible="icon" className="border-e">
       <SidebarHeader>
         <Brand />
-        <WorkspaceSwitcher />
       </SidebarHeader>
       <SidebarContent>
         {navSections.map((section) => {

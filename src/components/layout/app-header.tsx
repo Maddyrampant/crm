@@ -6,14 +6,16 @@ import { GlobalSearch } from "@/components/layout/global-search";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { LocaleToggle } from "@/components/layout/locale-toggle";
+import { WorkspaceSwitcher } from "@/components/layout/workspace-switcher";
 
-export function AppHeader({ userName, userEmail }: { userName: string; userEmail: string }) {
+export function AppHeader({ userName, userEmail, workspaceId }: { userName: string; userEmail: string; workspaceId: string }) {
   return (
     <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <SidebarTrigger className="-ms-1" />
       <Separator orientation="vertical" className="h-6" />
       <PageTitle />
       <div className="flex-1" />
+      <WorkspaceSwitcher currentWorkspaceId={workspaceId} />
       <div className="hidden md:block">
         <GlobalSearch />
       </div>

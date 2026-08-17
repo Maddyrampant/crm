@@ -11,6 +11,9 @@ import {
   addWorkspaceMember,
   removeWorkspaceMember,
   updateMemberRole,
+  updateWorkspaceName,
+  deleteWorkspace,
+  getUserWorkspaces,
   type EditableRole,
 } from "@/services/workspace";
 
@@ -122,4 +125,35 @@ export async function removeWorkspaceMemberAction(userId: string) {
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "خطا در حذف عضو" };
   }
+}
+
+const updateNameSchema = z.object({
+  name: z.string().trim().min(1, "نام ورک‌اسپیس را وارد کنید").max(60),
+});
+
+export async function updateWorkspaceNameAction(raw: unknown) {
+  const { workspaceId } = await requireWorkspaceRole("owner");
+  const parsed = updateNameSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "ورودی نامعتبر" };
+  }
+  const row = await updateWorkspaceName(workspaceId, parsed.data.name);
+  if (!row) return { ok: false, error: "ورک‌اسپیس یافت نشد" };
+  revalidatePath("/settings/workspace");
+  revalidatePath("/settings");
+  return { ok: true };
+}
+
+export async function deleteWorkspaceAction() {
+  const { workspaceId } = await requireWorkspaceRole("owner");
+  const row = await deleteWorkspace(workspaceId);
+  if (!row) return { ok: false, error: "ورک‌اسپیس یافت نشد" };
+  redirect("/workspace/new");
+}
+
+export async function getUserWorkspacesAction() {
+  const session = await getSession();
+  if (!session?.user) return { ok: false, data: [] };
+  const workspaces = await getUserWorkspaces(session.user.id);
+  return { ok: true, data: workspaces };
 }

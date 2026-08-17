@@ -2,7 +2,7 @@ import "server-only";
 
 import { and, count, eq, ilike, type SQL } from "drizzle-orm";
 import { db } from "@/db";
-import { workspaceMembers, user, type WorkspaceMember } from "@/db/schema";
+import { workspaceMembers, workspaces, user, type WorkspaceMember } from "@/db/schema";
 import {
   normalizePage,
   normalizePageSize,
@@ -152,4 +152,36 @@ export async function removeWorkspaceMember(
     throw new Error("برای خروج خودتان، حساب را ترک نکنید");
   }
   await db.delete(workspaceMembers).where(eq(workspaceMembers.id, target.id));
+}
+
+export async function updateWorkspaceName(workspaceId: string, name: string) {
+  const [row] = await db
+    .update(workspaces)
+    .set({ name, updatedAt: new Date() })
+    .where(eq(workspaces.id, workspaceId))
+    .returning({ id: workspaces.id });
+  return row ?? null;
+}
+
+export async function deleteWorkspace(workspaceId: string) {
+  const [deleted] = await db
+    .delete(workspaces)
+    .where(eq(workspaces.id, workspaceId))
+    .returning({ id: workspaces.id });
+  return deleted ?? null;
+}
+
+export async function getUserWorkspaces(userId: string) {
+  const rows = await db
+    .select({
+      id: workspaces.id,
+      name: workspaces.name,
+      slug: workspaces.slug,
+      role: workspaceMembers.role,
+    })
+    .from(workspaceMembers)
+    .innerJoin(workspaces, eq(workspaces.id, workspaceMembers.workspaceId))
+    .where(eq(workspaceMembers.userId, userId))
+    .orderBy(workspaces.name);
+  return rows;
 }
