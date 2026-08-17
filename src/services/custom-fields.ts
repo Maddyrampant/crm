@@ -13,6 +13,18 @@ export type CustomFieldDefInput = {
   orderIndex?: number;
 };
 
+export type CustomFieldDef = {
+  id: string;
+  workspaceId: string;
+  entity: "contact" | "company" | "deal";
+  name: string;
+  type: "text" | "number" | "date" | "select" | "multiselect" | "boolean";
+  options: string[] | null;
+  required: boolean;
+  orderIndex: number;
+  createdAt: Date;
+};
+
 export async function listFields(workspaceId: string) {
   return db
     .select()
