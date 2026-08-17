@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Eye, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { deleteInvoiceAction } from "@/actions/invoices";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { deleteInvoiceAction, listInvoicesAction } from "@/actions/invoices";
+import { formatCurrency, formatDate, toFaDigits } from "@/lib/format";
 import type { InvoiceRow } from "@/services/invoices";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import {
   Table,
   TableBody,
@@ -20,22 +21,51 @@ import {
 } from "@/components/ui/table";
 import { InvoiceStatusBadge } from "./status-badge";
 
-export function InvoiceList({ initialData }: { initialData: InvoiceRow[] }) {
+export function InvoiceList({
+  initialData,
+  initialTotal,
+  workspaceId,
+}: {
+  initialData: InvoiceRow[];
+  initialTotal: number;
+  workspaceId: string;
+}) {
+  const [items, setItems] = useState(initialData);
+  const [total, setTotal] = useState(initialTotal);
+  const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const [isPending, startTransition] = useTransition();
   const router = useRouter();
+  const pageSize = 20;
 
-  const filtered = initialData.filter(
-    (row) =>
-      row.invoice.number.toLowerCase().includes(search.toLowerCase()) ||
-      row.contactName.toLowerCase().includes(search.toLowerCase())
+  const fetchPage = useCallback(
+    (p: number, q: string) => {
+      startTransition(async () => {
+        const result = await listInvoicesAction({ page: p, pageSize, search: q || undefined });
+        setItems(result.items);
+        setTotal(result.total);
+      });
+    },
+    [pageSize]
   );
+
+  function handleSearch(value: string) {
+    setSearch(value);
+    setPage(1);
+    fetchPage(1, value);
+  }
+
+  function handlePageChange(p: number) {
+    setPage(p);
+    fetchPage(p, search);
+  }
 
   async function handleDelete(invoiceId: string) {
     if (!confirm("این فاکتور حذف شود؟")) return;
     const result = await deleteInvoiceAction(invoiceId);
     if (result.ok) {
       toast.success("فاکتور حذف شد");
-      router.refresh();
+      fetchPage(page, search);
     } else {
       toast.error("خطا در حذف");
     }
@@ -49,7 +79,7 @@ export function InvoiceList({ initialData }: { initialData: InvoiceRow[] }) {
           placeholder="جستجوی شماره یا نام مشتری…"
           className="ps-3 pe-9"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => handleSearch(e.target.value)}
         />
       </div>
 
@@ -68,14 +98,14 @@ export function InvoiceList({ initialData }: { initialData: InvoiceRow[] }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.length === 0 && (
+            {items.length === 0 && (
               <TableRow>
                 <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
-                  فاکتوری یافت نشد
+                  {isPending ? "در حال بارگذاری…" : "فاکتوری یافت نشد"}
                 </TableCell>
               </TableRow>
             )}
-            {filtered.map((row) => (
+            {items.map((row) => (
               <TableRow key={row.invoice.id}>
                 <TableCell className="font-medium" dir="ltr">
                   {row.invoice.number}
@@ -114,6 +144,16 @@ export function InvoiceList({ initialData }: { initialData: InvoiceRow[] }) {
           </TableBody>
         </Table>
       </div>
+
+      {total > pageSize && (
+        <PaginationControls
+          page={page}
+          total={total}
+          pageSize={pageSize}
+          onPageChange={handlePageChange}
+          onPageSizeChange={() => {}}
+        />
+      )}
     </div>
   );
 }

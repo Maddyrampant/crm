@@ -110,6 +110,7 @@ export function NotificationCenterPanel() {
   useEffect(() => {
     let active = true;
     const run = async () => {
+      if (document.hidden) return;
       try {
         const data = await listNotificationsAction({
           page,

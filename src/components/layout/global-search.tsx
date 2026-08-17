@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Building2, Kanban, Loader2, Search, Users } from "lucide-react";
@@ -218,7 +218,7 @@ export function GlobalSearch() {
   );
 }
 
-function ResultLink({
+const ResultLink = memo(function ResultLink({
   href,
   title,
   subtitle,
@@ -253,4 +253,4 @@ function ResultLink({
       </span>
     </Link>
   );
-}
+});
