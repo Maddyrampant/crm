@@ -2,7 +2,7 @@ import "server-only";
 
 import { and, eq, lt } from "drizzle-orm";
 import { db } from "@/db";
-import { invoices, workspaces } from "@/db/schema";
+import { invoices, tasks, workspaces } from "@/db/schema";
 import { listLowStock } from "./inventory";
 import { notifyWorkspace, processDueReminders } from "./notifications";
 import { dispatchRuleEvent } from "./rules";
@@ -14,6 +14,7 @@ function num(v: string | null | undefined) {
 export type DailyCronResult = {
   remindersProcessed: number;
   overdueInvoices: number;
+  overdueTasks: number;
   lowStockWorkspaces: number;
 };
 
@@ -74,5 +75,37 @@ export async function runDailyMaintenance(): Promise<DailyCronResult> {
     });
   }
 
-  return { remindersProcessed, overdueInvoices: overdueRows.length, lowStockWorkspaces };
+  // ── تسکهای سررسید شده ──
+  let overdueTasks = 0;
+  const now = new Date();
+  for (const ws of allWorkspaces) {
+    const overdue = await db
+      .select({ id: tasks.id, title: tasks.title, dueAt: tasks.dueAt })
+      .from(tasks)
+      .where(
+        and(
+          eq(tasks.workspaceId, ws.id),
+          eq(tasks.status, "open"),
+          lt(tasks.dueAt, now)
+        )
+      )
+      .limit(50);
+
+    overdueTasks += overdue.length;
+    if (overdue.length > 0) {
+      const titles = overdue.slice(0, 5).map((t) => t.title).join("، ");
+      await notifyWorkspace({
+        workspaceId: ws.id,
+        type: "task",
+        title: "تسکهای سررسید شده",
+        body:
+          overdue.length <= 5
+            ? `${overdue.length} تسک از موعد گذشته: ${titles}`
+            : `${overdue.length} تسک از موعد گذشته (نمونه: ${titles}).`,
+        link: "/tasks",
+      });
+    }
+  }
+
+  return { remindersProcessed, overdueInvoices: overdueRows.length, overdueTasks, lowStockWorkspaces };
 }
