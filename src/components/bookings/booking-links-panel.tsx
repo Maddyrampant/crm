@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -19,6 +19,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import {
   Dialog,
   DialogContent,
@@ -80,6 +81,8 @@ export function BookingLinksPanel({ links }: Props) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState("");
   const [activeFilter, setActiveFilter] = useState<string>("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [title, setTitle] = useState("");
   const [duration, setDuration] = useState<BookingDuration>(30);
   const [location, setLocation] = useState("");
@@ -97,6 +100,13 @@ export function BookingLinksPanel({ links }: Props) {
       (activeFilter === "inactive" && !l.active);
     return matchesSearch && matchesActive;
   });
+
+  useEffect(() => { setPage(1); }, [searchInput, activeFilter]);
+
+  const paginatedLinks = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredLinks.slice(start, start + pageSize);
+  }, [filteredLinks, page, pageSize]);
 
   function resetForm() {
     setTitle("");
@@ -226,8 +236,9 @@ export function BookingLinksPanel({ links }: Props) {
               className="py-8"
             />
           ) : (
+            <>
             <ul className="space-y-3">
-              {filteredLinks.map((link) => (
+              {paginatedLinks.map((link) => (
                 <li key={link.id} className="rounded-lg border p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="grid gap-1.5">
@@ -291,6 +302,14 @@ export function BookingLinksPanel({ links }: Props) {
                 </li>
               ))}
             </ul>
+            <PaginationControls
+              page={page}
+              total={filteredLinks.length}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
+            />
+            </>
           )}
         </div>
       </div>

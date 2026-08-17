@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Inbox, Loader2, Pencil, Plus, ScrollText, Search, Trash2 } from "lucide-react";
@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Card,
@@ -46,7 +47,13 @@ export function RulesPanel({ rules, logs, stages }: Props) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState("");
   const [eventFilter, setEventFilter] = useState<string>("all");
+  const [rulesPage, setRulesPage] = useState(1);
+  const [rulesPageSize, setRulesPageSize] = useState(10);
+  const [logsPage, setLogsPage] = useState(1);
+  const [logsPageSize, setLogsPageSize] = useState(10);
   const router = useRouter();
+
+  useEffect(() => { setRulesPage(1); }, [searchInput, eventFilter]);
 
   const filteredRules = rules.filter((r) => {
     const matchesSearch = !searchInput ||
@@ -55,6 +62,16 @@ export function RulesPanel({ rules, logs, stages }: Props) {
     const matchesEvent = eventFilter === "all" || r.event === eventFilter;
     return matchesSearch && matchesEvent;
   });
+
+  const paginatedRules = useMemo(() => {
+    const start = (rulesPage - 1) * rulesPageSize;
+    return filteredRules.slice(start, start + rulesPageSize);
+  }, [filteredRules, rulesPage, rulesPageSize]);
+
+  const paginatedLogs = useMemo(() => {
+    const start = (logsPage - 1) * logsPageSize;
+    return logs.slice(start, start + logsPageSize);
+  }, [logs, logsPage, logsPageSize]);
 
   function openCreate() {
     setEditing(null);
@@ -151,8 +168,9 @@ export function RulesPanel({ rules, logs, stages }: Props) {
                 className="py-10"
               />
             ) : (
+              <>
               <ul className="space-y-3">
-                {filteredRules.map((rule) => (
+                {paginatedRules.map((rule) => (
                   <li
                     key={rule.id}
                     className="rounded-lg border p-4"
@@ -221,6 +239,14 @@ export function RulesPanel({ rules, logs, stages }: Props) {
                   </li>
                 ))}
               </ul>
+              <PaginationControls
+                page={rulesPage}
+                total={filteredRules.length}
+                pageSize={rulesPageSize}
+                onPageChange={setRulesPage}
+                onPageSizeChange={(size) => { setRulesPageSize(size); setRulesPage(1); }}
+              />
+              </>
             )}
           </CardContent>
         </Card>
@@ -241,6 +267,7 @@ export function RulesPanel({ rules, logs, stages }: Props) {
                 className="py-10"
               />
             ) : (
+              <>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -253,7 +280,7 @@ export function RulesPanel({ rules, logs, stages }: Props) {
                     </tr>
                   </thead>
                   <tbody>
-                    {logs.map((log) => (
+                    {paginatedLogs.map((log) => (
                       <tr key={log.id} className="border-b last:border-0">
                         <td className="py-2 pe-3">
                           {eventLabel(log.event)}
@@ -288,6 +315,14 @@ export function RulesPanel({ rules, logs, stages }: Props) {
                   </tbody>
                 </table>
               </div>
+              <PaginationControls
+                page={logsPage}
+                total={logs.length}
+                pageSize={logsPageSize}
+                onPageChange={setLogsPage}
+                onPageSizeChange={(size) => { setLogsPageSize(size); setLogsPage(1); }}
+              />
+              </>
             )}
           </CardContent>
         </Card>
