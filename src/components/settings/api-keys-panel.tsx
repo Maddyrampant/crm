@@ -108,7 +108,7 @@ export function ApiKeysPanel({ keys }: { keys: ApiKey[] }) {
       </CardContent>
 
       <Dialog open={Boolean(secret)} onOpenChange={(o) => !o && setSecret(null)}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>کلید شما ساخته شد</DialogTitle>
             <DialogDescription>
