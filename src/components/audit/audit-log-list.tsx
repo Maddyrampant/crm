@@ -40,7 +40,7 @@ export function AuditLogList({ logs }: Props) {
   }
 
   return (
-    <div className="rounded-lg border">
+    <div className="overflow-x-auto rounded-lg border">
       <Table>
         <TableHeader>
           <TableRow>
