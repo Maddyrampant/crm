@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { getSession, getActiveWorkspace, hasPermission } from "@/lib/session";
 import { sendSms } from "@/services/automation";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
   const session = await getSession();
@@ -13,6 +14,11 @@ export async function POST(req: NextRequest) {
   }
   if (!hasPermission(membership, "manager")) {
     return Response.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const rl = await checkRateLimit(`sms:${membership.workspaceId}`, 10, 60_000);
+  if (!rl.ok) {
+    return Response.json({ error: "درخواست‌ها بیش از حد مجاز است" }, { status: 429 });
   }
 
   const body = (await req.json().catch(() => null)) as {

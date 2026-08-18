@@ -4,6 +4,7 @@ import {
   timestamp,
   pgEnum,
   numeric,
+  index,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { workspaces } from "./workspaces";
@@ -26,70 +27,85 @@ export const paymentMethod = pgEnum("payment_method", [
   "other",
 ]);
 
-export const invoices = pgTable("invoices", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  workspaceId: text("workspace_id")
-    .notNull()
-    .references(() => workspaces.id, { onDelete: "cascade" }),
-  contactId: text("contact_id")
-    .notNull()
-    .references(() => contacts.id, { onDelete: "cascade" }),
-  number: text("number").notNull(),
-  status: invoiceStatus("status").notNull().default("draft"),
-  issuedAt: timestamp("issued_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  dueAt: timestamp("due_at", { withTimezone: true }),
-  discount: numeric("discount", { precision: 18, scale: 2 }).notNull().default("0"),
-  taxRate: numeric("tax_rate", { precision: 5, scale: 2 }).notNull().default("0"),
-  total: numeric("total", { precision: 18, scale: 2 }).notNull().default("0"),
-  notes: text("notes"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+export const invoices = pgTable(
+  "invoices",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    contactId: text("contact_id")
+      .notNull()
+      .references(() => contacts.id, { onDelete: "cascade" }),
+    number: text("number").notNull(),
+    status: invoiceStatus("status").notNull().default("draft"),
+    issuedAt: timestamp("issued_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    dueAt: timestamp("due_at", { withTimezone: true }),
+    discount: numeric("discount", { precision: 18, scale: 2 }).notNull().default("0"),
+    taxRate: numeric("tax_rate", { precision: 5, scale: 2 }).notNull().default("0"),
+    total: numeric("total", { precision: 18, scale: 2 }).notNull().default("0"),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    index("invoices_workspace_idx").on(t.workspaceId),
+    index("invoices_contact_idx").on(t.contactId),
+  ]
+);
 
-export const invoiceItems = pgTable("invoice_items", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  invoiceId: text("invoice_id")
-    .notNull()
-    .references(() => invoices.id, { onDelete: "cascade" }),
-  productId: text("product_id").references(() => products.id, {
-    onDelete: "set null",
-  }),
-  description: text("description").notNull(),
-  quantity: numeric("quantity", { precision: 18, scale: 3 }).notNull().default("1"),
-  unitPrice: numeric("unit_price", { precision: 18, scale: 2 })
-    .notNull()
-    .default("0"),
-  taxRate: numeric("tax_rate", { precision: 5, scale: 2 }).notNull().default("0"),
-  amount: numeric("amount", { precision: 18, scale: 2 }).notNull().default("0"),
-});
+export const invoiceItems = pgTable(
+  "invoice_items",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    invoiceId: text("invoice_id")
+      .notNull()
+      .references(() => invoices.id, { onDelete: "cascade" }),
+    productId: text("product_id").references(() => products.id, {
+      onDelete: "set null",
+    }),
+    description: text("description").notNull(),
+    quantity: numeric("quantity", { precision: 18, scale: 3 }).notNull().default("1"),
+    unitPrice: numeric("unit_price", { precision: 18, scale: 2 })
+      .notNull()
+      .default("0"),
+    taxRate: numeric("tax_rate", { precision: 5, scale: 2 }).notNull().default("0"),
+    amount: numeric("amount", { precision: 18, scale: 2 }).notNull().default("0"),
+  },
+  (t) => [index("invoice_items_invoice_idx").on(t.invoiceId)]
+);
 
-export const payments = pgTable("payments", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  invoiceId: text("invoice_id")
-    .notNull()
-    .references(() => invoices.id, { onDelete: "cascade" }),
-  amount: numeric("amount", { precision: 18, scale: 2 }).notNull(),
-  paidAt: timestamp("paid_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  method: paymentMethod("method").notNull().default("cash"),
-  reference: text("reference"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+export const payments = pgTable(
+  "payments",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    invoiceId: text("invoice_id")
+      .notNull()
+      .references(() => invoices.id, { onDelete: "cascade" }),
+    amount: numeric("amount", { precision: 18, scale: 2 }).notNull(),
+    paidAt: timestamp("paid_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    method: paymentMethod("method").notNull().default("cash"),
+    reference: text("reference"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("payments_invoice_idx").on(t.invoiceId)]
+);
 
 export const invoiceRelations = relations(invoices, ({ many }) => ({
   items: many(invoiceItems),

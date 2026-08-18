@@ -124,6 +124,22 @@ export async function removeWorkspaceMemberAction(userId: string) {
   }
 }
 
+export async function updateWorkspaceNameAction(input: { name: string }) {
+  const { workspaceId } = await requireWorkspaceRole("admin");
+  if (!input.name.trim()) return { ok: false, error: "نام نمی‌تواند خالی باشد" };
+  await db.update(workspaces).set({ name: input.name.trim(), updatedAt: new Date() }).where(eq(workspaces.id, workspaceId));
+  revalidatePath("/settings/workspace");
+  return { ok: true };
+}
+
+export async function deleteWorkspaceAction() {
+  const { workspaceId, user: currentUser } = await requireWorkspaceRole("owner");
+  const ws = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
+  if (!ws[0] || ws[0].ownerId !== currentUser.id) return { ok: false, error: "فقط مالک می‌تواند ورک‌اسپیس را حذف کند" };
+  await db.delete(workspaces).where(eq(workspaces.id, workspaceId));
+  redirect("/workspace/new");
+}
+
 export async function listWorkspaceMembersAction() {
   const { workspaceId } = await requireWorkspace();
   const members = await db

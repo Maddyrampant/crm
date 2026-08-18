@@ -8,6 +8,7 @@ import { getActiveWorkspace } from "@/lib/session";
 import { getChatModel } from "@/lib/ai/provider";
 import { readTools, writeTools } from "@/lib/ai/tools";
 import { buildSystemPrompt } from "@/lib/ai/system-prompt";
+import { checkRateLimit } from "@/lib/rate-limit";
 import {
   createConversation,
   getConversation,
@@ -28,6 +29,11 @@ export async function POST(req: NextRequest) {
   }
   const workspaceId = membership.workspaceId;
   const userId = session.user.id;
+
+  const rl = await checkRateLimit(`ai:${workspaceId}`, 30, 60_000);
+  if (!rl.ok) {
+    return Response.json({ error: "درخواست‌ها بیش از حد مجاز است" }, { status: 429 });
+  }
 
   const body = (await req.json().catch(() => null)) as {
     messages?: Array<{ role: string; content: string }>;
