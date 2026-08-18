@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireWorkspace } from "@/lib/session";
 import * as leadScoringService from "@/services/lead-scoring";
+import * as leadScoreSettingsService from "@/services/lead-score-settings";
 
 export async function calculateLeadScoreAction(contactId: string) {
   const { workspaceId } = await requireWorkspace();
@@ -20,16 +21,14 @@ export async function batchScoreContactsAction() {
 
 export async function getLeadScoreSettingsAction() {
   const { workspaceId } = await requireWorkspace();
-  const data = await leadScoringService.getLeadScoreSettings(workspaceId);
+  const data = await leadScoreSettingsService.getLeadScoreSettings(workspaceId);
   return { ok: true, data };
 }
 
-export async function updateLeadScoreSettingsAction(settings: unknown) {
+export async function updateLeadScoreSettingsAction(settings: leadScoreSettingsService.LeadScoreSettingsInput) {
   const { workspaceId } = await requireWorkspace();
-  const result = await leadScoringService.updateLeadScoreSettings(
-    workspaceId,
-    settings as Partial<leadScoringService.LeadScoreSettings>
-  );
+  const result = await leadScoreSettingsService.updateLeadScoreSettings(workspaceId, settings);
   revalidatePath("/settings");
+  revalidatePath("/contacts");
   return { ok: result.ok };
 }

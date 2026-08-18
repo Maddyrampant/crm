@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createDealAction, updateDealAction } from "@/actions/deals";
+import { dealFormSchema } from "@/lib/validations";
 import { NotesPanel } from "@/components/notes/notes-panel";
 import { formatNumber } from "@/lib/format";
 import type { DealRow, PipelineRow } from "@/lib/api-types";
@@ -59,6 +60,7 @@ export function DealFormDialog({
     deal?.stageId || defaultStageId || stagesForPipeline[0]?.id || "";
 
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [pipelineId, setPipelineId] = useState(initialPipelineId);
   const [stageId, setStageId] = useState(initialStageId);
   const [title, setTitle] = useState(deal?.title ?? "");
@@ -88,6 +90,18 @@ export function DealFormDialog({
       ownerId: ownerId || null,
       closeDate: closeDate || null,
     };
+
+    const validation = dealFormSchema.safeParse(payload);
+    if (!validation.success) {
+      const fieldErrors: Record<string, string> = {};
+      validation.error.issues.forEach((issue) => {
+        fieldErrors[issue.path[0] as string] = issue.message;
+      });
+      setErrors(fieldErrors);
+      setSaving(false);
+      return;
+    }
+    setErrors({});
 
     const result = deal
       ? await updateDealAction(deal.id, payload)
@@ -122,6 +136,7 @@ export function DealFormDialog({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
+            {errors.title && <p className="text-sm text-destructive">{errors.title}</p>}
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">

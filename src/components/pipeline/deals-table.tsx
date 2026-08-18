@@ -54,11 +54,13 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   deleteDealAction,
   listDealsAction,
   setDealOutcomeAction,
 } from "@/actions/deals";
+import { bulkDeleteDealsAction } from "@/actions/bulk";
 import { STATUS_LABELS } from "@/lib/labels";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/format";
 import type { DealRow, PipelineRow } from "@/lib/api-types";
@@ -121,6 +123,8 @@ export function DealsTable({
   const [deleting, setDeleting] = useState<DealRow | null>(null);
   const [busy, setBusy] = useState(false);
   const [sort, setSort] = useState<ColumnSort | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   function toggleSort(col: string) {
     setSort((prev) => ({
@@ -207,6 +211,38 @@ export function DealsTable({
       total: Math.max(0, d.total - 1),
     }));
     setDeleting(null);
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.size === data.items.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(data.items.map((d) => d.id)));
+    }
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleBulkDelete() {
+    const ids = Array.from(selectedIds);
+    if (!ids.length) return;
+    setBulkBusy(true);
+    const result = await bulkDeleteDealsAction(ids);
+    setBulkBusy(false);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success(`${result.deleted} فروش حذف شد`);
+    setSelectedIds(new Set());
+    load();
   }
 
   const totalPages = Math.max(1, Math.ceil(data.total / pageSize));
@@ -315,6 +351,14 @@ export function DealsTable({
             <Table>
               <TableHeader>
                 <TableRow>
+                  {canDelete && (
+                    <TableHead className="w-10">
+                      <Checkbox
+                        checked={data.items.length > 0 && selectedIds.size === data.items.length}
+                        onCheckedChange={toggleSelectAll}
+                      />
+                    </TableHead>
+                  )}
                   <TableHead>
                     <button onClick={() => toggleSort("title")} className="inline-flex items-center gap-1 hover:text-foreground">
                       عنوان
@@ -344,7 +388,7 @@ export function DealsTable({
               <TableBody>
                 {data.items.length === 0 && !isPending ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="border-0">
+                    <TableCell colSpan={canDelete ? 10 : 9} className="border-0">
                       <EmptyState
                         icon={Trophy}
                         title="فروشی یافت نشد"
@@ -361,7 +405,15 @@ export function DealsTable({
                   </TableRow>
                 ) : (
                   data.items.map((d) => (
-                    <TableRow key={d.id}>
+                    <TableRow key={d.id} className={selectedIds.has(d.id) ? "bg-muted/50" : ""}>
+                      {canDelete && (
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedIds.has(d.id)}
+                            onCheckedChange={() => toggleSelect(d.id)}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell>
                         <div className="min-w-0">
                           <Link
@@ -525,8 +577,26 @@ export function DealsTable({
         </CardContent>
       </Card>
 
+      {selectedIds.size > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
+            <span className="text-sm text-muted-foreground">
+              {formatNumber(selectedIds.size)} مورد انتخاب شده
+            </span>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleBulkDelete}
+              disabled={bulkBusy}
+            >
+              {bulkBusy && <Loader2 className="size-4 animate-spin" />}
+              حذف گروهی
+            </Button>
+          </div>
+        </div>
+      )}
+
       <Dialog
-        open={outcomeDeal !== null && outcome !== null}
         onOpenChange={(o) => {
           if (!o) {
             setOutcomeDeal(null);

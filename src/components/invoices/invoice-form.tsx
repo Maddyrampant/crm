@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Package, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { createInvoiceAction } from "@/actions/invoices";
+import { invoiceFormSchema } from "@/lib/validations";
 import { formatCurrency, formatNumber } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import {
@@ -148,6 +149,7 @@ export function InvoiceForm({
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [contactId, setContactId] = useState("");
   const [dueAt, setDueAt] = useState("");
   const [discount, setDiscount] = useState("0");
@@ -172,14 +174,31 @@ export function InvoiceForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!contactId) {
-      toast.error("مشتری را انتخاب کنید");
+
+    const validation = invoiceFormSchema.safeParse({
+      contactId,
+      dueAt: dueAt || null,
+      notes,
+      discount,
+      items: items.map((it) => ({
+        productId: it.productId || null,
+        description: it.description,
+        quantity: it.quantity,
+        unitPrice: it.unitPrice,
+        taxRate: it.taxRate,
+      })),
+    });
+    if (!validation.success) {
+      const fieldErrors: Record<string, string> = {};
+      validation.error.issues.forEach((issue) => {
+        const key = issue.path[0] as string;
+        if (!fieldErrors[key]) fieldErrors[key] = issue.message;
+      });
+      setErrors(fieldErrors);
       return;
     }
-    if (items.some((it) => !it.description.trim())) {
-      toast.error("شرح همه آیتم‌ها را وارد کنید");
-      return;
-    }
+    setErrors({});
+
     setLoading(true);
     const result = await createInvoiceAction({
       contactId,
@@ -226,24 +245,25 @@ export function InvoiceForm({
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="grid gap-2">
             <Label>مشتری *</Label>
-            <Select value={contactId} onValueChange={setContactId}>
-              <SelectTrigger>
-                <SelectValue placeholder="انتخاب مشتری" />
-              </SelectTrigger>
-              <SelectContent>
-                {customers.length === 0 && (
-                  <div className="p-2 text-sm text-muted-foreground">
-                    هنوز مخاطبی ثبت نشده است
-                  </div>
-                )}
-                {customers.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                    {c.email ? ` (${c.email})` : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <Select value={contactId} onValueChange={setContactId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="انتخاب مشتری" />
+                </SelectTrigger>
+                <SelectContent>
+                  {customers.length === 0 && (
+                    <div className="p-2 text-sm text-muted-foreground">
+                      هنوز مخاطبی ثبت نشده است
+                    </div>
+                  )}
+                  {customers.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                      {c.email ? ` (${c.email})` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.contactId && <p className="text-sm text-destructive">{errors.contactId}</p>}
           </div>
           <div className="grid gap-2">
             <Label>سررسید</Label>

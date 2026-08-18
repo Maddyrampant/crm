@@ -20,3 +20,4 @@ export * from "./sales-goals";
 export * from "./audit-logs";
 export * from "./woocommerce";
 export * from "./attachments";
+export * from "./lead-score-settings";

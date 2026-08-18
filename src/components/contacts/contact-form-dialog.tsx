@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { createContactAction, updateContactAction } from "@/actions/contacts";
 import { SOURCE_OPTIONS, STAGE_OPTIONS } from "@/lib/labels";
+import { contactFormSchema } from "@/lib/validations";
 import type { ContactRow, CustomFieldRow } from "@/lib/api-types";
 
 type Props = {
@@ -59,6 +60,7 @@ export function ContactFormDialog({
   onSaved,
 }: Props) {
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const initialCustomValues: Record<string, string> = {};
   for (const f of customFields) {
@@ -109,6 +111,18 @@ export function ContactFormDialog({
       customFields: customFieldsValue,
     };
 
+    const validation = contactFormSchema.safeParse(payload);
+    if (!validation.success) {
+      const fieldErrors: Record<string, string> = {};
+      validation.error.issues.forEach((issue) => {
+        fieldErrors[issue.path[0] as string] = issue.message;
+      });
+      setErrors(fieldErrors);
+      setSaving(false);
+      return;
+    }
+    setErrors({});
+
     const result = contact
       ? await updateContactAction(contact.id, payload)
       : await createContactAction(payload);
@@ -144,6 +158,7 @@ export function ContactFormDialog({
                 value={form.firstName}
                 onChange={(e) => set("firstName", e.target.value)}
               />
+              {errors.firstName && <p className="text-sm text-destructive">{errors.firstName}</p>}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="lastName">نام خانوادگی</Label>
@@ -166,6 +181,7 @@ export function ContactFormDialog({
                 value={form.email}
                 onChange={(e) => set("email", e.target.value)}
               />
+              {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="phone">موبایل</Label>

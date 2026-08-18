@@ -3,6 +3,7 @@ import "server-only";
 import { and, eq, gte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { contacts, deals, activityLog, invoices, payments } from "@/db/schema";
+import { getLeadScoreSettings } from "@/services/lead-score-settings";
 
 const num = (v: string | number | null | undefined) => Number(v ?? 0);
 
@@ -14,16 +15,8 @@ export type LeadScoreSettings = {
   maxScore: number;
 };
 
-const DEFAULT_SETTINGS: LeadScoreSettings = {
-  activityWeight: 5,
-  dealWeight: 10,
-  invoiceWeight: 1,
-  recencyDecayDays: 90,
-  maxScore: 100,
-};
-
 export async function calculateLeadScore(workspaceId: string, contactId: string) {
-  const settings = DEFAULT_SETTINGS;
+  const settings = await getLeadScoreSettings(workspaceId);
 
   const [activityCount] = await db
     .select({ count: sql<number>`count(*)::int` })
@@ -73,14 +66,6 @@ export async function calculateLeadScore(workspaceId: string, contactId: string)
     .where(and(eq(contacts.workspaceId, workspaceId), eq(contacts.id, contactId)));
 
   return score;
-}
-
-export async function getLeadScoreSettings(_workspaceId: string) {
-  return DEFAULT_SETTINGS;
-}
-
-export async function updateLeadScoreSettings(_workspaceId: string, _settings: Partial<LeadScoreSettings>) {
-  return { ok: true as const };
 }
 
 export async function batchScoreContacts(workspaceId: string) {
