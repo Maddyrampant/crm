@@ -61,7 +61,7 @@ export function WooSyncLogTable({ storeId, open, onOpenChange }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>لاگ همگام‌سازی</DialogTitle>
         </DialogHeader>
