@@ -4,6 +4,7 @@ import { requireWorkspaceRole } from "@/lib/session";
 import { listWooStores } from "@/actions/woocommerce";
 import { PageHeader } from "@/components/ui/page-header";
 import { WooStorePanel } from "./woo-store-panel";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 
 export const metadata: Metadata = { title: "اتصال فروشگاه ووکامرس" };
 
@@ -13,6 +14,7 @@ export default async function WooSettingsPage() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumb items={[{ label: "تنظیمات", href: "/settings" }, { label: "یکپارچه‌سازی", href: "/settings/integrations" }, { label: "ووکامرس" }]} />
       <PageHeader
         title="اتصال فروشگاه ووکامرس"
         description="فروشگاه‌های ووکامرس متصل را مدیریت کنید"

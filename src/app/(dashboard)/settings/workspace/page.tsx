@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WorkspaceInfoPanel } from "./workspace-info-panel";
 import { TeamMembersPanel } from "@/components/settings/team-members-panel";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 
 export const metadata: Metadata = { title: "مدیریت ورک‌اسپیس" };
 
@@ -24,6 +25,7 @@ export default async function WorkspacePage() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumb items={[{ label: "تنظیمات", href: "/settings" }, { label: "مدیریت ورک‌اسپیس" }]} />
       <PageHeader
         title="مدیریت ورک‌اسپیس"
         description="اطلاعات، اعضا و تنظیمات فضای کاری"

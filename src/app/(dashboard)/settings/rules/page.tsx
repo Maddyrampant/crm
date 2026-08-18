@@ -4,6 +4,7 @@ import { listRules, listRuleLogs } from "@/services/rules";
 import { listPipelines } from "@/services/pipelines";
 import { PageHeader } from "@/components/ui/page-header";
 import { RulesPanel } from "@/components/rules/rules-panel";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 
 export const metadata: Metadata = { title: "قوانین اتوماسیون" };
 
@@ -22,6 +23,7 @@ export default async function RulesPage() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumb items={[{ label: "تنظیمات", href: "/settings" }, { label: "قوانین اتوماسیون" }]} />
       <PageHeader
         title="قوانین اتوماسیون"
         description="رویدادها، شرایط و اکشن‌های خودکار — انجین قوانین (Workflow/Blueprint)"

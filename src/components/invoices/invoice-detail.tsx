@@ -93,11 +93,6 @@ export function InvoiceDetail({ data }: { data: InvoiceDetailData }) {
     <div className="space-y-6 print:space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
         <div className="flex items-center gap-2">
-          <Button asChild variant="ghost" size="icon">
-            <Link href="/invoices">
-              <ArrowLeft className="size-4" />
-            </Link>
-          </Button>
           <div>
             <h1 className="text-xl font-bold" dir="ltr">
               {invoice.number}

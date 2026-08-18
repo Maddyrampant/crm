@@ -113,12 +113,6 @@ export function PurchaseOrderDetail({ order, canManage }: Props) {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex items-center justify-between gap-3">
-        <Button variant="ghost" size="sm" asChild>
-          <Link href="/purchases">
-            <ArrowRight className="size-4" />
-            بازگشت به سفارش‌ها
-          </Link>
-        </Button>
         <div className="flex items-center gap-2">
           <span className="font-mono text-lg font-bold" dir="ltr">
             {order.number}

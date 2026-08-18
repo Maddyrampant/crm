@@ -3,6 +3,7 @@ import { requireWorkspace } from "@/lib/session";
 import { getForecast, getStalledDeals } from "@/services/forecast";
 import { PageHeader } from "@/components/ui/page-header";
 import { ForecastPanel } from "@/components/reports/forecast-panel";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 
 export const metadata: Metadata = { title: "پیش‌بینی فروش" };
 
@@ -23,6 +24,7 @@ export default async function ForecastPage() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumb items={[{ label: "گزارش‌ها", href: "/reports" }, { label: "پیش‌بینی فروش" }]} />
       <PageHeader
         title="پیش‌بینی فروش"
         description="مجموع وزنی فرصتها، دیلهای متوقف‌شده و پیش‌بینی هوشمند"
