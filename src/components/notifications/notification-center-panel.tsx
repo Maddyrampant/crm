@@ -134,31 +134,45 @@ export function NotificationCenterPanel() {
   }, [page, pageSize, typeFilter]);
 
   const markRead = (id: string) => {
-    startTransition(async () => {
-      const res = await markNotificationReadAction(id);
-      if (!res.ok) {
-        toast.error("خطا در علامت‌گذاری اعلان");
-        return;
-      }
+    const previousItems = items;
+    const previousUnread = unread;
+
+    startTransition(() => {
       setItems((prev) =>
         (prev ?? []).map((n) => (n.id === id ? { ...n, readAt: new Date() } : n))
       );
       setUnread((u) => Math.max(0, u - 1));
     });
+
+    void (async () => {
+      const res = await markNotificationReadAction(id);
+      if (!res.ok) {
+        setItems(previousItems);
+        setUnread(previousUnread);
+        toast.error("خطا در علامت‌گذاری اعلان");
+      }
+    })();
   };
 
   const markAllRead = () => {
-    startTransition(async () => {
-      const res = await markAllNotificationsReadAction();
-      if (!res.ok) {
-        toast.error("خطا در خواندن همهٔ اعلان‌ها");
-        return;
-      }
+    const previousItems = items;
+    const previousUnread = unread;
+
+    startTransition(() => {
       setItems((prev) =>
         (prev ?? []).map((n) => (n.readAt ? n : { ...n, readAt: new Date() }))
       );
       setUnread(0);
     });
+
+    void (async () => {
+      const res = await markAllNotificationsReadAction();
+      if (!res.ok) {
+        setItems(previousItems);
+        setUnread(previousUnread);
+        toast.error("خطا در خواندن همهٔ اعلان‌ها");
+      }
+    })();
   };
 
   const filteredItems = items ?? [];
