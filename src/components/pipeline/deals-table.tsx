@@ -54,14 +54,16 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/ui/empty-state";
+import { InlineEdit } from "@/components/ui/inline-edit";
 import {
   deleteDealAction,
   listDealsAction,
+  patchDealAction,
   setDealOutcomeAction,
 } from "@/actions/deals";
 import { STATUS_LABELS } from "@/lib/labels";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/format";
-import type { DealRow, PipelineRow } from "@/lib/api-types";
+import type { DealRow, DealStatus, PipelineRow } from "@/lib/api-types";
 import type { WorkspaceMemberRow } from "@/services/workspace";
 
 type Props = {
@@ -207,6 +209,19 @@ export function DealsTable({
       total: Math.max(0, d.total - 1),
     }));
     setDeleting(null);
+  }
+
+  async function handlePatchDeal(id: string, patch: { title?: string; amount?: number; status?: DealStatus }) {
+    const previous = data;
+    setData((d) => ({
+      ...d,
+      items: d.items.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+    }));
+    const result = await patchDealAction(id, patch);
+    if (!result.ok) {
+      setData(previous);
+      toast.error(result.error);
+    }
   }
 
   const totalPages = Math.max(1, Math.ceil(data.total / pageSize));
@@ -364,12 +379,13 @@ export function DealsTable({
                     <TableRow key={d.id}>
                       <TableCell>
                         <div className="min-w-0">
-                          <Link
-                            href="/pipeline"
-                            className="block truncate font-medium hover:underline"
-                          >
-                            {d.title}
-                          </Link>
+                          <InlineEdit
+                            value={d.title}
+                            disabled={!canManageDeal}
+                            onSave={(v) => handlePatchDeal(d.id, { title: String(v) })}
+                            className="max-w-[200px]"
+                            displayClassName="font-medium"
+                          />
                           {d.closeDate ? (
                             <span className="block text-xs text-muted-foreground">
                               بستن: {formatDate(d.closeDate)}
@@ -406,15 +422,34 @@ export function DealsTable({
                         {d.ownerName || "—"}
                       </TableCell>
                       <TableCell className="font-medium">
-                        {formatCurrency(d.amount)}
+                        <InlineEdit
+                          value={d.amount}
+                          type="number"
+                          min={0}
+                          disabled={!canManageDeal}
+                          onSave={(v) => handlePatchDeal(d.id, { amount: Number(v) })}
+                          formatDisplay={(v) => formatCurrency(v)}
+                        />
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {d.closeDate ? formatDate(d.closeDate) : "—"}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={STATUS_VARIANT[d.status]}>
-                          {STATUS_LABELS[d.status]}
-                        </Badge>
+                        <InlineEdit
+                          value={d.status}
+                          type="select"
+                          disabled={!canManageDeal}
+                          options={Object.entries(STATUS_LABELS).map(([value, label]) => ({
+                            value,
+                            label,
+                          }))}
+                          onSave={(v) => handlePatchDeal(d.id, { status: v as DealStatus })}
+                          formatDisplay={(v) => (
+                            <Badge variant={STATUS_VARIANT[v as DealStatus]}>
+                              {STATUS_LABELS[v as DealStatus]}
+                            </Badge>
+                          )}
+                        />
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
