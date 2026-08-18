@@ -508,6 +508,7 @@ export async function handleWooWebhook(
 
   if (!store[0]) return { ok: false, error: "Store not found" };
   if (!store[0].active) return { ok: false, error: "Store is disabled" };
+  if (!store[0].webhookSecret) return { ok: false, error: "Webhook secret not configured" };
 
   const verified = await verifyWebhookSignature(rawBody, signature, store[0].webhookSecret);
   if (!verified) return { ok: false, error: "Invalid signature" };
