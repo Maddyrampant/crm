@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ACTION_LABELS, ENTITY_LABELS, STATUS_LABELS } from "@/lib/labels";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
+import { AttachmentPanel } from "@/components/attachments/attachment-panel";
 
 export const metadata: Metadata = { title: "جزئیات فروش" };
 
@@ -156,6 +157,8 @@ export default async function DealDetailPage({
           )}
         </CardContent>
       </Card>
+
+      <AttachmentPanel entityType="deal" entityId={id} />
     </div>
   );
 }

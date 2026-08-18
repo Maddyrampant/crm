@@ -92,6 +92,13 @@
       "when": 1787025650879,
       "tag": "0012_add_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1787026195847,
+      "tag": "0013_attachments",
+      "breakpoints": true
     }
   ]
 }

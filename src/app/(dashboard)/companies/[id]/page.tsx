@@ -9,6 +9,7 @@ import { toContactRow } from "@/lib/serialize";
 import { STAGE_LABELS, STAGE_VARIANT } from "@/lib/labels";
 import { formatDate, formatNumber } from "@/lib/format";
 import { NotesPanel } from "@/components/notes/notes-panel";
+import { AttachmentPanel } from "@/components/attachments/attachment-panel";
 
 export default async function CompanyDetailPage({
   params,
@@ -122,6 +123,7 @@ export default async function CompanyDetailPage({
       </Card>
 
       <NotesPanel entityType="company" entityId={id} />
+      <AttachmentPanel entityType="company" entityId={id} />
     </div>
   );
 }
