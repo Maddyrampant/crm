@@ -4,7 +4,7 @@ import { useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Download, Users, Handshake, FileText } from "lucide-react";
+import { Download, Users, Handshake, FileText, Package, Store } from "lucide-react";
 import { exportDataAction } from "@/actions/export";
 
 type Props = Record<string, never>;
@@ -34,6 +34,8 @@ export function ExportPanel(_props: Props) {
     { entity: "contacts", label: "مخاطبین", icon: Users },
     { entity: "deals", label: "فروش‌ها", icon: Handshake },
     { entity: "invoices", label: "فاکتورها", icon: FileText },
+    { entity: "products", label: "کالاها", icon: Package },
+    { entity: "suppliers", label: "تأمین‌کنندگان", icon: Store },
   ];
 
   return (

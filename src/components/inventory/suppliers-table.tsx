@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
+  Download,
   Loader2,
   MoreHorizontal,
   Pencil,
@@ -38,9 +39,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { PaginationControls } from "@/components/ui/pagination-controls";
-import { deleteSupplierAction, listSuppliersAction } from "@/actions/inventory";
+import { deleteSupplierAction, listSuppliersAction, exportSuppliersCsvAction } from "@/actions/inventory";
 import { showUndoToast } from "@/components/ui/undo-toast";
 import { SupplierFormDialog } from "@/components/inventory/supplier-form-dialog";
+import { ImportSuppliersDialog } from "@/components/inventory/import-suppliers-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { Supplier } from "@/db/schema";
 
@@ -61,6 +63,7 @@ export function SuppliersTable({ initialData, canManage }: Props) {
   const [editing, setEditing] = useState<Supplier | null>(null);
   const [deleting, setDeleting] = useState<Supplier | null>(null);
   const [busy, setBusy] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -105,23 +108,54 @@ export function SuppliersTable({ initialData, canManage }: Props) {
     }
   }
 
+  async function handleExportCsv() {
+    setExporting(true);
+    try {
+      const result = await exportSuppliersCsvAction();
+      if (result.ok && result.data) {
+        const blob = new Blob([result.data], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `suppliers-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success("خروجی تأمین‌کنندگان دانلود شد");
+      } else {
+        toast.error("خطا در خروجی");
+      }
+    } catch {
+      toast.error("خطا در خروجی CSV");
+    }
+    setExporting(false);
+  }
+
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader className="flex-row items-center justify-between space-y-0">
           <CardTitle className="text-lg">تأمین‌کنندگان</CardTitle>
-          {canManage && (
-            <Button
-              size="sm"
-              onClick={() => {
-                setEditing(null);
-                setFormOpen(true);
-              }}
-            >
-              <Plus className="size-4" />
-              تأمین‌کننده جدید
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleExportCsv} disabled={exporting}>
+              {exporting ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+              خروجی CSV
             </Button>
-          )}
+            {canManage && (
+              <>
+                <ImportSuppliersDialog />
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setEditing(null);
+                    setFormOpen(true);
+                  }}
+                >
+                  <Plus className="size-4" />
+                  تأمین‌کننده جدید
+                </Button>
+              </>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="relative w-full max-w-xs">

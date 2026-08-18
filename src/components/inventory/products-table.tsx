@@ -6,6 +6,7 @@ import {
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
+  Download,
   Loader2,
   MoreHorizontal,
   Package,
@@ -54,10 +55,12 @@ import {
   listProductsAction,
   deleteProductAction,
   listProductCategoriesAction,
+  exportProductsCsvAction,
 } from "@/actions/inventory";
 import { showUndoToast } from "@/components/ui/undo-toast";
 import { ProductFormDialog } from "@/components/inventory/product-form-dialog";
 import { CategoryManagerDialog } from "@/components/inventory/category-manager-dialog";
+import { ImportProductsDialog } from "@/components/inventory/import-products-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PRODUCT_ACTIVE_LABEL } from "@/lib/inventory";
 import { formatCurrency, formatNumber } from "@/lib/format";
@@ -89,6 +92,7 @@ export function ProductsTable({ initialData, categories, canManage }: Props) {
   const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [sort, setSort] = useState<ColumnSort | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   function toggleSort(col: string) {
     setSort((prev) => ({
@@ -157,6 +161,28 @@ export function ProductsTable({ initialData, categories, canManage }: Props) {
     }
   }
 
+  async function handleExportCsv() {
+    setExporting(true);
+    try {
+      const result = await exportProductsCsvAction();
+      if (result.ok && result.data) {
+        const blob = new Blob([result.data], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `products-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success("خروجی کالاها دانلود شد");
+      } else {
+        toast.error("خطا در خروجی");
+      }
+    } catch {
+      toast.error("خطا در خروجی CSV");
+    }
+    setExporting(false);
+  }
+
   const totalPages = Math.max(1, Math.ceil(data.total / PAGE_SIZE));
 
   return (
@@ -164,18 +190,27 @@ export function ProductsTable({ initialData, categories, canManage }: Props) {
       <Card>
         <CardHeader className="flex-row items-center justify-between space-y-0">
           <CardTitle className="text-lg">کالاها</CardTitle>
-          {canManage && (
-            <Button
-              size="sm"
-              onClick={() => {
-                setEditing(null);
-                setFormOpen(true);
-              }}
-            >
-              <Plus className="size-4" />
-              کالای جدید
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleExportCsv} disabled={exporting}>
+              {exporting ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+              خروجی CSV
             </Button>
-          )}
+            {canManage && (
+              <>
+                <ImportProductsDialog />
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setEditing(null);
+                    setFormOpen(true);
+                  }}
+                >
+                  <Plus className="size-4" />
+                  کالای جدید
+                </Button>
+              </>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
