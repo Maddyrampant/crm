@@ -1,8 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { requireWorkspace } from "@/lib/session";
 import * as goalsService from "@/services/goals";
+
+const goalSchema = z.object({
+  userId: z.string().min(1),
+  period: z.enum(["monthly", "quarterly", "yearly"]),
+  targetAmount: z.number().positive(),
+  startDate: z.string().min(1),
+  endDate: z.string().min(1),
+});
 
 export async function listGoalsAction() {
   const { workspaceId } = await requireWorkspace();
@@ -12,8 +21,9 @@ export async function listGoalsAction() {
 
 export async function createGoalAction(input: unknown) {
   const { workspaceId } = await requireWorkspace();
-  const data = input as goalsService.GoalInput;
-  const row = await goalsService.createGoal(workspaceId, data);
+  const parsed = goalSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "ورودی نامعتبر" };
+  const row = await goalsService.createGoal(workspaceId, parsed.data);
   revalidatePath("/goals");
   return { ok: true, data: row };
 }

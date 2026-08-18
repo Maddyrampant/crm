@@ -1,8 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { requireWorkspace } from "@/lib/session";
 import * as smsService from "@/services/sms";
+
+const smsCampaignSchema = z.object({
+  name: z.string().min(1).max(200),
+  message: z.string().min(1).max(1600),
+  recipientType: z.string().max(50).optional(),
+  recipientIds: z.array(z.string()).optional(),
+});
 
 export async function listSmsCampaignsAction() {
   const { workspaceId } = await requireWorkspace();
@@ -19,16 +27,18 @@ export async function getSmsCampaignAction(id: string) {
 
 export async function createSmsCampaignAction(input: unknown) {
   const { workspaceId } = await requireWorkspace();
-  const data = input as smsService.SmsCampaignInput;
-  const row = await smsService.createSmsCampaign(workspaceId, data);
+  const parsed = smsCampaignSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "ورودی نامعتبر" };
+  const row = await smsService.createSmsCampaign(workspaceId, parsed.data);
   revalidatePath("/sms");
   return { ok: true, data: row };
 }
 
 export async function updateSmsCampaignAction(id: string, input: unknown) {
   const { workspaceId } = await requireWorkspace();
-  const data = input as Partial<smsService.SmsCampaignInput>;
-  const row = await smsService.updateSmsCampaign(workspaceId, id, data);
+  const parsed = smsCampaignSchema.partial().safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "ورودی نامعتبر" };
+  const row = await smsService.updateSmsCampaign(workspaceId, id, parsed.data);
   if (!row) return { ok: false, error: "کمپین پیامکی یافت نشد" };
   revalidatePath("/sms");
   return { ok: true, data: row };
