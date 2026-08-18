@@ -8,8 +8,12 @@ const TAG_LENGTH = 16;
 
 function getKey(): Buffer {
   const raw = process.env.WOO_ENCRYPTION_KEY;
-  if (raw) return Buffer.from(raw, "hex");
-  return randomBytes(32);
+  if (!raw) {
+    throw new Error(
+      "WOO_ENCRYPTION_KEY is not set. Generate one with: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
+    );
+  }
+  return Buffer.from(raw, "hex");
 }
 
 export function encrypt(plaintext: string): string {

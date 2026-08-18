@@ -512,6 +512,11 @@ export async function handleWooWebhook(
   const verified = await verifyWebhookSignature(rawBody, signature, store[0].webhookSecret);
   if (!verified) return { ok: false, error: "Invalid signature" };
 
+  const validEvents = ["created", "updated", "deleted"] as const;
+  if (!(validEvents as readonly string[]).includes(event)) {
+    return { ok: false, error: `Invalid event: ${event}` };
+  }
+
   const resourceId = String((payload as Record<string, unknown>).id ?? "");
   const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000);
   const duplicate = await db

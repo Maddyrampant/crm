@@ -134,14 +134,17 @@ interface WooApiListResponse<T> {
 }
 
 function isPrivateIP(ip: string): boolean {
-  if (ip === "127.0.0.1" || ip === "::1" || ip === "localhost") return true;
-  if (ip.startsWith("10.")) return true;
-  if (ip.startsWith("172.")) {
-    const second = parseInt(ip.split(".")[1], 10);
+  const normalized = ip.startsWith("::ffff:")
+    ? ip.slice(7)
+    : ip;
+  if (normalized === "127.0.0.1" || normalized === "::1" || normalized === "localhost") return true;
+  if (normalized.startsWith("10.")) return true;
+  if (normalized.startsWith("172.")) {
+    const second = parseInt(normalized.split(".")[1], 10);
     if (second >= 16 && second <= 31) return true;
   }
-  if (ip.startsWith("192.168.")) return true;
-  if (ip.startsWith("0.")) return true;
+  if (normalized.startsWith("192.168.")) return true;
+  if (normalized.startsWith("0.")) return true;
   return false;
 }
 
@@ -279,43 +282,31 @@ class WooCommerceApiClient {
     return this.request<WooProduct>(`/products/${id}`);
   }
 
-  async getAllCustomers(): Promise<WooCustomer[]> {
-    const all: WooCustomer[] = [];
+  private async getAllPaginated<T>(
+    fetchPage: (page: number) => Promise<WooApiListResponse<T>>
+  ): Promise<T[]> {
+    const all: T[] = [];
     let page = 1;
     const maxPages = 50;
     while (page <= maxPages) {
-      const { data, headers } = await this.getCustomers(page, 100);
+      const { data, headers } = await fetchPage(page);
       all.push(...data);
       if (page >= Number(headers.totalPages)) break;
       page++;
     }
     return all;
+  }
+
+  async getAllCustomers(): Promise<WooCustomer[]> {
+    return this.getAllPaginated<WooCustomer>((p) => this.getCustomers(p, 100));
   }
 
   async getAllOrders(status?: string): Promise<WooOrder[]> {
-    const all: WooOrder[] = [];
-    let page = 1;
-    const maxPages = 50;
-    while (page <= maxPages) {
-      const { data, headers } = await this.getOrders(page, 100, status);
-      all.push(...data);
-      if (page >= Number(headers.totalPages)) break;
-      page++;
-    }
-    return all;
+    return this.getAllPaginated<WooOrder>((p) => this.getOrders(p, 100, status));
   }
 
   async getAllProducts(): Promise<WooProduct[]> {
-    const all: WooProduct[] = [];
-    let page = 1;
-    const maxPages = 50;
-    while (page <= maxPages) {
-      const { data, headers } = await this.getProducts(page, 100);
-      all.push(...data);
-      if (page >= Number(headers.totalPages)) break;
-      page++;
-    }
-    return all;
+    return this.getAllPaginated<WooProduct>((p) => this.getProducts(p, 100));
   }
 }
 

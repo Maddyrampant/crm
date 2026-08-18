@@ -77,7 +77,7 @@ export async function connectWooStore(input: ConnectStoreInput) {
       url: parsed.data.url,
       consumerKey: encryptedKey,
       consumerSecret: encryptedSecret,
-      webhookSecret: parsed.data.webhookSecret,
+      webhookSecret: parsed.data.webhookSecret ? encrypt(parsed.data.webhookSecret) : null,
     })
     .returning();
 
