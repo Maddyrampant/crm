@@ -146,8 +146,12 @@ export async function testWooConnection(url: string, consumerKey: string, consum
   const ctx = await getWorkspaceContext();
   if (!ctx) return { ok: false as const, error: "ورک‌اسپیس یافت نشد" };
 
-  const client = createWooClient(url, consumerKey, consumerSecret);
-  const connected = await client.testConnection();
-  if (!connected) return { ok: false as const, error: "اتصال برقرار نشد" };
-  return { ok: true as const };
+  try {
+    const client = createWooClient(url, consumerKey, consumerSecret);
+    const connected = await client.testConnection();
+    if (!connected) return { ok: false as const, error: "اتصال برقرار نشد" };
+    return { ok: true as const };
+  } catch (err) {
+    return { ok: false as const, error: "اتصال برقرار نشد" };
+  }
 }

@@ -277,7 +277,8 @@ class WooCommerceApiClient {
   async getAllCustomers(): Promise<WooCustomer[]> {
     const all: WooCustomer[] = [];
     let page = 1;
-    while (true) {
+    const maxPages = 50;
+    while (page <= maxPages) {
       const { data, headers } = await this.getCustomers(page, 100);
       all.push(...data);
       if (page >= Number(headers.totalPages)) break;
@@ -289,7 +290,8 @@ class WooCommerceApiClient {
   async getAllOrders(status?: string): Promise<WooOrder[]> {
     const all: WooOrder[] = [];
     let page = 1;
-    while (true) {
+    const maxPages = 50;
+    while (page <= maxPages) {
       const { data, headers } = await this.getOrders(page, 100, status);
       all.push(...data);
       if (page >= Number(headers.totalPages)) break;
@@ -301,7 +303,8 @@ class WooCommerceApiClient {
   async getAllProducts(): Promise<WooProduct[]> {
     const all: WooProduct[] = [];
     let page = 1;
-    while (true) {
+    const maxPages = 50;
+    while (page <= maxPages) {
       const { data, headers } = await this.getProducts(page, 100);
       all.push(...data);
       if (page >= Number(headers.totalPages)) break;
