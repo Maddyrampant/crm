@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ACTION_LABELS, ENTITY_LABELS, STATUS_LABELS } from "@/lib/labels";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
 import { AttachmentPanel } from "@/components/attachments/attachment-panel";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 
 export const metadata: Metadata = { title: "جزئیات فروش" };
 
@@ -38,6 +39,7 @@ export default async function DealDetailPage({
 
   return (
     <div className="space-y-4">
+      <Breadcrumb items={[{ label: "خط لوله", href: "/pipeline" }, { label: "فروش‌ها", href: "/pipeline/deals" }, { label: "جزئیات فروش" }]} />
       <Card>
         <CardHeader>
           <div className="flex flex-wrap items-center gap-4">

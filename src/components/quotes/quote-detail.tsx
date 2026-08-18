@@ -70,11 +70,6 @@ export function QuoteDetail({ data }: { data: QuoteData }) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Button asChild variant="ghost" size="icon">
-            <Link href="/quotes">
-              <ArrowLeft className="size-4" />
-            </Link>
-          </Button>
           <div>
             <h1 className="text-xl font-bold" dir="ltr">
               {data.number}
