@@ -56,7 +56,7 @@ const TYPE_STYLE: Record<NotificationType, string> = {
   appointment: "bg-amber-500/10 text-amber-600",
   ai: "bg-fuchsia-500/10 text-fuchsia-600",
   contact: "bg-teal-500/10 text-teal-600",
-  system: "bg-slate-500/10 text-slate-600",
+  system: "bg-muted text-muted-foreground",
 };
 
 function formatRelativeTime(value: Date | string | null | undefined): string {
