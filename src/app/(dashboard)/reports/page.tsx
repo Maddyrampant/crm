@@ -18,6 +18,7 @@ import { TeamPerformanceTable } from "@/components/reports/team-performance-tabl
 import { PageHeader } from "@/components/ui/page-header";
 import { Contact, Package, Banknote, TrendingUp, Clock3 } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
+import { ReportExportButton } from "@/components/reports/report-export-button";
 
 export const metadata: Metadata = { title: "گزارش‌ها" };
 
@@ -43,10 +44,35 @@ export default async function ReportsPage({
       getTeamPerformance(workspaceId),
     ]);
 
+  const today = new Date().toISOString().slice(0, 10);
+  const kpiRows = [
+    ["شاخص", "مقدار"],
+    ["مخاطبین", String(kpis.contacts)],
+    ["فرصت‌های باز", String(kpis.openDeals)],
+    ["برنده‌شده", String(kpis.wonDeals)],
+    ["درآمد وصول‌شده", String(kpis.collected)],
+    ["ارزش فرصت‌های باز", String(kpis.openValue)],
+    ["فاکتورهای سررسید گذشته", String(kpis.overdueInvoices)],
+  ];
+  const teamRows = [
+    ["نام", "برنده‌شده", "ارزش برنده", "باز", "ارزش باز"],
+    ...teamPerformance.map((r) => [
+      r.userName ?? "نامشخص",
+      String(r.wonCount),
+      String(r.wonValue),
+      String(r.openCount),
+      String(r.openValue),
+    ]),
+  ];
+  const reportCsv = [...kpiRows, [], ...teamRows]
+    .map((row) => row.join(","))
+    .join("\n");
+
   return (
     <div className="space-y-6">
       <PageHeader title="گزارش‌ها" description="نمای کلی عملکرد فروش">
         <RangeSelector value={String(months)} />
+        <ReportExportButton csvContent={reportCsv} filename={`reports-${today}.csv`} />
       </PageHeader>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
