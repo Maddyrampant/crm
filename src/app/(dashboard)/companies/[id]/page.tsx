@@ -9,11 +9,8 @@ import { toContactRow } from "@/lib/serialize";
 import { STAGE_LABELS, STAGE_VARIANT } from "@/lib/labels";
 import { formatDate, formatNumber } from "@/lib/format";
 import { NotesPanel } from "@/components/notes/notes-panel";
-<<<<<<< HEAD
 import { AttachmentPanel } from "@/components/attachments/attachment-panel";
-=======
 import { Breadcrumb } from "@/components/ui/breadcrumb";
->>>>>>> d505c2f (feat(ui): #14 breadcrumb navigation — 16 pages + shared component)
 
 export default async function CompanyDetailPage({
   params,
