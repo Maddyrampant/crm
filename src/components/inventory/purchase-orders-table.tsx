@@ -182,7 +182,7 @@ export function PurchaseOrdersTable({
             </Select>
           </div>
 
-          <div className={isPending || busy ? "relative rounded-lg opacity-60" : "relative rounded-lg"}>
+          <div className={isPending || busy ? "overflow-x-auto relative rounded-lg opacity-60" : "overflow-x-auto relative rounded-lg"}>
             {data.items.length === 0 && !isPending ? (
               <EmptyState
                 icon={ClipboardList}

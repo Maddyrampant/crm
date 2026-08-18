@@ -139,7 +139,7 @@ export function CompaniesTable({ initialData, canManage, canDelete }: Props) {
             />
           </div>
 
-          <div className={isPending || busy ? "opacity-60" : ""}>
+          <div className={isPending || busy ? "overflow-x-auto rounded-lg opacity-60" : "overflow-x-auto rounded-lg"}>
             <Table>
               <TableHeader>
                 <TableRow>

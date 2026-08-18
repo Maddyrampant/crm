@@ -157,7 +157,7 @@ export function EmailManager({
                   )}
                 </EmptyState>
               ) : (
-                <div className="rounded-lg border">
+                <div className="overflow-x-auto rounded-lg border">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -264,7 +264,7 @@ export function EmailManager({
                   )}
                 </EmptyState>
               ) : (
-                <div className="rounded-lg border">
+                <div className="overflow-x-auto rounded-lg border">
                   <Table>
                     <TableHeader>
                       <TableRow>
