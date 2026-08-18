@@ -22,7 +22,7 @@ export const wooStores = pgTable(
     url: text("url").notNull(),
     consumerKey: text("consumer_key").notNull(),
     consumerSecret: text("consumer_secret").notNull(),
-    webhookSecret: text("webhook_secret").notNull(),
+    webhookSecret: text("webhook_secret"),
     active: boolean("active").notNull().default(true),
     lastSyncAt: timestamp("last_sync_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })

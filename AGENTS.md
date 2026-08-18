@@ -31,7 +31,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Auth
 - Login: `admin@crm.dev` / `admin1234`
-- Cookies stored at: `/tmp/opencode/cookies.txt`
+- Cookies stored at: `/tmp/crm-cookies.txt`
 - `BETTER_AUTH_URL="http://localhost:3000"` in `.env.local`
 
 ## Database
