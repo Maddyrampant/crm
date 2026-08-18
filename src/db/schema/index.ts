@@ -19,3 +19,4 @@ export * from "./sms-campaigns";
 export * from "./sales-goals";
 export * from "./audit-logs";
 export * from "./woocommerce";
+export * from "./attachments";
