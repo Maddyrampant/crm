@@ -44,7 +44,7 @@ export function TeamPerformanceTable({ data }: Props) {
             داده‌ای برای نمایش نیست
           </p>
         ) : (
-          <div className="rounded-lg border">
+          <div className="overflow-x-auto rounded-lg border">
             <Table>
               <TableHeader>
                 <TableRow>

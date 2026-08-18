@@ -311,7 +311,7 @@ export function DealsTable({
             </div>
           </div>
 
-          <div className={isPending || busy ? "relative rounded-lg opacity-60" : "relative rounded-lg"}>
+          <div className={isPending || busy ? "overflow-x-auto relative rounded-lg opacity-60" : "overflow-x-auto relative rounded-lg"}>
             <Table>
               <TableHeader>
                 <TableRow>

@@ -195,7 +195,7 @@ export function StockTable({ initialData, lowStockIds }: Props) {
 
           <div
             className={
-              isPending ? "relative rounded-lg opacity-60" : "relative rounded-lg"
+              isPending ? "overflow-x-auto relative rounded-lg opacity-60" : "overflow-x-auto relative rounded-lg"
             }
           >
             <Table>
