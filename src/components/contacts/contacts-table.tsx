@@ -50,11 +50,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   getContactsAction,
   deleteContactAction,
   exportContactsCsvAction,
 } from "@/actions/contacts";
+import { bulkDeleteContactsAction } from "@/actions/bulk";
 import { ContactFormDialog } from "@/components/contacts/contact-form-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SOURCE_LABELS, STAGE_LABELS, STAGE_VARIANT } from "@/lib/labels";
@@ -112,6 +114,8 @@ export function ContactsTable({
   const [editing, setEditing] = useState<ContactRow | null>(null);
   const [deleting, setDeleting] = useState<ContactRow | null>(null);
   const [busy, setBusy] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -190,6 +194,38 @@ export function ContactsTable({
       total: Math.max(0, d.total - 1),
     }));
     setDeleting(null);
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.size === data.items.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(data.items.map((c) => c.id)));
+    }
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleBulkDelete() {
+    const ids = Array.from(selectedIds);
+    if (!ids.length) return;
+    setBulkBusy(true);
+    const result = await bulkDeleteContactsAction(ids);
+    setBulkBusy(false);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success(`${result.deleted} مشتری حذف شد`);
+    setSelectedIds(new Set());
+    load();
   }
 
   const totalPages = Math.max(1, Math.ceil(data.total / pageSize));
@@ -322,6 +358,14 @@ export function ContactsTable({
             <Table>
               <TableHeader>
                 <TableRow>
+                  {canDelete && (
+                    <TableHead className="w-10">
+                      <Checkbox
+                        checked={data.items.length > 0 && selectedIds.size === data.items.length}
+                        onCheckedChange={toggleSelectAll}
+                      />
+                    </TableHead>
+                  )}
                   <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("firstName")}>
                     <span className="inline-flex items-center gap-1">
                       نام {sortBy === "firstName" && sortIndicator()}
@@ -342,7 +386,7 @@ export function ContactsTable({
               <TableBody>
                 {data.items.length === 0 && !isPending ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="border-0">
+                    <TableCell colSpan={canDelete ? 8 : 7} className="border-0">
                       <EmptyState
                         icon={Search}
                         title="مشتری‌ای یافت نشد"
@@ -352,7 +396,15 @@ export function ContactsTable({
                   </TableRow>
                 ) : (
                   data.items.map((c) => (
-                    <TableRow key={c.id}>
+                    <TableRow key={c.id} className={selectedIds.has(c.id) ? "bg-muted/50" : ""}>
+                      {canDelete && (
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedIds.has(c.id)}
+                            onCheckedChange={() => toggleSelect(c.id)}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 font-medium text-primary">
@@ -499,6 +551,25 @@ export function ContactsTable({
           </div>
         </CardContent>
       </Card>
+
+      {selectedIds.size > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
+            <span className="text-sm text-muted-foreground">
+              {formatNumber(selectedIds.size)} مورد انتخاب شده
+            </span>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleBulkDelete}
+              disabled={bulkBusy}
+            >
+              {bulkBusy && <Loader2 className="size-4 animate-spin" />}
+              حذف گروهی
+            </Button>
+          </div>
+        </div>
+      )}
 
       <ContactFormDialog
         open={formOpen}

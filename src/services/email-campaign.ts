@@ -154,3 +154,23 @@ export async function deleteTemplate(workspaceId: string, id: string) {
     .returning({ id: campaignEmailTemplates.id });
   return deleted ?? null;
 }
+
+export async function trackOpen(campaignId: string) {
+  await db
+    .update(emailCampaigns)
+    .set({
+      totalOpened: sql`${emailCampaigns.totalOpened} + 1`,
+      updatedAt: new Date(),
+    })
+    .where(eq(emailCampaigns.id, campaignId));
+}
+
+export async function trackClick(campaignId: string) {
+  await db
+    .update(emailCampaigns)
+    .set({
+      totalClicked: sql`${emailCampaigns.totalClicked} + 1`,
+      updatedAt: new Date(),
+    })
+    .where(eq(emailCampaigns.id, campaignId));
+}

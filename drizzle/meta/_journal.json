@@ -99,6 +99,13 @@
       "when": 1787026195847,
       "tag": "0013_attachments",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1787027773426,
+      "tag": "0014_lead_score_settings",
+      "breakpoints": true
     }
   ]
 }

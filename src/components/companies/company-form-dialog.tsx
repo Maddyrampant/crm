@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { createCompanyAction, updateCompanyAction } from "@/actions/contacts";
+import { companyFormSchema } from "@/lib/validations";
 import type { CompanyRow } from "@/lib/api-types";
 
 type Props = {
@@ -36,6 +37,7 @@ type FormState = {
 
 export function CompanyFormDialog({ open, onOpenChange, company, onSaved }: Props) {
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState<FormState>({
     name: company?.name ?? "",
     domain: company?.domain ?? "",
@@ -61,6 +63,18 @@ export function CompanyFormDialog({ open, onOpenChange, company, onSaved }: Prop
       address: form.address || null,
       notes: form.notes || null,
     };
+
+    const validation = companyFormSchema.safeParse(payload);
+    if (!validation.success) {
+      const fieldErrors: Record<string, string> = {};
+      validation.error.issues.forEach((issue) => {
+        fieldErrors[issue.path[0] as string] = issue.message;
+      });
+      setErrors(fieldErrors);
+      setSaving(false);
+      return;
+    }
+    setErrors({});
 
     const result = company
       ? await updateCompanyAction(company.id, payload)
@@ -94,6 +108,7 @@ export function CompanyFormDialog({ open, onOpenChange, company, onSaved }: Prop
               value={form.name}
               onChange={(e) => set("name", e.target.value)}
             />
+            {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-2">

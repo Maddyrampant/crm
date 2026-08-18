@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createProductAction, updateProductAction } from "@/actions/inventory";
+import { productFormSchema } from "@/lib/validations";
 import { PRODUCT_UNITS } from "@/lib/inventory";
 import { formatCurrency } from "@/lib/format";
 import type { CategoryWithCount, ProductWithStock } from "@/lib/inventory";
@@ -57,6 +58,7 @@ export function ProductFormDialog({
   onSaved,
 }: Props) {
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [form, setForm] = useState<FormState>(() => ({
     name: product?.name ?? "",
@@ -87,17 +89,29 @@ export function ProductFormDialog({
           ? form.categoryId
           : null,
       unit: form.unit,
-      unitPrice: Number(form.unitPrice) || 0,
-      costPrice: Number(form.costPrice) || 0,
+      unitPrice: form.unitPrice,
+      costPrice: form.costPrice || "0",
       taxable: form.taxable,
       active: form.active,
       barcode: form.barcode || null,
       notes: form.notes,
     };
 
+    const validation = productFormSchema.safeParse(payload);
+    if (!validation.success) {
+      const fieldErrors: Record<string, string> = {};
+      validation.error.issues.forEach((issue) => {
+        fieldErrors[issue.path[0] as string] = issue.message;
+      });
+      setErrors(fieldErrors);
+      setSaving(false);
+      return;
+    }
+    setErrors({});
+
     try {
-      if (product) await updateProductAction(product.id, payload);
-      else await createProductAction(payload);
+      if (product) await updateProductAction(product.id, { ...payload, unitPrice: Number(payload.unitPrice) || 0, costPrice: Number(payload.costPrice) || 0 });
+      else await createProductAction({ ...payload, unitPrice: Number(payload.unitPrice) || 0, costPrice: Number(payload.costPrice) || 0 });
 
       toast.success(product ? "کالا ویرایش شد" : "کالای جدید ساخته شد");
       onSaved();
@@ -128,6 +142,7 @@ export function ProductFormDialog({
               value={form.name}
               onChange={(e) => set("name", e.target.value)}
             />
+            {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
@@ -141,6 +156,7 @@ export function ProductFormDialog({
                 value={form.sku}
                 onChange={(e) => set("sku", e.target.value)}
               />
+              {errors.sku && <p className="text-sm text-destructive">{errors.sku}</p>}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="barcode">بارکد</Label>
@@ -204,6 +220,7 @@ export function ProductFormDialog({
                 value={form.unitPrice}
                 onChange={(e) => set("unitPrice", e.target.value)}
               />
+              {errors.unitPrice && <p className="text-sm text-destructive">{errors.unitPrice}</p>}
               {form.unitPrice && (
                 <p className="text-xs text-muted-foreground">
                   {formatCurrency(Number(form.unitPrice))}
