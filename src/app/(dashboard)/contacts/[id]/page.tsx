@@ -11,6 +11,7 @@ import {
   toDealRow,
 } from "@/lib/serialize";
 import { ContactDetail } from "@/components/contacts/contact-detail";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 
 export default async function ContactDetailPage({
   params,
@@ -31,7 +32,9 @@ export default async function ContactDetailPage({
   ]);
 
   return (
-    <ContactDetail
+    <>
+      <Breadcrumb items={[{ label: "مخاطبین", href: "/contacts" }, { label: "جزئیات مخاطب" }]} />
+      <ContactDetail
       contact={toContactRow({
         ...contact,
         companyName: contact.company?.name ?? null,
@@ -55,5 +58,6 @@ export default async function ContactDetailPage({
       members={membersResult.items}
       canManage={hasPermission(membership, "seller")}
     />
+    </>
   );
 }

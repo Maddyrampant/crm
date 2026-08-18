@@ -5,6 +5,7 @@ import { contacts } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { listProducts } from "@/services/inventory";
 import { InvoiceForm } from "@/components/invoices/invoice-form";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 
 export const metadata: Metadata = { title: "فاکتور جدید" };
 
@@ -19,5 +20,10 @@ export default async function NewInvoicePage() {
     listProducts({ workspaceId, active: "active", pageSize: 100 }),
   ]);
 
-  return <InvoiceForm customers={customers} products={products.items} />;
+  return (
+    <>
+      <Breadcrumb items={[{ label: "فاکتورها", href: "/invoices" }, { label: "فاکتور جدید" }]} />
+      <InvoiceForm customers={customers} products={products.items} />
+    </>
+  );
 }

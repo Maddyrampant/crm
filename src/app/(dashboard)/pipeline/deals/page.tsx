@@ -6,6 +6,7 @@ import { getWorkspaceMembers } from "@/services/workspace";
 import { toDealRow, toPipelineRow } from "@/lib/serialize";
 import { PageHeader } from "@/components/ui/page-header";
 import { DealsTable } from "@/components/pipeline/deals-table";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 
 export const metadata: Metadata = { title: "فروش‌ها" };
 
@@ -20,6 +21,7 @@ export default async function DealsPage() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumb items={[{ label: "خط لوله", href: "/pipeline" }, { label: "فروش‌ها" }]} />
       <PageHeader
         title="فروش‌ها"
         description="همه فرصت‌های فروش با فیلتر و صفحه‌بندی؛ ثبت برد/باخت و حذف."
