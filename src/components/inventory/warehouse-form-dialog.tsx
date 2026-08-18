@@ -81,7 +81,7 @@ export function WarehouseFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-md">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{warehouse ? "ویرایش انبار" : "انبار جدید"}</DialogTitle>
           <DialogDescription>
@@ -89,66 +89,68 @@ export function WarehouseFormDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="warehouseName">نام انبار *</Label>
-            <Input
-              id="warehouseName"
-              required
-              value={form.name}
-              onChange={(e) => set("name", e.target.value)}
-            />
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
+        <div className="overflow-y-auto flex-1 px-4">
+          <form onSubmit={handleSubmit} className="grid gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="warehouseCode">کد انبار</Label>
+              <Label htmlFor="warehouseName">نام انبار *</Label>
               <Input
-                id="warehouseCode"
-                dir="ltr"
-                className="text-end"
-                value={form.code}
-                onChange={(e) => set("code", e.target.value)}
+                id="warehouseName"
+                required
+                value={form.name}
+                onChange={(e) => set("name", e.target.value)}
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="warehouseLocation">موقعیت</Label>
-              <Input
-                id="warehouseLocation"
-                dir="rtl"
-                value={form.location}
-                onChange={(e) => set("location", e.target.value)}
-              />
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="warehouseCode">کد انبار</Label>
+                <Input
+                  id="warehouseCode"
+                  dir="ltr"
+                  className="text-end"
+                  value={form.code}
+                  onChange={(e) => set("code", e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="warehouseLocation">موقعیت</Label>
+                <Input
+                  id="warehouseLocation"
+                  dir="rtl"
+                  value={form.location}
+                  onChange={(e) => set("location", e.target.value)}
+                />
+              </div>
             </div>
-          </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox
-                checked={form.isDefault}
-                onCheckedChange={(v) => set("isDefault", v === true)}
-              />
-              انبار پیش‌فرض
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox
-                checked={form.active}
-                onCheckedChange={(v) => set("active", v === true)}
-              />
-              انبار فعال است
-            </label>
-          </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={form.isDefault}
+                  onCheckedChange={(v) => set("isDefault", v === true)}
+                />
+                انبار پیش‌فرض
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={form.active}
+                  onCheckedChange={(v) => set("active", v === true)}
+                />
+                انبار فعال است
+              </label>
+            </div>
+          </form>
+        </div>
 
-          <DialogFooter className="gap-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-              انصراف
-            </Button>
-            <Button type="submit" disabled={saving}>
-              {saving && <Loader2 className="size-4 animate-spin" />}
-              {warehouse ? "ذخیره تغییرات" : "ساخت انبار"}
-            </Button>
-          </DialogFooter>
-        </form>
+        <DialogFooter className="gap-2">
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+            انصراف
+          </Button>
+          <Button type="submit" disabled={saving}>
+            {saving && <Loader2 className="size-4 animate-spin" />}
+            {warehouse ? "ذخیره تغییرات" : "ساخت انبار"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

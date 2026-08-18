@@ -111,7 +111,7 @@ export function ProductFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{product ? "ویرایش کالا" : "کالای جدید"}</DialogTitle>
           <DialogDescription>
@@ -119,154 +119,156 @@ export function ProductFormDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="productName">نام کالا *</Label>
-            <Input
-              id="productName"
-              required
-              value={form.name}
-              onChange={(e) => set("name", e.target.value)}
-            />
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
+        <div className="overflow-y-auto flex-1 px-4">
+          <form onSubmit={handleSubmit} className="grid gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="sku">کد کالا (SKU) *</Label>
+              <Label htmlFor="productName">نام کالا *</Label>
               <Input
-                id="sku"
-                dir="ltr"
+                id="productName"
                 required
-                className="text-end"
-                value={form.sku}
-                onChange={(e) => set("sku", e.target.value)}
+                value={form.name}
+                onChange={(e) => set("name", e.target.value)}
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="barcode">بارکد</Label>
-              <Input
-                id="barcode"
-                dir="ltr"
-                className="text-end"
-                value={form.barcode}
-                onChange={(e) => set("barcode", e.target.value)}
-              />
-            </div>
-          </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label>دسته‌بندی</Label>
-              <Select
-                value={form.categoryId}
-                onValueChange={(v) => set("categoryId", v)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="بدون دسته‌بندی" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="no-category">بدون دسته‌بندی</SelectItem>
-                  {categories.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="sku">کد کالا (SKU) *</Label>
+                <Input
+                  id="sku"
+                  dir="ltr"
+                  required
+                  className="text-end"
+                  value={form.sku}
+                  onChange={(e) => set("sku", e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="barcode">بارکد</Label>
+                <Input
+                  id="barcode"
+                  dir="ltr"
+                  className="text-end"
+                  value={form.barcode}
+                  onChange={(e) => set("barcode", e.target.value)}
+                />
+              </div>
             </div>
-            <div className="grid gap-2">
-              <Label>واحد</Label>
-              <Select value={form.unit} onValueChange={(v) => set("unit", v)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PRODUCT_UNITS.map((u) => (
-                    <SelectItem key={u} value={u}>
-                      {u}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label>دسته‌بندی</Label>
+                <Select
+                  value={form.categoryId}
+                  onValueChange={(v) => set("categoryId", v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="بدون دسته‌بندی" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="no-category">بدون دسته‌بندی</SelectItem>
+                    {categories.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>واحد</Label>
+                <Select value={form.unit} onValueChange={(v) => set("unit", v)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PRODUCT_UNITS.map((u) => (
+                      <SelectItem key={u} value={u}>
+                        {u}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label htmlFor="unitPrice">قیمت فروش (تومان)</Label>
-              <Input
-                id="unitPrice"
-                dir="ltr"
-                type="number"
-                step="any"
-                min="0"
-                className="text-end"
-                value={form.unitPrice}
-                onChange={(e) => set("unitPrice", e.target.value)}
-              />
-              {form.unitPrice && (
-                <p className="text-xs text-muted-foreground">
-                  {formatCurrency(Number(form.unitPrice))}
-                </p>
-              )}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="unitPrice">قیمت فروش (تومان)</Label>
+                <Input
+                  id="unitPrice"
+                  dir="ltr"
+                  type="number"
+                  step="any"
+                  min="0"
+                  className="text-end"
+                  value={form.unitPrice}
+                  onChange={(e) => set("unitPrice", e.target.value)}
+                />
+                {form.unitPrice && (
+                  <p className="text-xs text-muted-foreground">
+                    {formatCurrency(Number(form.unitPrice))}
+                  </p>
+                )}
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="costPrice">قیمت خرید (تومان)</Label>
+                <Input
+                  id="costPrice"
+                  dir="ltr"
+                  type="number"
+                  step="any"
+                  min="0"
+                  className="text-end"
+                  value={form.costPrice}
+                  onChange={(e) => set("costPrice", e.target.value)}
+                />
+                {form.costPrice && (
+                  <p className="text-xs text-muted-foreground">
+                    {formatCurrency(Number(form.costPrice))}
+                  </p>
+                )}
+              </div>
             </div>
+
             <div className="grid gap-2">
-              <Label htmlFor="costPrice">قیمت خرید (تومان)</Label>
-              <Input
-                id="costPrice"
-                dir="ltr"
-                type="number"
-                step="any"
-                min="0"
-                className="text-end"
-                value={form.costPrice}
-                onChange={(e) => set("costPrice", e.target.value)}
+              <Label htmlFor="notes">یادداشت</Label>
+              <Textarea
+                id="notes"
+                rows={3}
+                value={form.notes}
+                onChange={(e) => set("notes", e.target.value)}
               />
-              {form.costPrice && (
-                <p className="text-xs text-muted-foreground">
-                  {formatCurrency(Number(form.costPrice))}
-                </p>
-              )}
             </div>
-          </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="notes">یادداشت</Label>
-            <Textarea
-              id="notes"
-              rows={3}
-              value={form.notes}
-              onChange={(e) => set("notes", e.target.value)}
-            />
-          </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={form.active}
+                  onCheckedChange={(v) => set("active", v === true)}
+                />
+                کالا فعال است
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={form.taxable}
+                  onCheckedChange={(v) => set("taxable", v === true)}
+                />
+                مشمول مالیات است
+              </label>
+            </div>
+          </form>
+        </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox
-                checked={form.active}
-                onCheckedChange={(v) => set("active", v === true)}
-              />
-              کالا فعال است
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox
-                checked={form.taxable}
-                onCheckedChange={(v) => set("taxable", v === true)}
-              />
-              مشمول مالیات است
-            </label>
-          </div>
-
-          <DialogFooter className="gap-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-              انصراف
-            </Button>
-            <Button type="submit" disabled={saving}>
-              {saving && <Loader2 className="size-4 animate-spin" />}
-              {product ? "ذخیره تغییرات" : "ساخت کالا"}
-            </Button>
-          </DialogFooter>
-        </form>
+        <DialogFooter className="gap-2">
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+            انصراف
+          </Button>
+          <Button type="submit" disabled={saving}>
+            {saving && <Loader2 className="size-4 animate-spin" />}
+            {product ? "ذخیره تغییرات" : "ساخت کالا"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

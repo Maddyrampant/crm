@@ -86,7 +86,7 @@ export function SupplierFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-md">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
             {supplier ? "ویرایش تأمین‌کننده" : "تأمین‌کننده جدید"}
@@ -96,84 +96,86 @@ export function SupplierFormDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="supplierName">نام تأمین‌کننده *</Label>
-            <Input
-              id="supplierName"
-              required
-              value={form.name}
-              onChange={(e) => set("name", e.target.value)}
-            />
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
+        <div className="overflow-y-auto flex-1 px-4">
+          <form onSubmit={handleSubmit} className="grid gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="contactName">شخص تماس</Label>
+              <Label htmlFor="supplierName">نام تأمین‌کننده *</Label>
               <Input
-                id="contactName"
-                value={form.contactName}
-                onChange={(e) => set("contactName", e.target.value)}
+                id="supplierName"
+                required
+                value={form.name}
+                onChange={(e) => set("name", e.target.value)}
               />
             </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="contactName">شخص تماس</Label>
+                <Input
+                  id="contactName"
+                  value={form.contactName}
+                  onChange={(e) => set("contactName", e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="supplierPhone">موبایل</Label>
+                <Input
+                  id="supplierPhone"
+                  dir="ltr"
+                  className="text-end"
+                  value={form.phone}
+                  onChange={(e) => set("phone", e.target.value)}
+                />
+              </div>
+            </div>
+
             <div className="grid gap-2">
-              <Label htmlFor="supplierPhone">موبایل</Label>
+              <Label htmlFor="supplierEmail">ایمیل</Label>
               <Input
-                id="supplierPhone"
+                id="supplierEmail"
                 dir="ltr"
+                type="email"
                 className="text-end"
-                value={form.phone}
-                onChange={(e) => set("phone", e.target.value)}
+                value={form.email}
+                onChange={(e) => set("email", e.target.value)}
               />
             </div>
-          </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="supplierEmail">ایمیل</Label>
-            <Input
-              id="supplierEmail"
-              dir="ltr"
-              type="email"
-              className="text-end"
-              value={form.email}
-              onChange={(e) => set("email", e.target.value)}
-            />
-          </div>
+            <div className="grid gap-2">
+              <Label htmlFor="supplierAddress">آدرس</Label>
+              <Input
+                id="supplierAddress"
+                value={form.address}
+                onChange={(e) => set("address", e.target.value)}
+              />
+            </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="supplierAddress">آدرس</Label>
-            <Input
-              id="supplierAddress"
-              value={form.address}
-              onChange={(e) => set("address", e.target.value)}
-            />
-          </div>
+            <div className="grid gap-2">
+              <Label htmlFor="supplierNotes">یادداشت</Label>
+              <Textarea
+                id="supplierNotes"
+                rows={2}
+                value={form.notes}
+                onChange={(e) => set("notes", e.target.value)}
+              />
+            </div>
+          </form>
+        </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="supplierNotes">یادداشت</Label>
-            <Textarea
-              id="supplierNotes"
-              rows={2}
-              value={form.notes}
-              onChange={(e) => set("notes", e.target.value)}
-            />
-          </div>
-
-          <DialogFooter className="gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={saving}
-            >
-              انصراف
-            </Button>
-            <Button type="submit" disabled={saving}>
-              {saving && <Loader2 className="size-4 animate-spin" />}
-              {supplier ? "ذخیره تغییرات" : "ساخت تأمین‌کننده"}
-            </Button>
-          </DialogFooter>
-        </form>
+        <DialogFooter className="gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={saving}
+          >
+            انصراف
+          </Button>
+          <Button type="submit" disabled={saving}>
+            {saving && <Loader2 className="size-4 animate-spin" />}
+            {supplier ? "ذخیره تغییرات" : "ساخت تأمین‌کننده"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

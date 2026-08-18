@@ -106,133 +106,135 @@ export function DealFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{deal ? "ویرایش فروش" : "فروش جدید"}</DialogTitle>
           <DialogDescription>اطلاعات فرصت فروش را وارد کنید.</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="title">عنوان *</Label>
-            <Input
-              id="title"
-              required
-              placeholder="مثلاً: قرارداد پشتیبانی سالانه"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
+        <div className="overflow-y-auto flex-1 px-4">
+          <form onSubmit={handleSubmit} className="grid gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="amount">مبلغ (تومان)</Label>
+              <Label htmlFor="title">عنوان *</Label>
               <Input
-                id="amount"
-                dir="ltr"
-                type="number"
-                min={0}
-                placeholder="0"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                id="title"
+                required
+                placeholder="مثلاً: قرارداد پشتیبانی سالانه"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
               />
-              {amount && <p className="text-xs text-muted-foreground">{formatNumber(amount)}</p>}
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="closeDate">تاریخ بسته‌شدن</Label>
-              <JalaliDateInput value={closeDate} onChange={(v) => setCloseDate(v ?? "")} id="closeDate" />
-            </div>
-          </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label>فانل فروش</Label>
-              <Select value={pipelineId} onValueChange={handlePipelineChange}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {pipelines.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="amount">مبلغ (تومان)</Label>
+                <Input
+                  id="amount"
+                  dir="ltr"
+                  type="number"
+                  min={0}
+                  placeholder="0"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                />
+                {amount && <p className="text-xs text-muted-foreground">{formatNumber(amount)}</p>}
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="closeDate">تاریخ بسته‌شدن</Label>
+                <JalaliDateInput value={closeDate} onChange={(v) => setCloseDate(v ?? "")} id="closeDate" />
+              </div>
             </div>
-            <div className="grid gap-2">
-              <Label>مرحله</Label>
-              <Select value={stageId} onValueChange={setStageId}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {stages.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label>مشتری</Label>
-              <Select value={contactId || "none"} onValueChange={(v) => setContactId(v === "none" ? "" : v)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="انتخاب مشتری" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">بدون مشتری</SelectItem>
-                  {contacts.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label>فانل فروش</Label>
+                <Select value={pipelineId} onValueChange={handlePipelineChange}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {pipelines.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>مرحله</Label>
+                <Select value={stageId} onValueChange={setStageId}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {stages.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="grid gap-2">
-              <Label>مسئول فروش</Label>
-              <Select value={ownerId || "none"} onValueChange={(v) => setOwnerId(v === "none" ? "" : v)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="انتخاب مسئول" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">بدون مسئول</SelectItem>
-                  {members.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>
-                      {m.name || m.email}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label>مشتری</Label>
+                <Select value={contactId || "none"} onValueChange={(v) => setContactId(v === "none" ? "" : v)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="انتخاب مشتری" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">بدون مشتری</SelectItem>
+                    {contacts.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>مسئول فروش</Label>
+                <Select value={ownerId || "none"} onValueChange={(v) => setOwnerId(v === "none" ? "" : v)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="انتخاب مسئول" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">بدون مسئول</SelectItem>
+                    {members.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.name || m.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          </div>
+          </form>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={saving}
-            >
-              انصراف
-            </Button>
-            <Button type="submit" disabled={saving}>
-              {saving && <Loader2 className="size-4 animate-spin" />}
-              {deal ? "ذخیره تغییرات" : "ایجاد فروش"}
-            </Button>
-          </DialogFooter>
-        </form>
+          {deal && open && (
+            <div className="grid gap-2 border-t pt-4">
+              <NotesPanel entityType="deal" entityId={deal.id} />
+            </div>
+          )}
+        </div>
 
-        {deal && open && (
-          <div className="grid gap-2 border-t pt-4">
-            <NotesPanel entityType="deal" entityId={deal.id} />
-          </div>
-        )}
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={saving}
+          >
+            انصراف
+          </Button>
+          <Button type="submit" disabled={saving}>
+            {saving && <Loader2 className="size-4 animate-spin" />}
+            {deal ? "ذخیره تغییرات" : "ایجاد فروش"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
