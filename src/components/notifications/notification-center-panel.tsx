@@ -14,6 +14,7 @@ import {
   LoaderCircle,
   Search,
   Settings,
+  Settings2,
   Sparkles,
   SquareCheckBig,
   Trophy,
@@ -40,6 +41,7 @@ import {
   markNotificationReadAction,
 } from "@/actions/notifications";
 import type { Notification } from "@/db/schema";
+import { NotificationPreferences } from "./notification-preferences";
 
 const ICON_BY_NAME: Record<string, LucideIcon> = {
   "file-text": FileText,
@@ -106,6 +108,7 @@ export function NotificationCenterPanel() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [searchInput, setSearchInput] = useState("");
   const [isPending, startTransition] = useTransition();
+  const [showPrefs, setShowPrefs] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -202,18 +205,29 @@ export function NotificationCenterPanel() {
             </span>
           ) : null}
         </div>
-        {unread > 0 && (
+        <div className="flex items-center gap-1">
+          {unread > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 gap-1 text-xs"
+              onClick={markAllRead}
+              disabled={isPending}
+            >
+              <CheckCheck className="size-3.5" />
+              خواندن همه
+            </Button>
+          )}
           <Button
-            variant="ghost"
+            variant={showPrefs ? "secondary" : "ghost"}
             size="sm"
             className="h-8 gap-1 text-xs"
-            onClick={markAllRead}
-            disabled={isPending}
+            onClick={() => setShowPrefs(!showPrefs)}
           >
-            <CheckCheck className="size-3.5" />
-            خواندن همه
+            <Settings2 className="size-3.5" />
+            تنظیمات اعلان‌ها
           </Button>
-        )}
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2 border-b p-3">
@@ -244,7 +258,9 @@ export function NotificationCenterPanel() {
         </Select>
       </div>
 
-      {items === null ? (
+      {showPrefs ? (
+        <NotificationPreferences />
+      ) : items === null ? (
         <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
           <LoaderCircle className="size-4 animate-spin" />
           در حال بارگذاری…
