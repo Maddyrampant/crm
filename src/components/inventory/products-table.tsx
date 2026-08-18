@@ -55,6 +55,7 @@ import {
   deleteProductAction,
   listProductCategoriesAction,
 } from "@/actions/inventory";
+import { showUndoToast } from "@/components/ui/undo-toast";
 import { ProductFormDialog } from "@/components/inventory/product-form-dialog";
 import { CategoryManagerDialog } from "@/components/inventory/category-manager-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -132,7 +133,10 @@ export function ProductsTable({ initialData, categories, canManage }: Props) {
     setBusy(true);
     try {
       await deleteProductAction(deleting.id);
-      toast.success("کالا حذف شد");
+      showUndoToast({
+        message: "کالا حذف شد",
+        onUndo: () => load(),
+      });
       setData((d) => ({
         items: d.items.filter((p) => p.id !== deleting.id),
         total: Math.max(0, d.total - 1),

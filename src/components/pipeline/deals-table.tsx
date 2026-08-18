@@ -54,6 +54,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/ui/empty-state";
+import { showUndoToast } from "@/components/ui/undo-toast";
 import { InlineEdit } from "@/components/ui/inline-edit";
 import {
   deleteDealAction,
@@ -203,7 +204,10 @@ export function DealsTable({
       toast.error(result.error);
       return;
     }
-    toast.success("فروش حذف شد");
+    showUndoToast({
+      message: "فروش حذف شد",
+      onUndo: () => load(),
+    });
     setData((d) => ({
       items: d.items.filter((x) => x.id !== deleting.id),
       total: Math.max(0, d.total - 1),

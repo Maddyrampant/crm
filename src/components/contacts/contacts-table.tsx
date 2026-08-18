@@ -55,6 +55,7 @@ import {
   deleteContactAction,
   exportContactsCsvAction,
 } from "@/actions/contacts";
+import { showUndoToast } from "@/components/ui/undo-toast";
 import { ContactFormDialog } from "@/components/contacts/contact-form-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SOURCE_LABELS, STAGE_LABELS, STAGE_VARIANT } from "@/lib/labels";
@@ -184,7 +185,10 @@ export function ContactsTable({
       toast.error(result.error);
       return;
     }
-    toast.success("مشتری حذف شد");
+    showUndoToast({
+      message: "مخاطب حذف شد",
+      onUndo: () => load(),
+    });
     setData((d) => ({
       items: d.items.filter((c) => c.id !== deleting.id),
       total: Math.max(0, d.total - 1),

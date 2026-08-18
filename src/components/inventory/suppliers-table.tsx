@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/dialog";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { deleteSupplierAction, listSuppliersAction } from "@/actions/inventory";
+import { showUndoToast } from "@/components/ui/undo-toast";
 import { SupplierFormDialog } from "@/components/inventory/supplier-form-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { Supplier } from "@/db/schema";
@@ -91,7 +92,10 @@ export function SuppliersTable({ initialData, canManage }: Props) {
     setBusy(true);
     try {
       await deleteSupplierAction(deleting.id);
-      toast.success("تأمین‌کننده حذف شد");
+      showUndoToast({
+        message: "تأمین‌کننده حذف شد",
+        onUndo: () => load(),
+      });
       load();
       setDeleting(null);
     } catch (err) {
