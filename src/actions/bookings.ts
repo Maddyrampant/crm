@@ -69,6 +69,9 @@ export async function bookSlotAction(
   }
 ) {
   const { getPublicBookingLink, bookSlot } = await import("@/services/bookings");
+  const { checkRateLimit } = await import("@/lib/rate-limit");
+  const rl = await checkRateLimit(`booking:${slug}`, 10, 60_000);
+  if (!rl.ok) return { ok: false, error: "تعداد درخواست‌ها بیش از حد مجاز است" };
   const link = await getPublicBookingLink(slug);
   if (!link) return { ok: false, error: "لینک نامعتبر" };
   try {

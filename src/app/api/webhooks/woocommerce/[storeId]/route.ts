@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { handleWooWebhook } from "@/services/woocommerce-sync";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const rateLimits = new Map<string, { count: number; resetAt: number }>();
 
@@ -21,8 +22,17 @@ export async function POST(
 ) {
   const { storeId } = await params;
 
+<<<<<<< HEAD
   if (!checkRateLimit(`woo:${storeId}`, 100, 60_000)) {
     return Response.json({ error: "درخواست‌ها بیش از حد مجاز است" }, { status: 429 });
+=======
+  const rl = await checkRateLimit(`webhook:${storeId}`, 30, 60_000);
+  if (!rl.ok) {
+    return Response.json(
+      { error: "Rate limit exceeded" },
+      { status: 429, headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) } }
+    );
+>>>>>>> 6edec1a (fix(security): timing-safe HMAC + rate limiting webhook & booking)
   }
 
   const topic = req.headers.get("x-wc-webhook-topic") ?? "";
