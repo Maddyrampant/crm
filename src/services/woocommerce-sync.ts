@@ -1,5 +1,6 @@
 import "server-only";
 
+import { timingSafeEqual } from "crypto";
 import { and, eq, gte, ilike, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
@@ -48,8 +49,10 @@ export async function verifyWebhookSignature(
     ["sign"]
   );
   const sig = await crypto.subtle.sign("HMAC", key, encoder.encode(body));
-  const expected = Buffer.from(sig).toString("base64");
-  return expected === signature;
+  const expected = Buffer.from(sig);
+  const received = Buffer.from(signature, "base64");
+  if (expected.length !== received.length) return false;
+  return timingSafeEqual(expected, received);
 }
 
 export async function logSyncEvent(params: {
