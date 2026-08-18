@@ -2,7 +2,17 @@ import "server-only";
 
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { contacts, deals, invoices, payments, invoiceItems } from "@/db/schema";
+import {
+  contacts,
+  deals,
+  invoices,
+  payments,
+  invoiceItems,
+  products,
+  productCategories,
+  stockLevels,
+  suppliers,
+} from "@/db/schema";
 
 function escapeCsv(v: unknown): string {
   const s = String(v ?? "").replace(/"/g, '""');
@@ -94,6 +104,69 @@ export async function exportInvoices(workspaceId: string) {
       r.status,
       r.issuedAt?.toISOString() ?? "",
       r.dueAt?.toISOString() ?? "",
+    ])
+  );
+}
+
+export async function exportProducts(workspaceId: string) {
+  const rows = await db
+    .select({
+      name: products.name,
+      sku: products.sku,
+      barcode: products.barcode,
+      categoryName: productCategories.name,
+      unit: products.unit,
+      unitPrice: products.unitPrice,
+      costPrice: products.costPrice,
+      taxable: products.taxable,
+      active: products.active,
+      totalStock: sql<string>`coalesce(sum(${stockLevels.quantity}::numeric), 0)::text`,
+    })
+    .from(products)
+    .leftJoin(productCategories, eq(productCategories.id, products.categoryId))
+    .leftJoin(stockLevels, eq(stockLevels.productId, products.id))
+    .where(eq(products.workspaceId, workspaceId))
+    .groupBy(products.id, productCategories.name);
+
+  return toCsv(
+    ["نام", "کد کالا", "بارکد", "دسته‌بندی", "واحد", "قیمت فروش", "قیمت تمام‌شده", "مشمول مالیات", "وضعیت", "موجودی کل"],
+    rows.map((r) => [
+      r.name,
+      r.sku,
+      r.barcode ?? "",
+      r.categoryName ?? "",
+      r.unit,
+      r.unitPrice,
+      r.costPrice,
+      r.taxable ? "بله" : "خیر",
+      r.active ? "فعال" : "غیرفعال",
+      String(Number(r.totalStock) || 0),
+    ])
+  );
+}
+
+export async function exportSuppliers(workspaceId: string) {
+  const rows = await db
+    .select({
+      name: suppliers.name,
+      contactName: suppliers.contactName,
+      phone: suppliers.phone,
+      email: suppliers.email,
+      address: suppliers.address,
+      notes: suppliers.notes,
+    })
+    .from(suppliers)
+    .where(eq(suppliers.workspaceId, workspaceId));
+
+  return toCsv(
+    ["نام", "شخص تماس", "موبایل", "ایمیل", "آدرس", "یادداشت"],
+    rows.map((r) => [
+      r.name,
+      r.contactName ?? "",
+      r.phone ?? "",
+      r.email ?? "",
+      r.address ?? "",
+      r.notes ?? "",
     ])
   );
 }

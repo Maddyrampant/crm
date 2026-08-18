@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireWorkspace, requireWorkspaceRole } from "@/lib/session";
+import { exportProducts, exportSuppliers } from "@/services/export";
 import {
   createProduct,
   createProductCategory,
@@ -25,6 +26,8 @@ import {
   updatePurchaseOrderStatus,
   updateSupplier,
   updateWarehouse,
+  importProductsCsv,
+  importSuppliersCsv,
 } from "@/services/inventory";
 
 export async function listProductsAction(raw?: {
@@ -198,4 +201,42 @@ export async function deletePurchaseOrderAction(orderId: string) {
   const row = await deletePurchaseOrder(workspaceId, orderId);
   revalidatePath("/purchases");
   return { ok: Boolean(row) };
+}
+
+/* ---------- خروجی CSV ---------- */
+
+export async function exportProductsCsvAction() {
+  const { workspaceId } = await requireWorkspace();
+  const csv = await exportProducts(workspaceId);
+  return { ok: true, data: csv };
+}
+
+export async function exportSuppliersCsvAction() {
+  const { workspaceId } = await requireWorkspace();
+  const csv = await exportSuppliers(workspaceId);
+  return { ok: true, data: csv };
+}
+
+/* ---------- ایمپورت CSV ---------- */
+
+export async function importProductsCsvAction(csv: string) {
+  const { workspaceId } = await requireWorkspaceRole("manager");
+  try {
+    const summary = await importProductsCsv(workspaceId, csv);
+    revalidatePath("/products");
+    return { ok: true, data: summary };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "خطا در ایمپورت" };
+  }
+}
+
+export async function importSuppliersCsvAction(csv: string) {
+  const { workspaceId } = await requireWorkspaceRole("manager");
+  try {
+    const summary = await importSuppliersCsv(workspaceId, csv);
+    revalidatePath("/purchases");
+    return { ok: true, data: summary };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "خطا در ایمپورت" };
+  }
 }
