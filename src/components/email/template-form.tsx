@@ -65,7 +65,7 @@ export function TemplateFormDialog({ open, onOpenChange, onSaved }: Props) {
         onOpenChange(v);
       }}
     >
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>قالب ایمیلی جدید</DialogTitle>
           <DialogDescription>
@@ -73,59 +73,61 @@ export function TemplateFormDialog({ open, onOpenChange, onSaved }: Props) {
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="tpl-name">نام قالب *</Label>
-            <Input
-              id="tpl-name"
-              dir="rtl"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="مثلاً خوشامدگویی"
-            />
-          </div>
+        <div className="overflow-y-auto flex-1 px-4">
+          <form onSubmit={handleSubmit} className="grid gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="tpl-name">نام قالب *</Label>
+              <Input
+                id="tpl-name"
+                dir="rtl"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="مثلاً خوشامدگویی"
+              />
+            </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="tpl-subject">موضوع ایمیل *</Label>
-            <Input
-              id="tpl-subject"
-              dir="rtl"
-              required
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              placeholder="موضوع ایمیل..."
-            />
-          </div>
+            <div className="grid gap-2">
+              <Label htmlFor="tpl-subject">موضوع ایمیل *</Label>
+              <Input
+                id="tpl-subject"
+                dir="rtl"
+                required
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder="موضوع ایمیل..."
+              />
+            </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="tpl-body">محتوای ایمیل *</Label>
-            <Textarea
-              id="tpl-body"
-              dir="rtl"
-              rows={8}
-              required
-              value={htmlBody}
-              onChange={(e) => setHtmlBody(e.target.value)}
-              placeholder="محتوای HTML ایمیل..."
-            />
-          </div>
+            <div className="grid gap-2">
+              <Label htmlFor="tpl-body">محتوای ایمیل *</Label>
+              <Textarea
+                id="tpl-body"
+                dir="rtl"
+                rows={8}
+                required
+                value={htmlBody}
+                onChange={(e) => setHtmlBody(e.target.value)}
+                placeholder="محتوای HTML ایمیل..."
+              />
+            </div>
+          </form>
+        </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={saving}
-            >
-              انصراف
-            </Button>
-            <Button type="submit" disabled={saving}>
-              {saving && <Loader2 className="size-4 animate-spin" />}
-              ایجاد قالب
-            </Button>
-          </DialogFooter>
-        </form>
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={saving}
+          >
+            انصراف
+          </Button>
+          <Button type="submit" disabled={saving}>
+            {saving && <Loader2 className="size-4 animate-spin" />}
+            ایجاد قالب
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

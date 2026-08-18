@@ -277,7 +277,7 @@ export function RuleFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{rule ? "ویرایش قانون" : "قانون جدید"}</DialogTitle>
           <DialogDescription>
@@ -286,374 +286,376 @@ export function RuleFormDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-5">
-          <div className="grid gap-4 sm:grid-cols-2">
+        <div className="overflow-y-auto flex-1 px-4">
+          <div className="grid gap-5">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-1.5">
+                <Label className="text-xs text-muted-foreground">نام قانون</Label>
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="مثلاً: یادآوری پیگیری فروش بالا"
+                />
+              </div>
+              <div className="grid gap-1.5">
+                <Label className="text-xs text-muted-foreground">رویداد</Label>
+                <Select
+                  value={event}
+                  onValueChange={(v) => changeEvent(v as RuleEventKey)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {RULE_EVENTS.map((e) => (
+                      <SelectItem key={e.key} value={e.key}>
+                        {e.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             <div className="grid gap-1.5">
-              <Label className="text-xs text-muted-foreground">نام قانون</Label>
+              <Label className="text-xs text-muted-foreground">
+                توضیحات (اختیاری)
+              </Label>
               <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="مثلاً: یادآوری پیگیری فروش بالا"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="توضیح کوتاه دربارهٔ این قانون"
               />
             </div>
-            <div className="grid gap-1.5">
-              <Label className="text-xs text-muted-foreground">رویداد</Label>
-              <Select
-                value={event}
-                onValueChange={(v) => changeEvent(v as RuleEventKey)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {RULE_EVENTS.map((e) => (
-                    <SelectItem key={e.key} value={e.key}>
-                      {e.label}
-                    </SelectItem>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs text-muted-foreground">
+                  شرایط (همه باید برقرار باشند)
+                </Label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setConditions((prev) => [...prev, { field: fields[0] ?? "", op: "eq", value: "" }])}
+                  disabled={fields.length === 0}
+                >
+                  <Plus className="size-3.5" />
+                  افزودن شرط
+                </Button>
+              </div>
+              {conditions.length === 0 ? (
+                <p className="rounded-md border border-dashed p-3 text-center text-xs text-muted-foreground">
+                  بدون شرط — قانون روی همهٔ رویدادها اجرا می‌شود.
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {conditions.map((c, i) => (
+                    <li
+                      key={i}
+                      className="flex flex-wrap items-center gap-2 rounded-md border p-2"
+                    >
+                      {fieldSelect(c.field, (v) => updateCondition(i, { field: v }))}
+                      {opSelect(c.op, (v) => updateCondition(i, { op: v }))}
+                      {c.op !== "is_set" ? (
+                        <Input
+                          className="w-40"
+                          value={c.value}
+                          onChange={(e) => updateCondition(i, { value: e.target.value })}
+                          placeholder="مقدار"
+                        />
+                      ) : null}
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="text-destructive"
+                        onClick={() =>
+                          setConditions((prev) => prev.filter((_, idx) => idx !== i))
+                        }
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </li>
                   ))}
-                </SelectContent>
-              </Select>
+                </ul>
+              )}
             </div>
-          </div>
 
-          <div className="grid gap-1.5">
-            <Label className="text-xs text-muted-foreground">
-              توضیحات (اختیاری)
-            </Label>
-            <Input
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="توضیح کوتاه دربارهٔ این قانون"
-            />
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="space-y-3">
               <Label className="text-xs text-muted-foreground">
-                شرایط (همه باید برقرار باشند)
+                اکشن‌ها (حداقل یک)
               </Label>
+              <ul className="space-y-3">
+                {actions.map((a, i) => (
+                  <li key={i} className="space-y-2 rounded-md border p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <Select
+                        value={a.type}
+                        onValueChange={(v) =>
+                          updateAction(i, {
+                            type: v as RuleAction["type"],
+                            to: undefined,
+                            subject: undefined,
+                            body: undefined,
+                            title: undefined,
+                            description: undefined,
+                            assignee: undefined,
+                            priority: undefined,
+                            dueOffsetDays: undefined,
+                            remindOffsetDays: undefined,
+                            target: undefined,
+                            stageId: undefined,
+                          })
+                        }
+                      >
+                        <SelectTrigger className="w-52">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {RULE_ACTION_TYPES.map((t) => (
+                            <SelectItem key={t} value={t}>
+                              {ACTION_LABELS[t]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="text-destructive"
+                        onClick={() =>
+                          setActions((prev) => prev.filter((_, idx) => idx !== i))
+                        }
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {a.type === "email" && (
+                        <>
+                          <div className="grid gap-1.5">
+                            <Label className="text-xs text-muted-foreground">گیرنده</Label>
+                            <Select
+                              value={a.to ?? "owner"}
+                              onValueChange={(v) => updateAction(i, { to: v as "contact" | "owner" })}
+                            >
+                              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {Object.entries(TO_LABELS).map(([k, l]) => (
+                                  <SelectItem key={k} value={k}>{l}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="grid gap-1.5 sm:col-span-2">
+                            <Label className="text-xs text-muted-foreground">موضوع</Label>
+                            <Input
+                              value={a.subject ?? ""}
+                              onChange={(e) => updateAction(i, { subject: e.target.value })}
+                              placeholder="موضوع ایمیل"
+                            />
+                          </div>
+                          <div className="grid gap-1.5 sm:col-span-2">
+                            <Label className="text-xs text-muted-foreground">متن</Label>
+                            <Textarea
+                              value={a.body ?? ""}
+                              onChange={(e) => updateAction(i, { body: e.target.value })}
+                              placeholder="متن ایمیل — متغیرها: {{contact.firstName}}، {{contact.email}}، {{owner.email}}، {{total}}"
+                              rows={3}
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {a.type === "task" && (
+                        <>
+                          <div className="grid gap-1.5">
+                            <Label className="text-xs text-muted-foreground">عنوان تسک</Label>
+                            <Input
+                              value={a.title ?? ""}
+                              onChange={(e) => updateAction(i, { title: e.target.value })}
+                              placeholder="عنوان تسک"
+                            />
+                          </div>
+                          <div className="grid gap-1.5">
+                            <Label className="text-xs text-muted-foreground">اولویت</Label>
+                            <Select
+                              value={a.priority ?? "medium"}
+                              onValueChange={(v) => updateAction(i, { priority: v as "low" | "medium" | "high" })}
+                            >
+                              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {Object.entries(PRIORITY_LABELS).map(([k, l]) => (
+                                  <SelectItem key={k} value={k}>{l}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="grid gap-1.5">
+                            <Label className="text-xs text-muted-foreground">مسئول</Label>
+                            <Select
+                              value={a.assignee ?? "owner"}
+                              onValueChange={(v) => updateAction(i, { assignee: v as "owner" | "none" })}
+                            >
+                              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {Object.entries(ASSIGNEE_LABELS).map(([k, l]) => (
+                                  <SelectItem key={k} value={k}>{l}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="grid gap-1.5">
+                            <Label className="text-xs text-muted-foreground">توضیحات</Label>
+                            <Input
+                              value={a.description ?? ""}
+                              onChange={(e) => updateAction(i, { description: e.target.value })}
+                              placeholder="توضیحات تسک (متغیرها مجازند)"
+                            />
+                          </div>
+                          <div className="grid gap-1.5">
+                            <Label className="text-xs text-muted-foreground">
+                              سررسید (روز از اکنون، اختیاری)
+                            </Label>
+                            <Input
+                              type="number"
+                              dir="ltr"
+                              value={a.dueOffsetDays ?? ""}
+                              onChange={(e) =>
+                                updateAction(i, {
+                                  dueOffsetDays: e.target.value === "" ? undefined : Number(e.target.value),
+                                })
+                              }
+                              placeholder="مثلاً ۲"
+                            />
+                          </div>
+                          <div className="grid gap-1.5">
+                            <Label className="text-xs text-muted-foreground">
+                              یادآور (روز قبل، اختیاری)
+                            </Label>
+                            <Input
+                              type="number"
+                              dir="ltr"
+                              value={a.remindOffsetDays ?? ""}
+                              onChange={(e) =>
+                                updateAction(i, {
+                                  remindOffsetDays: e.target.value === "" ? undefined : Number(e.target.value),
+                                })
+                              }
+                              placeholder="مثلاً ۱"
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {a.type === "notification" && (
+                        <>
+                          <div className="grid gap-1.5">
+                            <Label className="text-xs text-muted-foreground">عنوان اعلان</Label>
+                            <Input
+                              value={a.title ?? ""}
+                              onChange={(e) => updateAction(i, { title: e.target.value })}
+                              placeholder="عنوان اعلان"
+                            />
+                          </div>
+                          <div className="grid gap-1.5">
+                            <Label className="text-xs text-muted-foreground">مخاطب</Label>
+                            <Select
+                              value={a.target ?? "workspace"}
+                              onValueChange={(v) => updateAction(i, { target: v as "workspace" | "owner" })}
+                            >
+                              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {Object.entries(TARGET_LABELS).map(([k, l]) => (
+                                  <SelectItem key={k} value={k}>{l}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="grid gap-1.5 sm:col-span-2">
+                            <Label className="text-xs text-muted-foreground">متن</Label>
+                            <Textarea
+                              value={a.body ?? ""}
+                              onChange={(e) => updateAction(i, { body: e.target.value })}
+                              placeholder="متن اعلان (متغیرها مجازند)"
+                              rows={2}
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {a.type === "sms" && (
+                        <>
+                          <div className="grid gap-1.5">
+                            <Label className="text-xs text-muted-foreground">گیرنده</Label>
+                            <Select
+                              value={a.to ?? "owner"}
+                              onValueChange={(v) => updateAction(i, { to: v as "contact" | "owner" })}
+                            >
+                              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {Object.entries(TO_LABELS).map(([k, l]) => (
+                                  <SelectItem key={k} value={k}>{l}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="grid gap-1.5 sm:col-span-2">
+                            <Label className="text-xs text-muted-foreground">متن پیامک</Label>
+                            <Textarea
+                              value={a.body ?? ""}
+                              onChange={(e) => updateAction(i, { body: e.target.value })}
+                              placeholder="متن پیامک — متغیرها: {{contact.firstName}}، {{total}}"
+                              rows={2}
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {a.type === "move_deal" && (
+                        <div className="grid gap-1.5 sm:col-span-2">
+                          <Label className="text-xs text-muted-foreground">مرحلهٔ مقصد</Label>
+                          <Select
+                            value={a.stageId ?? ""}
+                            onValueChange={(v) => updateAction(i, { stageId: v })}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="انتخاب مرحله" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {stages.map((s) => (
+                                <SelectItem key={s.id} value={s.id}>
+                                  {s.pipelineName} ← {s.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setConditions((prev) => [...prev, { field: fields[0] ?? "", op: "eq", value: "" }])}
-                disabled={fields.length === 0}
+                onClick={() =>
+                  setActions((prev) => [...prev, { type: "email" }])
+                }
               >
                 <Plus className="size-3.5" />
-                افزودن شرط
+                افزودن اکشن
               </Button>
             </div>
-            {conditions.length === 0 ? (
-              <p className="rounded-md border border-dashed p-3 text-center text-xs text-muted-foreground">
-                بدون شرط — قانون روی همهٔ رویدادها اجرا می‌شود.
-              </p>
-            ) : (
-              <ul className="space-y-2">
-                {conditions.map((c, i) => (
-                  <li
-                    key={i}
-                    className="flex flex-wrap items-center gap-2 rounded-md border p-2"
-                  >
-                    {fieldSelect(c.field, (v) => updateCondition(i, { field: v }))}
-                    {opSelect(c.op, (v) => updateCondition(i, { op: v }))}
-                    {c.op !== "is_set" ? (
-                      <Input
-                        className="w-40"
-                        value={c.value}
-                        onChange={(e) => updateCondition(i, { value: e.target.value })}
-                        placeholder="مقدار"
-                      />
-                    ) : null}
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="text-destructive"
-                      onClick={() =>
-                        setConditions((prev) => prev.filter((_, idx) => idx !== i))
-                      }
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </li>
+
+            {localErrors.length > 0 && (
+              <ul className="space-y-1 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-xs text-destructive">
+                {localErrors.map((err) => (
+                  <li key={err}>• {err}</li>
                 ))}
               </ul>
             )}
           </div>
-
-          <div className="space-y-3">
-            <Label className="text-xs text-muted-foreground">
-              اکشن‌ها (حداقل یک)
-            </Label>
-            <ul className="space-y-3">
-              {actions.map((a, i) => (
-                <li key={i} className="space-y-2 rounded-md border p-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <Select
-                      value={a.type}
-                      onValueChange={(v) =>
-                        updateAction(i, {
-                          type: v as RuleAction["type"],
-                          to: undefined,
-                          subject: undefined,
-                          body: undefined,
-                          title: undefined,
-                          description: undefined,
-                          assignee: undefined,
-                          priority: undefined,
-                          dueOffsetDays: undefined,
-                          remindOffsetDays: undefined,
-                          target: undefined,
-                          stageId: undefined,
-                        })
-                      }
-                    >
-                      <SelectTrigger className="w-52">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {RULE_ACTION_TYPES.map((t) => (
-                          <SelectItem key={t} value={t}>
-                            {ACTION_LABELS[t]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="text-destructive"
-                      onClick={() =>
-                        setActions((prev) => prev.filter((_, idx) => idx !== i))
-                      }
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </div>
-
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {a.type === "email" && (
-                      <>
-                        <div className="grid gap-1.5">
-                          <Label className="text-xs text-muted-foreground">گیرنده</Label>
-                          <Select
-                            value={a.to ?? "owner"}
-                            onValueChange={(v) => updateAction(i, { to: v as "contact" | "owner" })}
-                          >
-                            <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              {Object.entries(TO_LABELS).map(([k, l]) => (
-                                <SelectItem key={k} value={k}>{l}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="grid gap-1.5 sm:col-span-2">
-                          <Label className="text-xs text-muted-foreground">موضوع</Label>
-                          <Input
-                            value={a.subject ?? ""}
-                            onChange={(e) => updateAction(i, { subject: e.target.value })}
-                            placeholder="موضوع ایمیل"
-                          />
-                        </div>
-                        <div className="grid gap-1.5 sm:col-span-2">
-                          <Label className="text-xs text-muted-foreground">متن</Label>
-                          <Textarea
-                            value={a.body ?? ""}
-                            onChange={(e) => updateAction(i, { body: e.target.value })}
-                            placeholder="متن ایمیل — متغیرها: {{contact.firstName}}، {{contact.email}}، {{owner.email}}، {{total}}"
-                            rows={3}
-                          />
-                        </div>
-                      </>
-                    )}
-
-                    {a.type === "task" && (
-                      <>
-                        <div className="grid gap-1.5">
-                          <Label className="text-xs text-muted-foreground">عنوان تسک</Label>
-                          <Input
-                            value={a.title ?? ""}
-                            onChange={(e) => updateAction(i, { title: e.target.value })}
-                            placeholder="عنوان تسک"
-                          />
-                        </div>
-                        <div className="grid gap-1.5">
-                          <Label className="text-xs text-muted-foreground">اولویت</Label>
-                          <Select
-                            value={a.priority ?? "medium"}
-                            onValueChange={(v) => updateAction(i, { priority: v as "low" | "medium" | "high" })}
-                          >
-                            <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              {Object.entries(PRIORITY_LABELS).map(([k, l]) => (
-                                <SelectItem key={k} value={k}>{l}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="grid gap-1.5">
-                          <Label className="text-xs text-muted-foreground">مسئول</Label>
-                          <Select
-                            value={a.assignee ?? "owner"}
-                            onValueChange={(v) => updateAction(i, { assignee: v as "owner" | "none" })}
-                          >
-                            <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              {Object.entries(ASSIGNEE_LABELS).map(([k, l]) => (
-                                <SelectItem key={k} value={k}>{l}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="grid gap-1.5">
-                          <Label className="text-xs text-muted-foreground">توضیحات</Label>
-                          <Input
-                            value={a.description ?? ""}
-                            onChange={(e) => updateAction(i, { description: e.target.value })}
-                            placeholder="توضیحات تسک (متغیرها مجازند)"
-                          />
-                        </div>
-                        <div className="grid gap-1.5">
-                          <Label className="text-xs text-muted-foreground">
-                            سررسید (روز از اکنون، اختیاری)
-                          </Label>
-                          <Input
-                            type="number"
-                            dir="ltr"
-                            value={a.dueOffsetDays ?? ""}
-                            onChange={(e) =>
-                              updateAction(i, {
-                                dueOffsetDays: e.target.value === "" ? undefined : Number(e.target.value),
-                              })
-                            }
-                            placeholder="مثلاً ۲"
-                          />
-                        </div>
-                        <div className="grid gap-1.5">
-                          <Label className="text-xs text-muted-foreground">
-                            یادآور (روز قبل، اختیاری)
-                          </Label>
-                          <Input
-                            type="number"
-                            dir="ltr"
-                            value={a.remindOffsetDays ?? ""}
-                            onChange={(e) =>
-                              updateAction(i, {
-                                remindOffsetDays: e.target.value === "" ? undefined : Number(e.target.value),
-                              })
-                            }
-                            placeholder="مثلاً ۱"
-                          />
-                        </div>
-                      </>
-                    )}
-
-                    {a.type === "notification" && (
-                      <>
-                        <div className="grid gap-1.5">
-                          <Label className="text-xs text-muted-foreground">عنوان اعلان</Label>
-                          <Input
-                            value={a.title ?? ""}
-                            onChange={(e) => updateAction(i, { title: e.target.value })}
-                            placeholder="عنوان اعلان"
-                          />
-                        </div>
-                        <div className="grid gap-1.5">
-                          <Label className="text-xs text-muted-foreground">مخاطب</Label>
-                          <Select
-                            value={a.target ?? "workspace"}
-                            onValueChange={(v) => updateAction(i, { target: v as "workspace" | "owner" })}
-                          >
-                            <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              {Object.entries(TARGET_LABELS).map(([k, l]) => (
-                                <SelectItem key={k} value={k}>{l}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="grid gap-1.5 sm:col-span-2">
-                          <Label className="text-xs text-muted-foreground">متن</Label>
-                          <Textarea
-                            value={a.body ?? ""}
-                            onChange={(e) => updateAction(i, { body: e.target.value })}
-                            placeholder="متن اعلان (متغیرها مجازند)"
-                            rows={2}
-                          />
-                        </div>
-                      </>
-                    )}
-
-                    {a.type === "sms" && (
-                      <>
-                        <div className="grid gap-1.5">
-                          <Label className="text-xs text-muted-foreground">گیرنده</Label>
-                          <Select
-                            value={a.to ?? "owner"}
-                            onValueChange={(v) => updateAction(i, { to: v as "contact" | "owner" })}
-                          >
-                            <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              {Object.entries(TO_LABELS).map(([k, l]) => (
-                                <SelectItem key={k} value={k}>{l}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="grid gap-1.5 sm:col-span-2">
-                          <Label className="text-xs text-muted-foreground">متن پیامک</Label>
-                          <Textarea
-                            value={a.body ?? ""}
-                            onChange={(e) => updateAction(i, { body: e.target.value })}
-                            placeholder="متن پیامک — متغیرها: {{contact.firstName}}، {{total}}"
-                            rows={2}
-                          />
-                        </div>
-                      </>
-                    )}
-
-                    {a.type === "move_deal" && (
-                      <div className="grid gap-1.5 sm:col-span-2">
-                        <Label className="text-xs text-muted-foreground">مرحلهٔ مقصد</Label>
-                        <Select
-                          value={a.stageId ?? ""}
-                          onValueChange={(v) => updateAction(i, { stageId: v })}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="انتخاب مرحله" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {stages.map((s) => (
-                              <SelectItem key={s.id} value={s.id}>
-                                {s.pipelineName} ← {s.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                setActions((prev) => [...prev, { type: "email" }])
-              }
-            >
-              <Plus className="size-3.5" />
-              افزودن اکشن
-            </Button>
-          </div>
-
-          {localErrors.length > 0 && (
-            <ul className="space-y-1 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-xs text-destructive">
-              {localErrors.map((err) => (
-                <li key={err}>• {err}</li>
-              ))}
-            </ul>
-          )}
         </div>
 
         <DialogFooter>

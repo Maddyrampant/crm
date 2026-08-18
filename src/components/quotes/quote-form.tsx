@@ -119,163 +119,165 @@ export function QuoteForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>پیشنهاد فروش جدید</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label>مشتری *</Label>
-              <Select value={contactId} onValueChange={setContactId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="انتخاب مشتری" />
-                </SelectTrigger>
-                <SelectContent>
-                  {contacts.length === 0 && (
-                    <div className="p-2 text-sm text-muted-foreground">
-                      هنوز مخاطبی ثبت نشده است
-                    </div>
-                  )}
-                  {contacts.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        <div className="overflow-y-auto flex-1 px-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label>مشتری *</Label>
+                <Select value={contactId} onValueChange={setContactId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="انتخاب مشتری" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {contacts.length === 0 && (
+                      <div className="p-2 text-sm text-muted-foreground">
+                        هنوز مخاطبی ثبت نشده است
+                      </div>
+                    )}
+                    {contacts.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>سررسید</Label>
+                <JalaliDateInput
+                  value={validUntil}
+                  onChange={(v) => setValidUntil(v ?? "")}
+                  id="validUntil"
+                />
+              </div>
             </div>
-            <div className="grid gap-2">
-              <Label>سررسید</Label>
-              <JalaliDateInput
-                value={validUntil}
-                onChange={(v) => setValidUntil(v ?? "")}
-                id="validUntil"
-              />
-            </div>
-          </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label>درصد مالیات کلی</Label>
-              <Input
-                type="number"
-                min="0"
-                max="100"
-                value={taxRate}
-                onChange={(e) => setTaxRate(e.target.value)}
-              />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label>درصد مالیات کلی</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={taxRate}
+                  onChange={(e) => setTaxRate(e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>یادداشت</Label>
+                <Textarea
+                  rows={2}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                />
+              </div>
             </div>
-            <div className="grid gap-2">
-              <Label>یادداشت</Label>
-              <Textarea
-                rows={2}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-              />
-            </div>
-          </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>آیتم‌ها</Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setItems((prev) => [...prev, { ...emptyItem }])}
-              >
-                <Plus className="size-4" />
-                افزودن
-              </Button>
-            </div>
             <div className="space-y-2">
-              {items.map((it, index) => (
-                <div
-                  key={index}
-                  className="grid gap-2 rounded-lg border p-2 sm:grid-cols-[minmax(0,1fr)_70px_90px_70px_32px]"
+              <div className="flex items-center justify-between">
+                <Label>آیتم‌ها</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setItems((prev) => [...prev, { ...emptyItem }])}
                 >
-                  <Input
-                    placeholder="شرح"
-                    value={it.description}
-                    onChange={(e) =>
-                      updateItem(index, { description: e.target.value })
-                    }
-                  />
-                  <Input
-                    type="number"
-                    min="0"
-                    placeholder="تعداد"
-                    value={it.quantity}
-                    onChange={(e) =>
-                      updateItem(index, { quantity: e.target.value })
-                    }
-                  />
-                  <Input
-                    type="number"
-                    min="0"
-                    placeholder="قیمت واحد"
-                    value={it.unitPrice}
-                    onChange={(e) =>
-                      updateItem(index, { unitPrice: e.target.value })
-                    }
-                  />
-                  <Input
-                    type="number"
-                    min="0"
-                    max="100"
-                    placeholder="مالیات٪"
-                    value={it.taxRate}
-                    onChange={(e) =>
-                      updateItem(index, { taxRate: e.target.value })
-                    }
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="self-end text-destructive"
-                    disabled={items.length === 1}
-                    onClick={() =>
-                      setItems((prev) => prev.filter((_, i) => i !== index))
-                    }
+                  <Plus className="size-4" />
+                  افزودن
+                </Button>
+              </div>
+              <div className="space-y-2">
+                {items.map((it, index) => (
+                  <div
+                    key={index}
+                    className="grid gap-2 rounded-lg border p-2 sm:grid-cols-[minmax(0,1fr)_70px_90px_70px_32px]"
                   >
-                    <Trash2 className="size-4" />
-                  </Button>
-                </div>
-              ))}
+                    <Input
+                      placeholder="شرح"
+                      value={it.description}
+                      onChange={(e) =>
+                        updateItem(index, { description: e.target.value })
+                      }
+                    />
+                    <Input
+                      type="number"
+                      min="0"
+                      placeholder="تعداد"
+                      value={it.quantity}
+                      onChange={(e) =>
+                        updateItem(index, { quantity: e.target.value })
+                      }
+                    />
+                    <Input
+                      type="number"
+                      min="0"
+                      placeholder="قیمت واحد"
+                      value={it.unitPrice}
+                      onChange={(e) =>
+                        updateItem(index, { unitPrice: e.target.value })
+                      }
+                    />
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      placeholder="مالیات٪"
+                      value={it.taxRate}
+                      onChange={(e) =>
+                        updateItem(index, { taxRate: e.target.value })
+                      }
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="self-end text-destructive"
+                      disabled={items.length === 1}
+                      onClick={() =>
+                        setItems((prev) => prev.filter((_, i) => i !== index))
+                      }
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
 
-          <div className="rounded-lg border bg-muted/50 p-3 text-sm space-y-1">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">جمع اقلام</span>
-              <span>{formatCurrency(subtotal)}</span>
+            <div className="rounded-lg border bg-muted/50 p-3 text-sm space-y-1">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">جمع اقلام</span>
+                <span>{formatCurrency(subtotal)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">مالیات آیتم‌ها</span>
+                <span>{formatCurrency(itemsTax)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">مالیات کلی</span>
+                <span>{formatCurrency(globalTax)}</span>
+              </div>
+              <div className="flex justify-between border-t pt-1 font-bold">
+                <span>مبلغ کل</span>
+                <span>{formatCurrency(total)}</span>
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">مالیات آیتم‌ها</span>
-              <span>{formatCurrency(itemsTax)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">مالیات کلی</span>
-              <span>{formatCurrency(globalTax)}</span>
-            </div>
-            <div className="flex justify-between border-t pt-1 font-bold">
-              <span>مبلغ کل</span>
-              <span>{formatCurrency(total)}</span>
-            </div>
-          </div>
+          </form>
+        </div>
 
-          <DialogFooter>
-            <Button type="submit" disabled={loading}>
-              {loading ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                "ساخت پیشنهاد"
-              )}
-            </Button>
-          </DialogFooter>
-        </form>
+        <DialogFooter>
+          <Button type="submit" disabled={loading}>
+            {loading ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              "ساخت پیشنهاد"
+            )}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
