@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -283,6 +283,7 @@ export function KanbanBoard({
   const [lostDeal, setLostDeal] = useState<DealRow | null>(null);
   const [lostReason, setLostReason] = useState("");
   const [losing, setLosing] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -327,23 +328,27 @@ export function KanbanBoard({
     }
     if (targetStageId === deal.stageId) return;
 
-    setBoard((b) => ({
-      ...b,
-      stages: b.stages.map((s) => ({
-        ...s,
-        deals:
-          s.id === deal.stageId
-            ? s.deals.filter((d) => d.id !== deal.id)
-            : s.id === targetStageId
-              ? [{ ...deal, stageId: targetStageId }, ...s.deals]
-              : s.deals,
-      })),
-    }));
+    const previousBoard = board;
+
+    startTransition(() => {
+      setBoard((b) => ({
+        ...b,
+        stages: b.stages.map((s) => ({
+          ...s,
+          deals:
+            s.id === deal.stageId
+              ? s.deals.filter((d) => d.id !== deal.id)
+              : s.id === targetStageId
+                ? [{ ...deal, stageId: targetStageId }, ...s.deals]
+                : s.deals,
+        })),
+      }));
+    });
 
     const result = await moveDealAction(deal.id, targetStageId);
     if (!result.ok) {
+      setBoard(previousBoard);
       toast.error(result.error);
-      reloadBoard();
     }
   }
 
