@@ -240,6 +240,22 @@ export const navSections: NavSection[] = [
         ready: true,
         minRole: "seller",
       },
+      {
+        title: "ورک‌اسپیس",
+        href: "/settings/workspace",
+        icon: Settings,
+        owner: "part1",
+        ready: true,
+        minRole: "admin",
+      },
+      {
+        title: "ووکامرس",
+        href: "/settings/integrations/woocommerce",
+        icon: Package,
+        owner: "part1",
+        ready: true,
+        minRole: "admin",
+      },
     ],
   },
 ];

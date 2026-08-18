@@ -6,6 +6,7 @@ import {
   jsonb,
   primaryKey,
   integer,
+  index,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { workspaces } from "./workspaces";
@@ -34,72 +35,88 @@ export const customFieldType = pgEnum("custom_field_type", [
   "select",
 ]);
 
-export const companies = pgTable("companies", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  workspaceId: text("workspace_id")
-    .notNull()
-    .references(() => workspaces.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  domain: text("domain"),
-  industry: text("industry"),
-  website: text("website"),
-  address: text("address"),
-  notes: text("notes"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+export const companies = pgTable(
+  "companies",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    domain: text("domain"),
+    industry: text("industry"),
+    website: text("website"),
+    address: text("address"),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("companies_workspace_idx").on(t.workspaceId)]
+);
 
-export const contacts = pgTable("contacts", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  workspaceId: text("workspace_id")
-    .notNull()
-    .references(() => workspaces.id, { onDelete: "cascade" }),
-  companyId: text("company_id").references(() => companies.id, {
-    onDelete: "set null",
-  }),
-  firstName: text("first_name").notNull(),
-  lastName: text("last_name"),
-  email: text("email"),
-  phone: text("phone"),
-  source: leadSource("source").notNull().default("other"),
-  lifecycleStage: lifecycleStage("lifecycle_stage")
-    .notNull()
-    .default("lead"),
-  ownerId: text("owner_id").references(() => user.id, {
-    onDelete: "set null",
-  }),
-  leadScore: integer("lead_score").default(0),
-  customFields: jsonb("custom_fields").$type<Record<string, unknown>>().notNull().default({}),
-  notes: text("notes"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+export const contacts = pgTable(
+  "contacts",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    companyId: text("company_id").references(() => companies.id, {
+      onDelete: "set null",
+    }),
+    firstName: text("first_name").notNull(),
+    lastName: text("last_name"),
+    email: text("email"),
+    phone: text("phone"),
+    source: leadSource("source").notNull().default("other"),
+    lifecycleStage: lifecycleStage("lifecycle_stage")
+      .notNull()
+      .default("lead"),
+    ownerId: text("owner_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    leadScore: integer("lead_score").default(0),
+    customFields: jsonb("custom_fields").$type<Record<string, unknown>>().notNull().default({}),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    index("contacts_workspace_idx").on(t.workspaceId),
+    index("contacts_company_idx").on(t.companyId),
+    index("contacts_owner_idx").on(t.ownerId),
+  ]
+);
 
-export const tags = pgTable("tags", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  workspaceId: text("workspace_id")
-    .notNull()
-    .references(() => workspaces.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  color: text("color").notNull().default("#6b7280"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+export const tags = pgTable(
+  "tags",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    color: text("color").notNull().default("#6b7280"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("tags_workspace_idx").on(t.workspaceId)]
+);
 
 export const contactTags = pgTable(
   "contact_tags",
@@ -114,21 +131,25 @@ export const contactTags = pgTable(
   (t) => [primaryKey({ columns: [t.contactId, t.tagId] })]
 );
 
-export const customFields = pgTable("custom_fields", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  workspaceId: text("workspace_id")
-    .notNull()
-    .references(() => workspaces.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  key: text("key").notNull(),
-  type: customFieldType("type").notNull().default("text"),
-  options: jsonb("options").$type<string[]>().notNull().default([]),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+export const customFields = pgTable(
+  "custom_fields",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    key: text("key").notNull(),
+    type: customFieldType("type").notNull().default("text"),
+    options: jsonb("options").$type<string[]>().notNull().default([]),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("custom_fields_workspace_idx").on(t.workspaceId)]
+);
 
 export const contactRelations = relations(contacts, ({ many, one }) => ({
   tags: many(contactTags),

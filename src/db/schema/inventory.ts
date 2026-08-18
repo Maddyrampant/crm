@@ -72,28 +72,35 @@ export const products = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (t) => [unique("products_workspace_sku_idx").on(t.workspaceId, t.sku)]
+  (t) => [
+    unique("products_workspace_sku_idx").on(t.workspaceId, t.sku),
+    index("products_workspace_idx").on(t.workspaceId),
+  ]
 );
 
-export const warehouses = pgTable("warehouses", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  workspaceId: text("workspace_id")
-    .notNull()
-    .references(() => workspaces.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  code: text("code"),
-  location: text("location"),
-  isDefault: boolean("is_default").notNull().default(false),
-  active: boolean("active").notNull().default(true),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+export const warehouses = pgTable(
+  "warehouses",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    code: text("code"),
+    location: text("location"),
+    isDefault: boolean("is_default").notNull().default(false),
+    active: boolean("active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("warehouses_workspace_idx").on(t.workspaceId)]
+);
 
 export const stockLevels = pgTable(
   "stock_levels",
@@ -151,70 +158,82 @@ export const stockMovements = pgTable(
   (t) => [index("stock_movements_product_idx").on(t.productId)]
 );
 
-export const suppliers = pgTable("suppliers", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  workspaceId: text("workspace_id")
-    .notNull()
-    .references(() => workspaces.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  contactName: text("contact_name"),
-  phone: text("phone"),
-  email: text("email"),
-  address: text("address"),
-  notes: text("notes"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+export const suppliers = pgTable(
+  "suppliers",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    contactName: text("contact_name"),
+    phone: text("phone"),
+    email: text("email"),
+    address: text("address"),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("suppliers_workspace_idx").on(t.workspaceId)]
+);
 
-export const purchaseOrders = pgTable("purchase_orders", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  workspaceId: text("workspace_id")
-    .notNull()
-    .references(() => workspaces.id, { onDelete: "cascade" }),
-  supplierId: text("supplier_id").references(() => suppliers.id, {
-    onDelete: "set null",
-  }),
-  number: text("number").notNull(),
-  status: purchaseOrderStatus("status").notNull().default("draft"),
-  orderedAt: timestamp("ordered_at", { withTimezone: true }),
-  expectedAt: timestamp("expected_at", { withTimezone: true }),
-  notes: text("notes"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+export const purchaseOrders = pgTable(
+  "purchase_orders",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    supplierId: text("supplier_id").references(() => suppliers.id, {
+      onDelete: "set null",
+    }),
+    number: text("number").notNull(),
+    status: purchaseOrderStatus("status").notNull().default("draft"),
+    orderedAt: timestamp("ordered_at", { withTimezone: true }),
+    expectedAt: timestamp("expected_at", { withTimezone: true }),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("purchase_orders_workspace_idx").on(t.workspaceId)]
+);
 
-export const purchaseOrderItems = pgTable("purchase_order_items", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  purchaseOrderId: text("purchase_order_id")
-    .notNull()
-    .references(() => purchaseOrders.id, { onDelete: "cascade" }),
-  productId: text("product_id").references(() => products.id, {
-    onDelete: "set null",
-  }),
-  quantity: numeric("quantity", { precision: 18, scale: 3 })
-    .notNull()
-    .default("1"),
-  unitPrice: numeric("unit_price", { precision: 18, scale: 2 })
-    .notNull()
-    .default("0"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+export const purchaseOrderItems = pgTable(
+  "purchase_order_items",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    purchaseOrderId: text("purchase_order_id")
+      .notNull()
+      .references(() => purchaseOrders.id, { onDelete: "cascade" }),
+    productId: text("product_id").references(() => products.id, {
+      onDelete: "set null",
+    }),
+    quantity: numeric("quantity", { precision: 18, scale: 3 })
+      .notNull()
+      .default("1"),
+    unitPrice: numeric("unit_price", { precision: 18, scale: 2 })
+      .notNull()
+      .default("0"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("purchase_order_items_purchase_order_idx").on(t.purchaseOrderId)]
+);
 
 export type ProductCategory = typeof productCategories.$inferSelect;
 export type Product = typeof products.$inferSelect;
