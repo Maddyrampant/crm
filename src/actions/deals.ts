@@ -130,6 +130,54 @@ export async function createDealAction(input: unknown) {
   return { ok: true, data: toDealRow(deal) };
 }
 
+const patchDealSchema = z.object({
+  title: z.string().trim().min(1, "عنوان فروش را وارد کنید").max(200).optional(),
+  amount: z.coerce.number().min(0, "مبلغ نمی‌تواند منفی باشد").max(1e15).optional(),
+  status: z.enum(["open", "won", "lost"]).optional(),
+});
+
+export async function patchDealAction(id: string, patch: unknown) {
+  const ctx = await getWorkspaceContext();
+  if (!ctx) return { ok: false, error: "ابتدا وارد شوید" };
+  if (!hasPermission(ctx.membership, "seller")) {
+    return { ok: false, error: "شما اجازه ویرایش فروش ندارید" };
+  }
+
+  const parsed = patchDealSchema.safeParse(patch);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "ورودی نامعتبر" };
+  }
+
+  const existing = await dealsService.getDeal(ctx.workspaceId, id);
+  if (!existing) return { ok: false, error: "فروش یافت نشد" };
+
+  const deal = await dealsService.updateDeal(ctx.workspaceId, id, {
+    title: parsed.data.title ?? existing.deal.title,
+    amount: parsed.data.amount ?? Number(existing.deal.amount),
+    status: parsed.data.status ?? existing.deal.status,
+    pipelineId: existing.deal.pipelineId,
+    stageId: existing.deal.stageId,
+    contactId: existing.deal.contactId,
+    ownerId: existing.deal.ownerId,
+    closeDate: existing.deal.closeDate,
+    lostReason: existing.deal.lostReason,
+  });
+
+  if (!deal) return { ok: false, error: "فروش یافت نشد" };
+
+  await logActivity({
+    workspaceId: ctx.workspaceId,
+    entityType: "deal",
+    entityId: id,
+    action: "updated",
+    userId: ctx.userId,
+    data: { title: deal.title },
+  });
+
+  revalidatePath("/pipeline");
+  return { ok: true, data: toDealRow(deal) };
+}
+
 export async function updateDealAction(id: string, input: unknown) {
   const ctx = await getWorkspaceContext();
   if (!ctx) return { ok: false, error: "ابتدا وارد شوید" };
