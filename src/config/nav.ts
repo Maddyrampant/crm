@@ -295,6 +295,22 @@ export const navSections: NavSection[] = [
         ready: true,
         minRole: "admin",
       },
+      {
+        title: "پایگاه دانش AI",
+        href: "/settings/ai-knowledge",
+        icon: Bot,
+        owner: "part1",
+        ready: true,
+        minRole: "manager",
+      },
+      {
+        title: "کتابخانه محتوا",
+        href: "/settings/ai-content",
+        icon: Link2,
+        owner: "part1",
+        ready: true,
+        minRole: "manager",
+      },
     ],
   },
 ];

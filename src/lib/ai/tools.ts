@@ -1,9 +1,10 @@
 import { tool } from "ai";
 import { z } from "zod";
-import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, or, sql, asc } from "drizzle-orm";
 import { db } from "@/db";
-import { activityLog, contacts, deals, pipelines, stages } from "@/db/schema";
+import { activityLog, contacts, deals, pipelines, stages, invoices, invoiceItems, products, stockLevels, warehouses, companies } from "@/db/schema";
 import { requestToolRun } from "@/services/ai";
+import { searchKnowledge } from "@/services/ai-knowledge";
 
 const num = (v: string | number | null | undefined) => Number(v ?? 0);
 
@@ -124,6 +125,327 @@ export function readTools(ctx: ToolContext) {
           .orderBy(desc(activityLog.createdAt))
           .limit(limit);
         return rows;
+      },
+    }),
+
+    getContactDetail: tool({
+      description:
+        "دریافت اطلاعات کامل یک مخاطب شامل شرکت، برچسب‌ها و فیلدهای سفارشی.",
+      inputSchema: z.object({
+        contactId: z.string().min(1).describe("شناسه مخاطب"),
+      }),
+      execute: async ({ contactId }) => {
+        const [row] = await db
+          .select({
+            id: contacts.id,
+            firstName: contacts.firstName,
+            lastName: contacts.lastName,
+            email: contacts.email,
+            phone: contacts.phone,
+            lifecycleStage: contacts.lifecycleStage,
+            source: contacts.source,
+            notes: contacts.notes,
+            ownerId: contacts.ownerId,
+            companyId: contacts.companyId,
+            companyName: companies.name,
+            createdAt: contacts.createdAt,
+          })
+          .from(contacts)
+          .leftJoin(companies, eq(companies.id, contacts.companyId))
+          .where(and(eq(contacts.id, contactId), eq(contacts.workspaceId, ctx.workspaceId)))
+          .limit(1);
+        return row ?? null;
+      },
+    }),
+
+    getDealDetail: tool({
+      description:
+        "دریافت اطلاعات کامل یک فرصت فروش شامل مرحله، فانل و مخاطب مرتبط.",
+      inputSchema: z.object({
+        dealId: z.string().min(1).describe("شناسه فرصت فروش"),
+      }),
+      execute: async ({ dealId }) => {
+        const [row] = await db
+          .select({
+            id: deals.id,
+            title: deals.title,
+            amount: deals.amount,
+            status: deals.status,
+            closeDate: deals.closeDate,
+            contactId: deals.contactId,
+            contactName: sql<string>`(${contacts.firstName} || ' ' || coalesce(${contacts.lastName}, ''))`,
+            stageId: deals.stageId,
+            stageName: stages.name,
+            pipelineId: deals.pipelineId,
+            pipelineName: pipelines.name,
+            createdAt: deals.createdAt,
+          })
+          .from(deals)
+          .innerJoin(stages, eq(stages.id, deals.stageId))
+          .innerJoin(pipelines, eq(pipelines.id, deals.pipelineId))
+          .leftJoin(contacts, eq(contacts.id, deals.contactId))
+          .where(and(eq(deals.id, dealId), eq(deals.workspaceId, ctx.workspaceId)))
+          .limit(1);
+        return row ?? null;
+      },
+    }),
+
+    getInvoiceDetail: tool({
+      description:
+        "دریافت اطلاعات کامل یک فاکتور شامل اقلام و جمع کل.",
+      inputSchema: z.object({
+        invoiceId: z.string().min(1).describe("شناسه فاکتور"),
+      }),
+      execute: async ({ invoiceId }) => {
+        const [invoice] = await db
+          .select({
+            id: invoices.id,
+            number: invoices.number,
+            status: invoices.status,
+            total: invoices.total,
+            discount: invoices.discount,
+            contactId: invoices.contactId,
+            contactName: sql<string>`(${contacts.firstName} || ' ' || coalesce(${contacts.lastName}, ''))`,
+            dueAt: invoices.dueAt,
+            createdAt: invoices.createdAt,
+          })
+          .from(invoices)
+          .leftJoin(contacts, eq(contacts.id, invoices.contactId))
+          .where(and(eq(invoices.id, invoiceId), eq(invoices.workspaceId, ctx.workspaceId)))
+          .limit(1);
+        if (!invoice) return null;
+
+        const items = await db
+          .select()
+          .from(invoiceItems)
+          .where(eq(invoiceItems.invoiceId, invoiceId));
+
+        return { ...invoice, items };
+      },
+    }),
+
+    getProductDetail: tool({
+      description:
+        "دریافت اطلاعات کامل یک کالا شامل سطح موجودی.",
+      inputSchema: z.object({
+        productId: z.string().min(1).describe("شناسه کالا"),
+      }),
+      execute: async ({ productId }) => {
+        const [product] = await db
+          .select()
+          .from(products)
+          .where(and(eq(products.id, productId), eq(products.workspaceId, ctx.workspaceId)))
+          .limit(1);
+        if (!product) return null;
+
+        const stock = await db
+          .select({
+            warehouseName: warehouses.name,
+            quantity: stockLevels.quantity,
+            reorderLevel: stockLevels.reorderLevel,
+          })
+          .from(stockLevels)
+          .innerJoin(warehouses, eq(warehouses.id, stockLevels.warehouseId))
+          .where(eq(stockLevels.productId, productId));
+
+        return { ...product, stock };
+      },
+    }),
+
+    listContacts: tool({
+      description:
+        "جستجو و فیلتر مخاطبان با امکان فیلتر بر اساس مرحله عمر، منبع و شرکت.",
+      inputSchema: z.object({
+        query: z.string().optional().describe("عبارت جستجو در نام، ایمیل یا تلفن"),
+        lifecycleStage: z.string().optional().describe("مرحله عمر مشتری"),
+        limit: z.number().min(1).max(20).default(10),
+      }),
+      execute: async ({ query, lifecycleStage, limit }) => {
+        const conditions = [eq(contacts.workspaceId, ctx.workspaceId)];
+        if (query) {
+          const q = `%${query}%`;
+          conditions.push(
+            or(
+              ilike(contacts.firstName, q),
+              ilike(contacts.lastName ?? "", q),
+              ilike(contacts.email ?? "", q),
+              ilike(contacts.phone ?? "", q)
+            )!
+          );
+        }
+        if (lifecycleStage) {
+          conditions.push(eq(contacts.lifecycleStage, lifecycleStage as "lead" | "prospect" | "customer" | "inactive"));
+        }
+        return db
+          .select({
+            id: contacts.id,
+            firstName: contacts.firstName,
+            lastName: contacts.lastName,
+            email: contacts.email,
+            phone: contacts.phone,
+            lifecycleStage: contacts.lifecycleStage,
+          })
+          .from(contacts)
+          .where(and(...conditions))
+          .limit(limit);
+      },
+    }),
+
+    listDeals: tool({
+      description:
+        "جستجو و فیلتر فرصت‌های فروش با امکان فیلتر بر اساس وضعیت و مرحله.",
+      inputSchema: z.object({
+        query: z.string().optional().describe("عبارت جستجو در عنوان"),
+        status: z.enum(["open", "won", "lost"]).optional().describe("وضعیت فرصت"),
+        limit: z.number().min(1).max(20).default(10),
+      }),
+      execute: async ({ query, status, limit }) => {
+        const conditions = [eq(deals.workspaceId, ctx.workspaceId)];
+        if (query) {
+          conditions.push(ilike(deals.title, `%${query}%`));
+        }
+        if (status) {
+          conditions.push(eq(deals.status, status));
+        }
+        return db
+          .select({
+            id: deals.id,
+            title: deals.title,
+            amount: deals.amount,
+            status: deals.status,
+            stageName: stages.name,
+            createdAt: deals.createdAt,
+          })
+          .from(deals)
+          .innerJoin(stages, eq(stages.id, deals.stageId))
+          .where(and(...conditions))
+          .orderBy(desc(deals.createdAt))
+          .limit(limit);
+      },
+    }),
+
+    listInvoices: tool({
+      description:
+        "جستجو و فیلتر فاکتورها با امکان فیلتر بر اساس وضعیت.",
+      inputSchema: z.object({
+        query: z.string().optional().describe("عبارت جستجو در شماره فاکتور"),
+        status: z.enum(["draft", "sent", "paid", "overdue", "cancelled"]).optional().describe("وضعیت فاکتور"),
+        limit: z.number().min(1).max(20).default(10),
+      }),
+      execute: async ({ query, status, limit }) => {
+        const conditions = [eq(invoices.workspaceId, ctx.workspaceId)];
+        if (query) {
+          conditions.push(ilike(invoices.number, `%${query}%`));
+        }
+        if (status) {
+          conditions.push(eq(invoices.status, status));
+        }
+        return db
+          .select({
+            id: invoices.id,
+            number: invoices.number,
+            status: invoices.status,
+            total: invoices.total,
+            contactId: invoices.contactId,
+            createdAt: invoices.createdAt,
+          })
+          .from(invoices)
+          .where(and(...conditions))
+          .orderBy(desc(invoices.createdAt))
+          .limit(limit);
+      },
+    }),
+
+    listProducts: tool({
+      description:
+        "جستجو و فیلتر کالاها با امکان فیلتر بر اساس وضعیت فعال/غیرفعال.",
+      inputSchema: z.object({
+        query: z.string().optional().describe("عبارت جستجو در نام یا SKU"),
+        limit: z.number().min(1).max(20).default(10),
+      }),
+      execute: async ({ query, limit }) => {
+        const conditions = [eq(products.workspaceId, ctx.workspaceId)];
+        if (query) {
+          const q = `%${query}%`;
+          conditions.push(or(ilike(products.name, q), ilike(products.sku, q))!);
+        }
+        return db
+          .select({
+            id: products.id,
+            name: products.name,
+            sku: products.sku,
+            unitPrice: products.unitPrice,
+            active: products.active,
+          })
+          .from(products)
+          .where(and(...conditions))
+          .orderBy(asc(products.name))
+          .limit(limit);
+      },
+    }),
+
+    getStockLevels: tool({
+      description:
+        "مشاهده سطح موجودی کالاها در انبارها.",
+      inputSchema: z.object({
+        productName: z.string().optional().describe("نام کالا برای فیلتر"),
+        limit: z.number().min(1).max(50).default(20),
+      }),
+      execute: async ({ productName, limit }) => {
+        const conditions = [eq(stockLevels.workspaceId, ctx.workspaceId)];
+        if (productName) {
+          conditions.push(ilike(products.name, `%${productName}%`));
+        }
+        return db
+          .select({
+            productName: products.name,
+            productSku: products.sku,
+            warehouseName: warehouses.name,
+            quantity: stockLevels.quantity,
+            reorderLevel: stockLevels.reorderLevel,
+          })
+          .from(stockLevels)
+          .innerJoin(products, eq(products.id, stockLevels.productId))
+          .innerJoin(warehouses, eq(warehouses.id, stockLevels.warehouseId))
+          .where(and(...conditions))
+          .limit(limit);
+      },
+    }),
+
+    searchKnowledgeBase: tool({
+      description:
+        "جستجو در پایگاه دانش هوش مصنوعی برای یافتن اطلاعات محصول، توصیه‌های فروش و سوالات متداول.",
+      inputSchema: z.object({
+        query: z.string().min(1).describe("عبارت جستجو"),
+      }),
+      execute: async ({ query }) => {
+        return searchKnowledge(ctx.workspaceId, query);
+      },
+    }),
+
+    getContentLibrary: tool({
+      description:
+        "مشاهده کتابخانه محتوای اختصاص‌یافته به یک مخاطب خاص.",
+      inputSchema: z.object({
+        contactId: z.string().min(1).describe("شناسه مخاطب"),
+      }),
+      execute: async ({ contactId }) => {
+        const { getContentAssignments } = await import("@/services/ai-content");
+        return getContentAssignments(ctx.workspaceId, contactId);
+      },
+    }),
+
+    listContentLibrary: tool({
+      description:
+        "جستجو و فیلتر کتابخانه محتوا (ویدیو، مستند، تصویر) برای مدیریت محتوای AI.",
+      inputSchema: z.object({
+        query: z.string().optional().describe("عبارت جستجو در عنوان"),
+        type: z.enum(["video_link", "document", "image", "custom"]).optional().describe("نوع محتوا"),
+        limit: z.number().min(1).max(20).default(10),
+      }),
+      execute: async ({ query, type, limit }) => {
+        const { listContent } = await import("@/services/ai-content");
+        return listContent(ctx.workspaceId, { search: query, type, pageSize: limit });
       },
     }),
   };
@@ -304,6 +626,52 @@ export function writeTools(ctx: ToolContext) {
           ctx.userId,
           ctx.conversationId,
           "sendSms",
+          args
+        );
+        return {
+          needsApproval: true,
+          toolRunId: run.id,
+          message: "این عملیات در انتظار تأیید شماست.",
+        };
+      },
+    }),
+
+    assignContent: tool({
+      description:
+        "تخصیص یک محتوا (ویدیو/مستند) به یک مخاطب برای مشاهده. نیازمند تأیید.",
+      inputSchema: z.object({
+        contentId: z.string().min(1).describe("شناسه محتوا"),
+        contactId: z.string().min(1).describe("شناسه مخاطب"),
+        notes: z.string().optional().describe("توضیحات اضافی"),
+      }),
+      execute: async (args) => {
+        const run = await requestToolRun(
+          ctx.workspaceId,
+          ctx.userId,
+          ctx.conversationId,
+          "assignContent",
+          args
+        );
+        return {
+          needsApproval: true,
+          toolRunId: run.id,
+          message: "این عملیات در انتظار تأیید شماست.",
+        };
+      },
+    }),
+
+    markContentViewed: tool({
+      description:
+        "علامت‌گذاری یک محتوای اختصاص‌یافته به‌عنوان مشاهده‌شده توسط مخاطب.",
+      inputSchema: z.object({
+        assignmentId: z.string().min(1).describe("شناسه تخصیص"),
+      }),
+      execute: async (args) => {
+        const run = await requestToolRun(
+          ctx.workspaceId,
+          ctx.userId,
+          ctx.conversationId,
+          "markContentViewed",
           args
         );
         return {

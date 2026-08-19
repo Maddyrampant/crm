@@ -78,6 +78,13 @@
       "when": 1786961813592,
       "tag": "0010_careless_miss_america",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1787131890590,
+      "tag": "0011_ai_knowledge_content",
+      "breakpoints": true
     }
   ]
 }
