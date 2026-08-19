@@ -56,6 +56,7 @@ import {
   exportContactsCsvAction,
 } from "@/actions/contacts";
 import { showUndoToast } from "@/components/ui/undo-toast";
+import { useUrlFilters } from "@/hooks/use-url-filters";
 import { ContactFormDialog } from "@/components/contacts/contact-form-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SOURCE_LABELS, STAGE_LABELS, STAGE_VARIANT } from "@/lib/labels";
@@ -99,8 +100,13 @@ export function ContactsTable({
   canDelete,
 }: Props) {
   const [searchInput, setSearchInput] = useState("");
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
-  const [page, setPage] = useState(1);
+  const { filters, setFilter, setFilters, page, setPage } = useUrlFilters({
+    search: "",
+    lifecycleStage: "all",
+    source: "all",
+    ownerId: "all",
+    tagId: "all",
+  });
   const [pageSize, setPageSize] = useState(20);
   const [sortBy, setSortBy] = useState<"firstName" | "createdAt" | "updatedAt">(
     "firstName"
@@ -116,11 +122,14 @@ export function ContactsTable({
 
   useEffect(() => {
     const t = setTimeout(() => {
-      setFilters((f) => ({ ...f, search: searchInput }));
-      setPage(1);
+      setFilters({ search: searchInput });
     }, 400);
     return () => clearTimeout(t);
-  }, [searchInput]);
+  }, [searchInput, setFilters]);
+
+  useEffect(() => {
+    setSearchInput(filters.search);
+  }, []);
 
   const load = useCallback(async () => {
     const result = await getContactsAction({
@@ -241,7 +250,7 @@ export function ContactsTable({
             <Select
               value={filters.lifecycleStage}
               onValueChange={(v) => {
-                setFilters((f) => ({ ...f, lifecycleStage: v }));
+                setFilter("lifecycleStage", v);
                 setPage(1);
               }}
             >
@@ -260,7 +269,7 @@ export function ContactsTable({
             <Select
               value={filters.source}
               onValueChange={(v) => {
-                setFilters((f) => ({ ...f, source: v }));
+                setFilter("source", v);
                 setPage(1);
               }}
             >
@@ -279,7 +288,7 @@ export function ContactsTable({
             <Select
               value={filters.ownerId}
               onValueChange={(v) => {
-                setFilters((f) => ({ ...f, ownerId: v }));
+                setFilter("ownerId", v);
                 setPage(1);
               }}
             >
@@ -298,7 +307,7 @@ export function ContactsTable({
             <Select
               value={filters.tagId}
               onValueChange={(v) => {
-                setFilters((f) => ({ ...f, tagId: v }));
+                setFilter("tagId", v);
                 setPage(1);
               }}
             >
@@ -484,7 +493,7 @@ export function ContactsTable({
                 variant="outline"
                 size="icon-sm"
                 disabled={page <= 1 || isPending}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                onClick={() => setPage(Math.max(1, page - 1))}
               >
                 <ChevronRight className="size-4 ltr:rotate-180" />
               </Button>
@@ -495,7 +504,7 @@ export function ContactsTable({
                 variant="outline"
                 size="icon-sm"
                 disabled={page >= totalPages || isPending}
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                onClick={() => setPage(Math.min(totalPages, page + 1))}
               >
                 <ChevronLeft className="size-4 ltr:rotate-180" />
               </Button>
