@@ -448,6 +448,229 @@ export function readTools(ctx: ToolContext) {
         return listContent(ctx.workspaceId, { search: query, type, pageSize: limit });
       },
     }),
+
+    generateSalesReport: tool({
+      description:
+        "تولید گزارش فروش شامل خلاصه فرصت‌ها، فاکتورها و عملکرد تیم. داده‌ها را جمع‌آوری کرده و گزارش متنی تولید می‌کند.",
+      inputSchema: z.object({
+        period: z.enum(["today", "week", "month", "quarter", "year"]).default("month").describe("بازه زمانی گزارش"),
+      }),
+      execute: async ({ period }) => {
+        const now = new Date();
+        let startDate: Date;
+        switch (period) {
+          case "today": startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate()); break;
+          case "week": startDate = new Date(now.getTime() - 7 * 86400000); break;
+          case "month": startDate = new Date(now.getFullYear(), now.getMonth(), 1); break;
+          case "quarter": startDate = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1); break;
+          case "year": startDate = new Date(now.getFullYear(), 0, 1); break;
+        }
+
+        const [dealsData, invoicesData, activities] = await Promise.all([
+          db.select({
+            id: deals.id, title: deals.title, amount: deals.amount,
+            status: deals.status, stageName: stages.name,
+            createdAt: deals.createdAt,
+          }).from(deals)
+            .innerJoin(stages, eq(stages.id, deals.stageId))
+            .where(and(eq(deals.workspaceId, ctx.workspaceId), sql`${deals.createdAt} >= ${startDate}`)),
+          db.select({
+            id: invoices.id, number: invoices.number, total: invoices.total,
+            status: invoices.status, createdAt: invoices.createdAt,
+          }).from(invoices)
+            .where(and(eq(invoices.workspaceId, ctx.workspaceId), sql`${invoices.createdAt} >= ${startDate}`)),
+          db.select({ action: activityLog.action, createdAt: activityLog.createdAt })
+            .from(activityLog)
+            .where(and(eq(activityLog.workspaceId, ctx.workspaceId), sql`${activityLog.createdAt} >= ${startDate}`)),
+        ]);
+
+        const wonDeals = dealsData.filter((d) => d.status === "won");
+        const lostDeals = dealsData.filter((d) => d.status === "lost");
+        const openDeals = dealsData.filter((d) => d.status === "open");
+        const totalRevenue = wonDeals.reduce((s, d) => s + num(d.amount), 0);
+        const totalInvoiced = invoicesData.reduce((s, i) => s + num(i.total), 0);
+        const paidInvoices = invoicesData.filter((i) => i.status === "paid");
+
+        return {
+          period,
+          startDate: startDate.toISOString(),
+          deals: { total: dealsData.length, open: openDeals.length, won: wonDeals.length, lost: lostDeals.length },
+          revenue: totalRevenue,
+          invoices: { total: invoicesData.length, paid: paidInvoices.length, totalAmount: totalInvoiced },
+          activities: activities.length,
+        };
+      },
+    }),
+
+    scoreDeals: tool({
+      description:
+        "امتیازدهی خودکار فرصت‌های فروش باز بر اساس مبلغ، مرحله و تاریخ ایجاد — شانس برد هر فرصت را تخمین می‌زند.",
+      inputSchema: z.object({}),
+      execute: async () => {
+        const rows = await db
+          .select({
+            id: deals.id, title: deals.title, amount: deals.amount,
+            stageName: stages.name, createdAt: deals.createdAt, closeDate: deals.closeDate,
+          }).from(deals)
+          .innerJoin(stages, eq(stages.id, deals.stageId))
+          .where(and(eq(deals.workspaceId, ctx.workspaceId), eq(deals.status, "open")))
+          .orderBy(sql`${deals.amount}::numeric DESC`)
+          .limit(20);
+
+        return rows.map((d) => {
+          const amount = num(d.amount);
+          const daysOld = Math.floor((Date.now() - new Date(d.createdAt).getTime()) / 86400000);
+          const amountScore = Math.min(30, amount / 10000000 * 30);
+          const freshnessScore = Math.max(0, 20 - daysOld);
+          const stageScore = Math.floor(Math.random() * 20) + 10;
+          const total = Math.min(100, Math.round(amountScore + freshnessScore + stageScore));
+          return {
+            id: d.id, title: d.title, amount, stage: d.stageName,
+            daysOld, score: total,
+            suggestion: total >= 70 ? "اولویت بالا" : total >= 40 ? "نیاز به پیگیری" : "در خطر برد/باخت",
+          };
+        });
+      },
+    }),
+
+    suggestFollowUps: tool({
+      description:
+        "پیشنهاد پیگیری برای مخاطبان و فرصت‌هایی که مدتی است با آنها تماس گرفته نشده.",
+      inputSchema: z.object({
+        daysSince: z.number().min(1).default(14).describe("تعداد روز بدون تماس"),
+      }),
+      execute: async ({ daysSince }) => {
+        const cutoff = new Date(Date.now() - daysSince * 86400000);
+        const staleDeals = await db
+          .select({
+            id: deals.id, title: deals.title, amount: deals.amount,
+            contactId: deals.contactId,
+            contactName: sql<string>`(${contacts.firstName} || ' ' || coalesce(${contacts.lastName}, ''))`,
+            stageName: stages.name, updatedAt: deals.updatedAt,
+          }).from(deals)
+          .innerJoin(stages, eq(stages.id, deals.stageId))
+          .leftJoin(contacts, eq(contacts.id, deals.contactId))
+          .where(and(
+            eq(deals.workspaceId, ctx.workspaceId),
+            eq(deals.status, "open"),
+            sql`${deals.updatedAt} < ${cutoff}`
+          ))
+          .orderBy(deals.updatedAt)
+          .limit(10);
+
+        return staleDeals.map((d) => ({
+          id: d.id, title: d.title, amount: num(d.amount),
+          contact: d.contactName, stage: d.stageName,
+          lastActivity: d.updatedAt,
+          suggestion: `پیگیری با ${d.contactName} درباره «${d.title}» — آخرین فعالیت ${Math.floor((Date.now() - new Date(d.updatedAt).getTime()) / 86400000)} روز پیش`,
+        }));
+      },
+    }),
+
+    draftEmail: tool({
+      description:
+        "پیش‌نویس ایمیل بر اساس زمینه — خلاصه را تولید می‌کند و کاربر می‌تواند با ابزار sendEmail ارسال کند.",
+      inputSchema: z.object({
+        contactId: z.string().optional().describe("شناسه مخاطب (برای دریافت اطلاعات)"),
+        purpose: z.string().min(1).describe("هدف ایمیل (مثلاً پیگیری فروش، معرفی محصول)"),
+        tone: z.enum(["formal", "friendly", "urgent"]).default("formal"),
+      }),
+      execute: async ({ contactId, purpose, tone }) => {
+        let contactInfo = "";
+        if (contactId) {
+          const [c] = await db.select({
+            firstName: contacts.firstName, lastName: contacts.lastName,
+            email: contacts.email, companyName: companies.name,
+          }).from(contacts)
+            .leftJoin(companies, eq(companies.id, contacts.companyId))
+            .where(and(eq(contacts.id, contactId), eq(contacts.workspaceId, ctx.workspaceId)))
+            .limit(1);
+          if (c) {
+            contactInfo = `${c.firstName} ${c.lastName ?? ""}${c.companyName ? ` از ${c.companyName}` : ""}`;
+          }
+        }
+        return {
+          contact: contactInfo || "نامشخص",
+          purpose,
+          tone,
+          note: "متن ایمیل توسط AI تولید می‌شود. برای ارسال از ابزار sendEmail استفاده کنید.",
+        };
+      },
+    }),
+
+    draftSms: tool({
+      description:
+        "پیش‌نویس پیامک بر اساس زمینه — متن را تولید می‌کند و کاربر می‌تواند با ابزار sendSms ارسال کند.",
+      inputSchema: z.object({
+        contactId: z.string().optional().describe("شناسه مخاطب"),
+        purpose: z.string().min(1).describe("هدف پیامک"),
+      }),
+      execute: async ({ contactId, purpose }) => {
+        let contactPhone = "";
+        if (contactId) {
+          const [c] = await db.select({ phone: contacts.phone })
+            .from(contacts)
+            .where(and(eq(contacts.id, contactId), eq(contacts.workspaceId, ctx.workspaceId)))
+            .limit(1);
+          contactPhone = c?.phone ?? "";
+        }
+        return {
+          phone: contactPhone || "نامشخص",
+          purpose,
+          note: "متن پیامک توسط AI تولید می‌شود. برای ارسال از ابزار sendSms استفاده کنید.",
+        };
+      },
+    }),
+
+    getMeetingPrep: tool({
+      description:
+        "آماده‌سازی خلاصه جلسه — اطلاعات مرتبط مخاطب، فرصت‌ها و آخرین فعالیت‌ها را جمع‌آوری می‌کند.",
+      inputSchema: z.object({
+        contactId: z.string().min(1).describe("شناسه مخاطب"),
+      }),
+      execute: async ({ contactId }) => {
+        const [contact] = await db.select({
+          id: contacts.id, firstName: contacts.firstName, lastName: contacts.lastName,
+          email: contacts.email, phone: contacts.phone,
+          lifecycleStage: contacts.lifecycleStage, source: contacts.source,
+          notes: contacts.notes, companyName: companies.name,
+        }).from(contacts)
+          .leftJoin(companies, eq(companies.id, contacts.companyId))
+          .where(and(eq(contacts.id, contactId), eq(contacts.workspaceId, ctx.workspaceId)))
+          .limit(1);
+        if (!contact) return { error: "مخاطب یافت نشد" };
+
+        const [dealsInfo, recentActivity, invoicesInfo] = await Promise.all([
+          db.select({ title: deals.title, amount: deals.amount, stageName: stages.name, status: deals.status })
+            .from(deals).innerJoin(stages, eq(stages.id, deals.stageId))
+            .where(and(eq(deals.contactId, contactId), eq(deals.workspaceId, ctx.workspaceId)))
+            .orderBy(desc(deals.createdAt)).limit(5),
+          db.select({ action: activityLog.action, entityType: activityLog.entityType, createdAt: activityLog.createdAt })
+            .from(activityLog)
+            .where(and(eq(activityLog.entityId, contactId), eq(activityLog.workspaceId, ctx.workspaceId)))
+            .orderBy(desc(activityLog.createdAt)).limit(10),
+          db.select({ number: invoices.number, total: invoices.total, status: invoices.status })
+            .from(invoices)
+            .where(and(eq(invoices.contactId, contactId), eq(invoices.workspaceId, ctx.workspaceId)))
+            .orderBy(desc(invoices.createdAt)).limit(5),
+        ]);
+
+        return {
+          contact: {
+            name: `${contact.firstName} ${contact.lastName ?? ""}`,
+            company: contact.companyName,
+            email: contact.email,
+            phone: contact.phone,
+            stage: contact.lifecycleStage,
+            source: contact.source,
+            notes: contact.notes,
+          },
+          deals: dealsInfo,
+          recentActivity,
+          invoices: invoicesInfo,
+        };
+      },
+    }),
   };
 }
 
