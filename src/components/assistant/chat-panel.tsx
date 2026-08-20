@@ -68,6 +68,12 @@ const toolLabels: Record<string, string> = {
   searchKnowledgeBase: "جستجوی دانش",
   getContentLibrary: "کتابخانه محتوا",
   listContentLibrary: "لیست محتوا",
+  generateSalesReport: "گزارش فروش",
+  scoreDeals: "امتیازدهی فرصت‌ها",
+  suggestFollowUps: "پیشنهاد پیگیری",
+  draftEmail: "پیش‌نویس ایمیل",
+  draftSms: "پیش‌نویس پیامک",
+  getMeetingPrep: "آماده‌سازی جلسه",
 };
 
 const QUICK_PROMPTS = [
