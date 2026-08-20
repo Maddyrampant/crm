@@ -3,6 +3,7 @@ import "server-only";
 import { listPipelines } from "@/services/pipelines";
 import { listCustomFields, listTags } from "@/services/contacts";
 import { getWorkspaceMembers } from "@/services/workspace";
+import { getAiSettings } from "@/services/workspace-settings";
 import {
   SOURCE_LABELS,
   STAGE_LABELS,
@@ -24,11 +25,12 @@ const BASE_PROMPT = `تو دستیار هوش مصنوعی CRM فارسی هست
 export async function buildSystemPrompt(workspaceId: string) {
   const parts: string[] = [BASE_PROMPT];
 
-  const [pipelines, tags, customFields, members] = await Promise.allSettled([
+  const [pipelines, tags, customFields, members, aiSettings] = await Promise.allSettled([
     listPipelines(workspaceId),
     listTags(workspaceId),
     listCustomFields(workspaceId),
     getWorkspaceMembers(workspaceId),
+    getAiSettings(workspaceId),
   ]);
 
   if (pipelines.status === "fulfilled" && pipelines.value.length > 0) {
@@ -78,6 +80,10 @@ export async function buildSystemPrompt(workspaceId: string) {
     `منابع مشتری: ${Object.values(SOURCE_LABELS).join("، ")}`,
     `وضعیت‌های فروش: ${Object.values(STATUS_LABELS).join("، ")}`
   );
+
+  if (aiSettings.status === "fulfilled" && aiSettings.value.systemPromptSuffix) {
+    parts.push(`دستورالعمل اضافی مدیر:\n${aiSettings.value.systemPromptSuffix}`);
+  }
 
   return parts.join("\n\n");
 }

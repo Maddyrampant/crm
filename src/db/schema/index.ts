@@ -21,3 +21,4 @@ export * from "./audit-logs";
 export * from "./woocommerce";
 export * from "./ai-knowledge";
 export * from "./ai-content";
+export * from "./workspace-settings";

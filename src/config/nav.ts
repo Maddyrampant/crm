@@ -311,6 +311,14 @@ export const navSections: NavSection[] = [
         ready: true,
         minRole: "manager",
       },
+      {
+        title: "تنظیمات AI",
+        href: "/settings/ai",
+        icon: Bot,
+        owner: "part1",
+        ready: true,
+        minRole: "admin",
+      },
     ],
   },
 ];
