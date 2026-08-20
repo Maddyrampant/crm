@@ -85,6 +85,13 @@
       "when": 1787131890590,
       "tag": "0011_ai_knowledge_content",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1787198747594,
+      "tag": "0012_workspace_settings",
+      "breakpoints": true
     }
   ]
 }
