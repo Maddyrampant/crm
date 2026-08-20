@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { toast } from "sonner";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -140,7 +141,14 @@ export function AiSettingsForm({ settings }: Props) {
         </CardContent>
       </Card>
 
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between">
+        <Link
+          href="/settings/ai/usage"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <BarChart3 className="size-4" />
+          گزارش مصرف و هزینه
+        </Link>
         <Button onClick={handleSave} disabled={loading}>
           {loading && <Loader2 className="size-4 animate-spin" />}
           <Save className="size-4" />
