@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { activityLog, contacts, deals, pipelines, stages, invoices, invoiceItems, products, stockLevels, warehouses, companies } from "@/db/schema";
 import { requestToolRun } from "@/services/ai";
 import { searchKnowledge } from "@/services/ai-knowledge";
+import { cacheKey, cacheRemember } from "@/lib/cache";
 
 const num = (v: string | number | null | undefined) => Number(v ?? 0);
 
@@ -56,26 +57,32 @@ export function readTools(ctx: ToolContext) {
         "نمای کلی فانل فروش: لیست مراحل به ترتیب، تعداد و ارزش کل فرصت‌های باز هر مرحله.",
       inputSchema: z.object({}),
       execute: async () => {
-        const rows = await db
-          .select({
-            stage: stages.name,
-            count: sql<number>`count(${deals.id})::int`,
-            total: sql<string>`coalesce(sum(${deals.amount}::numeric),0)::text`,
-          })
-          .from(stages)
-          .innerJoin(pipelines, eq(pipelines.id, stages.pipelineId))
-          .leftJoin(
-            deals,
-            and(eq(deals.stageId, stages.id), eq(deals.status, "open"))
-          )
-          .where(eq(pipelines.workspaceId, ctx.workspaceId))
-          .groupBy(stages.name, stages.orderIndex)
-          .orderBy(stages.orderIndex);
-        return rows.map((r) => ({
-          stage: r.stage,
-          count: r.count,
-          total: num(r.total),
-        }));
+        return cacheRemember(
+          cacheKey("ai:pipeline", ctx.workspaceId),
+          120,
+          async () => {
+            const rows = await db
+              .select({
+                stage: stages.name,
+                count: sql<number>`count(${deals.id})::int`,
+                total: sql<string>`coalesce(sum(${deals.amount}::numeric),0)::text`,
+              })
+              .from(stages)
+              .innerJoin(pipelines, eq(pipelines.id, stages.pipelineId))
+              .leftJoin(
+                deals,
+                and(eq(deals.stageId, stages.id), eq(deals.status, "open"))
+              )
+              .where(eq(pipelines.workspaceId, ctx.workspaceId))
+              .groupBy(stages.name, stages.orderIndex)
+              .orderBy(stages.orderIndex);
+            return rows.map((r) => ({
+              stage: r.stage,
+              count: r.count,
+              total: num(r.total),
+            }));
+          },
+        );
       },
     }),
 
@@ -135,26 +142,32 @@ export function readTools(ctx: ToolContext) {
         contactId: z.string().min(1).describe("شناسه مخاطب"),
       }),
       execute: async ({ contactId }) => {
-        const [row] = await db
-          .select({
-            id: contacts.id,
-            firstName: contacts.firstName,
-            lastName: contacts.lastName,
-            email: contacts.email,
-            phone: contacts.phone,
-            lifecycleStage: contacts.lifecycleStage,
-            source: contacts.source,
-            notes: contacts.notes,
-            ownerId: contacts.ownerId,
-            companyId: contacts.companyId,
-            companyName: companies.name,
-            createdAt: contacts.createdAt,
-          })
-          .from(contacts)
-          .leftJoin(companies, eq(companies.id, contacts.companyId))
-          .where(and(eq(contacts.id, contactId), eq(contacts.workspaceId, ctx.workspaceId)))
-          .limit(1);
-        return row ?? null;
+        return cacheRemember(
+          cacheKey("ai:contact", ctx.workspaceId, contactId),
+          300,
+          async () => {
+            const [row] = await db
+              .select({
+                id: contacts.id,
+                firstName: contacts.firstName,
+                lastName: contacts.lastName,
+                email: contacts.email,
+                phone: contacts.phone,
+                lifecycleStage: contacts.lifecycleStage,
+                source: contacts.source,
+                notes: contacts.notes,
+                ownerId: contacts.ownerId,
+                companyId: contacts.companyId,
+                companyName: companies.name,
+                createdAt: contacts.createdAt,
+              })
+              .from(contacts)
+              .leftJoin(companies, eq(companies.id, contacts.companyId))
+              .where(and(eq(contacts.id, contactId), eq(contacts.workspaceId, ctx.workspaceId)))
+              .limit(1);
+            return row ?? null;
+          },
+        );
       },
     }),
 
@@ -165,28 +178,34 @@ export function readTools(ctx: ToolContext) {
         dealId: z.string().min(1).describe("شناسه فرصت فروش"),
       }),
       execute: async ({ dealId }) => {
-        const [row] = await db
-          .select({
-            id: deals.id,
-            title: deals.title,
-            amount: deals.amount,
-            status: deals.status,
-            closeDate: deals.closeDate,
-            contactId: deals.contactId,
-            contactName: sql<string>`(${contacts.firstName} || ' ' || coalesce(${contacts.lastName}, ''))`,
-            stageId: deals.stageId,
-            stageName: stages.name,
-            pipelineId: deals.pipelineId,
-            pipelineName: pipelines.name,
-            createdAt: deals.createdAt,
-          })
-          .from(deals)
-          .innerJoin(stages, eq(stages.id, deals.stageId))
-          .innerJoin(pipelines, eq(pipelines.id, deals.pipelineId))
-          .leftJoin(contacts, eq(contacts.id, deals.contactId))
-          .where(and(eq(deals.id, dealId), eq(deals.workspaceId, ctx.workspaceId)))
-          .limit(1);
-        return row ?? null;
+        return cacheRemember(
+          cacheKey("ai:deal", ctx.workspaceId, dealId),
+          300,
+          async () => {
+            const [row] = await db
+              .select({
+                id: deals.id,
+                title: deals.title,
+                amount: deals.amount,
+                status: deals.status,
+                closeDate: deals.closeDate,
+                contactId: deals.contactId,
+                contactName: sql<string>`(${contacts.firstName} || ' ' || coalesce(${contacts.lastName}, ''))`,
+                stageId: deals.stageId,
+                stageName: stages.name,
+                pipelineId: deals.pipelineId,
+                pipelineName: pipelines.name,
+                createdAt: deals.createdAt,
+              })
+              .from(deals)
+              .innerJoin(stages, eq(stages.id, deals.stageId))
+              .innerJoin(pipelines, eq(pipelines.id, deals.pipelineId))
+              .leftJoin(contacts, eq(contacts.id, deals.contactId))
+              .where(and(eq(deals.id, dealId), eq(deals.workspaceId, ctx.workspaceId)))
+              .limit(1);
+            return row ?? null;
+          },
+        );
       },
     }),
 

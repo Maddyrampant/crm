@@ -237,12 +237,21 @@ export function dispatchRuleEvent(workspaceId: string, event: string, payload: R
         .select()
         .from(rules)
         .where(and(eq(rules.workspaceId, workspaceId), eq(rules.event, event as never), eq(rules.active, true)));
+      const logsToInsert: Array<{
+        workspaceId: string;
+        ruleId: string;
+        event: string;
+        entityId: string | null;
+        matched: boolean;
+        actionsExecuted: number;
+        error?: string;
+      }> = [];
       for (const rule of activeRules) {
         try {
           const ctx = flattenPayload(payload);
           const matched = evaluateConditions(rule.conditions, ctx);
           if (!matched) {
-            await db.insert(ruleLogs).values({
+            logsToInsert.push({
               workspaceId,
               ruleId: rule.id,
               event,
@@ -253,17 +262,17 @@ export function dispatchRuleEvent(workspaceId: string, event: string, payload: R
             continue;
           }
           const { executed, error } = await executeActions(workspaceId, rule, payload);
-          await db.insert(ruleLogs).values({
+          logsToInsert.push({
             workspaceId,
             ruleId: rule.id,
             event,
             entityId: payload.entityId ? String(payload.entityId) : null,
             matched: true,
             actionsExecuted: executed,
-            error,
+            ...(error ? { error } : {}),
           });
         } catch (err) {
-          await db.insert(ruleLogs).values({
+          logsToInsert.push({
             workspaceId,
             ruleId: rule.id,
             event,
@@ -273,6 +282,9 @@ export function dispatchRuleEvent(workspaceId: string, event: string, payload: R
             error: err instanceof Error ? err.message : "unknown error",
           });
         }
+      }
+      if (logsToInsert.length > 0) {
+        await db.insert(ruleLogs).values(logsToInsert);
       }
     } catch {
       // تبلیغات silence — خطای موتور نباید جریان اصلی را بشکند

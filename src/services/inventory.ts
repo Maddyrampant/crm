@@ -34,6 +34,7 @@ import {
   buildPaginatedResult,
   type PaginatedResult,
 } from "@/lib/pagination";
+import { invalidateInventoryCache, invalidateWorkspaceCache } from "@/lib/cache-invalidate";
 
 const num = (v: string | number | null | undefined) => Number(v ?? 0);
 const round2 = (v: number) => Math.round(v * 100) / 100;
@@ -192,6 +193,7 @@ export async function createProduct(workspaceId: string, raw: unknown) {
       notes: input.notes || null,
     })
     .returning();
+  await invalidateInventoryCache(workspaceId);
   return row;
 }
 
@@ -232,6 +234,7 @@ export async function updateProduct(
     })
     .where(and(eq(products.id, productId), eq(products.workspaceId, workspaceId)))
     .returning();
+  if (row) await invalidateInventoryCache(workspaceId);
   return row ?? null;
 }
 
@@ -240,6 +243,7 @@ export async function deleteProduct(workspaceId: string, productId: string) {
     .delete(products)
     .where(and(eq(products.id, productId), eq(products.workspaceId, workspaceId)))
     .returning({ id: products.id });
+  if (row) await invalidateInventoryCache(workspaceId);
   return row ?? null;
 }
 
@@ -464,6 +468,7 @@ export async function adjustStock(
   });
 
   await checkLowStock(workspaceId, input.productId, prevTotal);
+  await invalidateInventoryCache(workspaceId);
   return { prevTotal, newTotal };
 }
 
@@ -546,6 +551,33 @@ export async function listLowStock(workspaceId: string, limit = 50) {
     ...r.product,
     totalStock: num(r.totalStock),
   })) as ProductWithStock[];
+}
+
+/** کالاهای کم‌موجودی به تفکیک ورک‌اسپیس — یک query برای همه (نه N query). */
+export async function listAllLowStock(limit = 20) {
+  const rows = await db
+    .select({
+      workspaceId: stockLevels.workspaceId,
+      productName: products.name,
+      totalStock: sql<string>`coalesce(sum(${stockLevels.quantity}::numeric), 0)::text`,
+    })
+    .from(stockLevels)
+    .innerJoin(products, eq(products.id, stockLevels.productId))
+    .where(sql`${stockLevels.reorderLevel} is not null`)
+    .groupBy(stockLevels.workspaceId, products.id)
+    .having(
+      sql`coalesce(sum(${stockLevels.quantity}::numeric), 0) <= min(${stockLevels.reorderLevel}::numeric)`
+    )
+    .orderBy(sql`coalesce(sum(${stockLevels.quantity}::numeric), 0)`)
+    .limit(limit);
+
+  const byWorkspace = new Map<string, { name: string; totalStock: number }[]>();
+  for (const r of rows) {
+    const list = byWorkspace.get(r.workspaceId) ?? [];
+    list.push({ name: r.productName, totalStock: num(r.totalStock) });
+    byWorkspace.set(r.workspaceId, list);
+  }
+  return byWorkspace;
 }
 
 /* ─────────────────── تأمین‌کنندگان ─────────────────── */

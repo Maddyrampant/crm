@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { cacheKey, cacheRemember } from "@/lib/cache";
 import {
   activityLog,
+  companies,
   contacts,
   deals,
   invoices,
@@ -155,14 +156,17 @@ export async function getDashboardData(workspaceId: string) {
     cacheKey("dashboard", workspaceId),
     KPIS_TTL,
     async () => {
-      const [kpis, salesChart, teamPerformance, recentActivity, pipelineStats] = await Promise.all([
+      const [kpis, salesChart, teamPerformance, recentActivity, pipelineStats, leadSources, recentContacts, recentDeals] = await Promise.all([
         getKpis(workspaceId),
         getSalesChart(workspaceId),
         getTeamPerformance(workspaceId),
         getTodayActivity(workspaceId),
         getPipelineStats(workspaceId),
+        getLeadSourceStats(workspaceId),
+        getRecentContacts(workspaceId),
+        getRecentDeals(workspaceId),
       ]);
-      return { kpis, salesChart, teamPerformance, recentActivity, pipelineStats };
+      return { kpis, salesChart, teamPerformance, recentActivity, pipelineStats, leadSources, recentContacts, recentDeals };
     },
   );
 }
@@ -244,6 +248,35 @@ export async function getTodayActivity(workspaceId: string) {
     .from(activityLog)
     .where(and(eq(activityLog.workspaceId, workspaceId), gte(activityLog.createdAt, today)))
     .orderBy(desc(activityLog.createdAt));
+}
+
+export async function getRecentContacts(workspaceId: string, limit = 5) {
+  return db
+    .select({
+      contact: contacts,
+      companyName: companies.name,
+    })
+    .from(contacts)
+    .leftJoin(companies, eq(companies.id, contacts.companyId))
+    .where(eq(contacts.workspaceId, workspaceId))
+    .orderBy(desc(contacts.createdAt))
+    .limit(limit);
+}
+
+export async function getRecentDeals(workspaceId: string, limit = 5) {
+  return db
+    .select({
+      deal: deals,
+      contactName: contacts.firstName,
+      contactLastName: contacts.lastName,
+      stageName: stages.name,
+    })
+    .from(deals)
+    .leftJoin(contacts, eq(contacts.id, deals.contactId))
+    .leftJoin(stages, eq(stages.id, deals.stageId))
+    .where(eq(deals.workspaceId, workspaceId))
+    .orderBy(desc(deals.updatedAt))
+    .limit(limit);
 }
 
 export async function getSalesSummary(workspaceId: string) {
