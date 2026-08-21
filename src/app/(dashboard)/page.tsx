@@ -9,7 +9,7 @@ import {
   Users,
   Zap,
 } from "lucide-react";
-import { and, count, desc, eq, gte, sql } from "drizzle-orm";
+import { and, count, eq, gte } from "drizzle-orm";
 import {
   startOfDay,
   startOfWeek,
@@ -21,9 +21,9 @@ import {
 import { format as formatJalali } from "date-fns-jalali";
 import { requireWorkspace } from "@/lib/session";
 import { db } from "@/db";
-import { companies, contacts, deals, stages } from "@/db/schema";
+import { contacts, deals } from "@/db/schema";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/format";
-import { getKpis, getRevenueByMonth, getLeadSourceStats, getRecentActivity } from "@/services/reports";
+import { getDashboardData } from "@/services/reports";
 import { getStalledDeals } from "@/services/forecast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
@@ -97,18 +97,12 @@ export default async function DashboardPage({
   const sixMonthsAgo = startOfMonth(addMonths(new Date(), -5));
 
   const [
-    kpis,
+    dashboardData,
     newContactsRow,
     wonRows,
-    stageRows,
-    revenueByMonth,
-    leadSources,
-    recentActivity,
     stalledDeals,
-    recentContacts,
-    recentDeals,
   ] = await Promise.all([
-    getKpis(workspaceId),
+    getDashboardData(workspaceId),
     db
       .select({ value: count() })
       .from(contacts)
@@ -128,46 +122,16 @@ export default async function DashboardPage({
           gte(deals.wonAt, sixMonthsAgo),
         ),
       ),
-    db
-      .select({
-        stageName: stages.name,
-        stageColor: stages.color,
-        count: count(),
-        value: sql<string>`coalesce(sum(${deals.amount}), 0)`,
-      })
-      .from(deals)
-      .innerJoin(stages, eq(stages.id, deals.stageId))
-      .where(and(eq(deals.workspaceId, workspaceId), eq(deals.status, "open")))
-      .groupBy(stages.id, stages.name, stages.color)
-      .orderBy(sql`count desc`),
-    getRevenueByMonth(workspaceId),
-    getLeadSourceStats(workspaceId),
-    getRecentActivity(workspaceId, 8),
     getStalledDeals(workspaceId),
-    db
-      .select({
-        contact: contacts,
-        companyName: companies.name,
-      })
-      .from(contacts)
-      .leftJoin(companies, eq(companies.id, contacts.companyId))
-      .where(eq(contacts.workspaceId, workspaceId))
-      .orderBy(desc(contacts.createdAt))
-      .limit(5),
-    db
-      .select({
-        deal: deals,
-        contactName: contacts.firstName,
-        contactLastName: contacts.lastName,
-        stageName: stages.name,
-      })
-      .from(deals)
-      .leftJoin(contacts, eq(contacts.id, deals.contactId))
-      .leftJoin(stages, eq(stages.id, deals.stageId))
-      .where(eq(deals.workspaceId, workspaceId))
-      .orderBy(desc(deals.updatedAt))
-      .limit(5),
   ]);
+
+  const { kpis, leadSources, recentActivity, recentContacts, recentDeals } = dashboardData;
+  const stageRows = dashboardData.pipelineStats.map((r) => ({
+    stageName: r.name,
+    stageColor: r.color,
+    count: r.count,
+    value: String(r.total),
+  }));
 
   const revenueChartData = (() => {
     const months: { key: string; label: string; value: number }[] = [];

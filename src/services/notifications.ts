@@ -21,6 +21,7 @@ import {
   buildPaginatedResult,
   type PaginatedResult,
 } from "@/lib/pagination";
+import { cacheKey, cacheRemember } from "@/lib/cache";
 
 export type NotificationInput = {
   workspaceId: string;
@@ -51,14 +52,25 @@ export async function createNotification(
   return row;
 }
 
+/** دریافت اعضای ورک‌اسپیس (با کش ۶۰ ثانیه‌ای). */
+async function getWorkspaceMembers(workspaceId: string) {
+  return cacheRemember(
+    cacheKey("members", workspaceId),
+    60,
+    async () => {
+      return db
+        .select({ userId: workspaceMembers.userId })
+        .from(workspaceMembers)
+        .where(eq(workspaceMembers.workspaceId, workspaceId));
+    },
+  );
+}
+
 /** اعلان دسته‌ای برای همه اعضای ورک‌اسپیس (بدون userId). */
 export async function notifyWorkspace(
   input: Omit<NotificationInput, "userId">
 ) {
-  const members = await db
-    .select({ userId: workspaceMembers.userId })
-    .from(workspaceMembers)
-    .where(eq(workspaceMembers.workspaceId, input.workspaceId));
+  const members = await getWorkspaceMembers(input.workspaceId);
   if (members.length === 0) return 0;
 
   const rows = await db
