@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { requireWorkspace } from "@/lib/session";
+import { requireWorkspace, requireWorkspaceRole } from "@/lib/session";
 import * as leadScoringService from "@/services/lead-scoring";
 
 const leadScoreSettingsSchema = z.object({
@@ -21,7 +21,7 @@ export async function calculateLeadScoreAction(contactId: string) {
 }
 
 export async function batchScoreContactsAction() {
-  const { workspaceId } = await requireWorkspace();
+  const { workspaceId } = await requireWorkspaceRole("manager");
   const scored = await leadScoringService.batchScoreContacts(workspaceId);
   revalidatePath("/contacts");
   return { ok: true, data: { scored } };
@@ -34,7 +34,7 @@ export async function getLeadScoreSettingsAction() {
 }
 
 export async function updateLeadScoreSettingsAction(settings: unknown) {
-  const { workspaceId } = await requireWorkspace();
+  const { workspaceId } = await requireWorkspaceRole("manager");
   const parsed = leadScoreSettingsSchema.safeParse(settings);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "ورودی نامعتبر" };
   const result = await leadScoringService.updateLeadScoreSettings(workspaceId, parsed.data);

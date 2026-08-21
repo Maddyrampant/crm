@@ -156,6 +156,7 @@ export const navSections: NavSection[] = [
         icon: MessageSquare,
         owner: "part1",
         ready: true,
+        minRole: "seller",
       },
       {
         title: "اهداف فروش",
@@ -163,6 +164,7 @@ export const navSections: NavSection[] = [
         icon: Target,
         owner: "part1",
         ready: true,
+        minRole: "seller",
       },
       {
         title: "امتیازدهی لید",
@@ -170,6 +172,7 @@ export const navSections: NavSection[] = [
         icon: Zap,
         owner: "part1",
         ready: true,
+        minRole: "manager",
       },
     ],
   },
@@ -236,6 +239,7 @@ export const navSections: NavSection[] = [
         icon: Shield,
         owner: "part1",
         ready: true,
+        minRole: "admin",
       },
       {
         title: "خروجی داده",
@@ -243,6 +247,7 @@ export const navSections: NavSection[] = [
         icon: Download,
         owner: "part1",
         ready: true,
+        minRole: "manager",
       },
       {
         title: "ورک‌اسپیس",

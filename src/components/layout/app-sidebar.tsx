@@ -18,14 +18,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { navSections, type NavRole } from "@/config/nav";
-
-const ROLE_LEVEL: Record<NavRole, number> = {
-  viewer: 0,
-  seller: 1,
-  manager: 2,
-  admin: 3,
-  owner: 4,
-};
+import { ROLE_LEVEL } from "@/lib/roles";
 
 function Brand() {
   return (
