@@ -1,10 +1,10 @@
 "use server";
 
-import { requireWorkspace } from "@/lib/session";
+import { requireWorkspaceRole } from "@/lib/session";
 import { exportContacts, exportDeals, exportInvoices } from "@/services/export";
 
 export async function exportDataAction(entity: string) {
-  const { workspaceId } = await requireWorkspace();
+  const { workspaceId } = await requireWorkspaceRole("manager");
 
   let csv = "";
   switch (entity) {

@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { workspaceMembers, type WorkspaceMember } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { ROLE_LEVEL, type RoleLevel } from "@/lib/roles";
 
 export async function getSession() {
   const session = await auth.api.getSession({
@@ -13,17 +14,9 @@ export async function getSession() {
   return session;
 }
 
-const ROLE_LEVEL: Record<WorkspaceMember["role"], number> = {
-  viewer: 0,
-  seller: 1,
-  manager: 2,
-  admin: 3,
-  owner: 4,
-};
-
 export function hasPermission(
   membership: WorkspaceMember | null | undefined,
-  required: keyof typeof ROLE_LEVEL
+  required: RoleLevel
 ): boolean {
   if (!membership) return false;
   return ROLE_LEVEL[membership.role] >= ROLE_LEVEL[required];
@@ -58,11 +51,11 @@ export async function requireWorkspace() {
 }
 
 export async function requireWorkspaceRole(
-  required: keyof typeof ROLE_LEVEL
+  required: RoleLevel
 ) {
   const ctx = await requireWorkspace();
   if (!hasPermission(ctx.membership, required)) {
-    redirect("/dashboard");
+    redirect("/");
   }
   return ctx;
 }

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { requireWorkspace } from "@/lib/session";
+import { requireWorkspace, requireWorkspaceRole } from "@/lib/session";
 import * as customFieldsService from "@/services/custom-fields";
 
 const createFieldSchema = z.object({
@@ -27,7 +27,7 @@ export async function getFieldsForEntityAction(entity: string) {
 }
 
 export async function createFieldAction(input: unknown) {
-  const { workspaceId } = await requireWorkspace();
+  const { workspaceId } = await requireWorkspaceRole("admin");
   const parsed = createFieldSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "ورودی نامعتبر" };
   const row = await customFieldsService.createField(workspaceId, parsed.data);
@@ -36,7 +36,7 @@ export async function createFieldAction(input: unknown) {
 }
 
 export async function deleteFieldAction(id: string) {
-  const { workspaceId } = await requireWorkspace();
+  const { workspaceId } = await requireWorkspaceRole("admin");
   const row = await customFieldsService.deleteField(workspaceId, id);
   revalidatePath("/settings");
   return { ok: Boolean(row) };

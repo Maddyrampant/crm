@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { requireWorkspace } from "@/lib/session";
+import { requireWorkspace, requireWorkspaceRole } from "@/lib/session";
 import * as emailCampaignService from "@/services/email-campaign";
 
 const campaignSchema = z.object({
@@ -36,7 +36,7 @@ export async function getCampaignAction(id: string) {
 }
 
 export async function createCampaignAction(input: unknown) {
-  const { workspaceId } = await requireWorkspace();
+  const { workspaceId } = await requireWorkspaceRole("seller");
   const parsed = campaignSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "ورودی نامعتبر" };
   const row = await emailCampaignService.createCampaign(workspaceId, parsed.data);
@@ -45,7 +45,7 @@ export async function createCampaignAction(input: unknown) {
 }
 
 export async function updateCampaignAction(id: string, input: unknown) {
-  const { workspaceId } = await requireWorkspace();
+  const { workspaceId } = await requireWorkspaceRole("seller");
   const parsed = campaignSchema.partial().safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "ورودی نامعتبر" };
   const row = await emailCampaignService.updateCampaign(workspaceId, id, parsed.data);
@@ -55,14 +55,14 @@ export async function updateCampaignAction(id: string, input: unknown) {
 }
 
 export async function deleteCampaignAction(id: string) {
-  const { workspaceId } = await requireWorkspace();
+  const { workspaceId } = await requireWorkspaceRole("seller");
   const row = await emailCampaignService.deleteCampaign(workspaceId, id);
   revalidatePath("/campaigns");
   return { ok: Boolean(row) };
 }
 
 export async function sendCampaignAction(id: string) {
-  const { workspaceId } = await requireWorkspace();
+  const { workspaceId } = await requireWorkspaceRole("seller");
   const row = await emailCampaignService.sendCampaign(workspaceId, id);
   if (!row) return { ok: false, error: "کمپین یافت نشد" };
   revalidatePath("/campaigns");
@@ -76,7 +76,7 @@ export async function listCampaignTemplatesAction() {
 }
 
 export async function createCampaignTemplateAction(input: unknown) {
-  const { workspaceId } = await requireWorkspace();
+  const { workspaceId } = await requireWorkspaceRole("seller");
   const parsed = campaignTemplateSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "ورودی نامعتبر" };
   const row = await emailCampaignService.createTemplate(workspaceId, parsed.data);
@@ -85,7 +85,7 @@ export async function createCampaignTemplateAction(input: unknown) {
 }
 
 export async function deleteCampaignTemplateAction(id: string) {
-  const { workspaceId } = await requireWorkspace();
+  const { workspaceId } = await requireWorkspaceRole("seller");
   const row = await emailCampaignService.deleteTemplate(workspaceId, id);
   revalidatePath("/campaigns");
   return { ok: Boolean(row) };
