@@ -125,7 +125,7 @@ export type KanbanStage = typeof stages.$inferSelect & {
   deals: BoardDeal[];
 };
 
-export async function getKanbanBoard(workspaceId: string, pipelineId?: string | null) {
+export async function getKanbanBoard(workspaceId: string, pipelineId?: string | null, forceOwnerId?: string | null) {
   let pipelineIdResolved = pipelineId ?? null;
   if (!pipelineIdResolved) {
     const [def] = await db
@@ -155,6 +155,9 @@ export async function getKanbanBoard(workspaceId: string, pipelineId?: string | 
     .where(eq(stages.pipelineId, pipeline.id))
     .orderBy(asc(stages.orderIndex));
 
+  const dealConditions: SQL[] = [eq(deals.pipelineId, pipeline.id)];
+  if (forceOwnerId) dealConditions.push(eq(deals.ownerId, forceOwnerId));
+
   const dealRows = await db
     .select(DEAL_SELECT)
     .from(deals)
@@ -162,7 +165,7 @@ export async function getKanbanBoard(workspaceId: string, pipelineId?: string | 
     .leftJoin(companies, eq(companies.id, contacts.companyId))
     .leftJoin(stages, eq(stages.id, deals.stageId))
     .leftJoin(user, eq(user.id, deals.ownerId))
-    .where(eq(deals.pipelineId, pipeline.id))
+    .where(and(...dealConditions))
     .orderBy(desc(deals.updatedAt));
 
   const stagesWithDeals: KanbanStage[] = stageRows.map((stage) => ({

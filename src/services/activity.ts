@@ -53,7 +53,7 @@ type ActivityFeedOptions = {
 
 /** فید فعالیت یک موجودیت (یا کل ورک‌اسپیس) — جدیدترین اول. */
 export async function getActivityFeed(
-  options: ActivityFeedOptions
+  options: ActivityFeedOptions & { userId?: string | null }
 ): Promise<PaginatedResult<ActivityLog>> {
   const page = normalizePage(options.page);
   const pageSize = normalizePageSize(options.pageSize ?? options.limit);
@@ -62,6 +62,7 @@ export async function getActivityFeed(
   const conditions = [eq(activityLog.workspaceId, options.workspaceId)];
   if (options.entityType) conditions.push(eq(activityLog.entityType, options.entityType));
   if (options.entityId) conditions.push(eq(activityLog.entityId, options.entityId));
+  if (options.userId) conditions.push(eq(activityLog.userId, options.userId));
   const where = and(...conditions);
 
   const [items, totalRow] = await Promise.all([

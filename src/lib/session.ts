@@ -1,11 +1,14 @@
 import "server-only";
+import { cookies } from "next/headers";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { workspaceMembers, type WorkspaceMember } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { ROLE_LEVEL, type RoleLevel } from "@/lib/roles";
+
+const WORKSPACE_COOKIE = "active_workspace";
 
 export async function getSession() {
   const session = await auth.api.getSession({
@@ -22,7 +25,32 @@ export function hasPermission(
   return ROLE_LEVEL[membership.role] >= ROLE_LEVEL[required];
 }
 
+export function isManagerOrAbove(membership: WorkspaceMember | null | undefined): boolean {
+  return hasPermission(membership, "manager");
+}
+
+export function canSeeAllData(membership: WorkspaceMember | null | undefined): boolean {
+  return hasPermission(membership, "manager");
+}
+
 export async function getActiveWorkspace(userId: string) {
+  const store = await cookies();
+  const forcedWsId = store.get(WORKSPACE_COOKIE)?.value;
+
+  if (forcedWsId) {
+    const [match] = await db
+      .select()
+      .from(workspaceMembers)
+      .where(
+        and(
+          eq(workspaceMembers.userId, userId),
+          eq(workspaceMembers.workspaceId, forcedWsId)
+        )
+      )
+      .limit(1);
+    if (match) return match;
+  }
+
   const memberships = await db
     .select()
     .from(workspaceMembers)
