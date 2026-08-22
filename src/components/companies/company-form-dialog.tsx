@@ -16,7 +16,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { createCompanyAction, updateCompanyAction } from "@/actions/contacts";
-import { companyFormSchema } from "@/lib/validations";
 import type { CompanyRow } from "@/lib/api-types";
 
 type Props = {
@@ -37,7 +36,6 @@ type FormState = {
 
 export function CompanyFormDialog({ open, onOpenChange, company, onSaved }: Props) {
   const [saving, setSaving] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState<FormState>({
     name: company?.name ?? "",
     domain: company?.domain ?? "",
@@ -64,18 +62,6 @@ export function CompanyFormDialog({ open, onOpenChange, company, onSaved }: Prop
       notes: form.notes || null,
     };
 
-    const validation = companyFormSchema.safeParse(payload);
-    if (!validation.success) {
-      const fieldErrors: Record<string, string> = {};
-      validation.error.issues.forEach((issue) => {
-        fieldErrors[issue.path[0] as string] = issue.message;
-      });
-      setErrors(fieldErrors);
-      setSaving(false);
-      return;
-    }
-    setErrors({});
-
     const result = company
       ? await updateCompanyAction(company.id, payload)
       : await createCompanyAction(payload);
@@ -93,86 +79,87 @@ export function CompanyFormDialog({ open, onOpenChange, company, onSaved }: Prop
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{company ? "ویرایش شرکت" : "شرکت جدید"}</DialogTitle>
           <DialogDescription>اطلاعات شرکت را وارد کنید.</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="name">نام شرکت *</Label>
-            <Input
-              id="name"
-              required
-              value={form.name}
-              onChange={(e) => set("name", e.target.value)}
-            />
-            {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
-          </div>
-          <div className="grid grid-cols-2 gap-3">
+        <div className="overflow-y-auto flex-1 px-4">
+          <form onSubmit={handleSubmit} className="grid gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="domain">دامنه</Label>
+              <Label htmlFor="name">نام شرکت *</Label>
               <Input
-                id="domain"
+                id="name"
+                required
+                value={form.name}
+                onChange={(e) => set("name", e.target.value)}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-2">
+                <Label htmlFor="domain">دامنه</Label>
+                <Input
+                  id="domain"
+                  dir="ltr"
+                  placeholder="example.com"
+                  value={form.domain}
+                  onChange={(e) => set("domain", e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="industry">صنعت</Label>
+                <Input
+                  id="industry"
+                  value={form.industry}
+                  onChange={(e) => set("industry", e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="website">وب‌سایت</Label>
+              <Input
+                id="website"
                 dir="ltr"
-                placeholder="example.com"
-                value={form.domain}
-                onChange={(e) => set("domain", e.target.value)}
+                placeholder="https://..."
+                value={form.website}
+                onChange={(e) => set("website", e.target.value)}
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="industry">صنعت</Label>
+              <Label htmlFor="address">آدرس</Label>
               <Input
-                id="industry"
-                value={form.industry}
-                onChange={(e) => set("industry", e.target.value)}
+                id="address"
+                value={form.address}
+                onChange={(e) => set("address", e.target.value)}
               />
             </div>
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="website">وب‌سایت</Label>
-            <Input
-              id="website"
-              dir="ltr"
-              placeholder="https://..."
-              value={form.website}
-              onChange={(e) => set("website", e.target.value)}
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="address">آدرس</Label>
-            <Input
-              id="address"
-              value={form.address}
-              onChange={(e) => set("address", e.target.value)}
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="notes">یادداشت</Label>
-            <Textarea
-              id="notes"
-              rows={3}
-              value={form.notes}
-              onChange={(e) => set("notes", e.target.value)}
-            />
-          </div>
+            <div className="grid gap-2">
+              <Label htmlFor="notes">یادداشت</Label>
+              <Textarea
+                id="notes"
+                rows={3}
+                value={form.notes}
+                onChange={(e) => set("notes", e.target.value)}
+              />
+            </div>
+          </form>
+        </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={saving}
-            >
-              انصراف
-            </Button>
-            <Button type="submit" disabled={saving}>
-              {saving && <Loader2 className="size-4 animate-spin" />}
-              {company ? "ذخیره تغییرات" : "ایجاد شرکت"}
-            </Button>
-          </DialogFooter>
-        </form>
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={saving}
+          >
+            انصراف
+          </Button>
+          <Button type="submit" disabled={saving}>
+            {saving && <Loader2 className="size-4 animate-spin" />}
+            {company ? "ذخیره تغییرات" : "ایجاد شرکت"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

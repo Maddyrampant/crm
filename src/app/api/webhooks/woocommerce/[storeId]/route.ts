@@ -11,7 +11,7 @@ export async function POST(
   const rl = await checkRateLimit(`webhook:${storeId}`, 30, 60_000);
   if (!rl.ok) {
     return Response.json(
-      { error: "درخواست‌ها بیش از حد مجاز است" },
+      { error: "Rate limit exceeded" },
       { status: 429, headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) } }
     );
   }
@@ -45,8 +45,7 @@ export async function POST(
   );
 
   if (!result.ok) {
-    const status = result.error?.includes("یافت نشد") ? 404 : 401;
-    return Response.json({ error: result.error }, { status });
+    return Response.json({ error: result.error }, { status: 401 });
   }
 
   return Response.json({ ok: true });

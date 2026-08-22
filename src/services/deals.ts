@@ -15,6 +15,7 @@ import { getActivityFeed } from "@/services/activity";
 import { dispatchWebhookEvent } from "@/services/automation";
 import { notifyWorkspace } from "@/services/notifications";
 import { dispatchRuleEvent } from "@/services/rules";
+import { invalidateDealCache, invalidateWorkspaceCache } from "@/lib/cache-invalidate";
 
 const DEAL_SELECT = {
   deal: deals,
@@ -227,6 +228,7 @@ export async function createDeal(workspaceId: string, input: DealInput) {
     .returning();
 
   dispatchWebhookEvent(workspaceId, "deal.created", { id: deal.id });
+  await invalidateWorkspaceCache(workspaceId);
   return deal;
 }
 
@@ -296,6 +298,7 @@ export async function moveDeal(workspaceId: string, id: string, stageId: string)
       status: deal.status,
       link: "/pipeline",
     });
+    await invalidateDealCache(workspaceId, deal.id);
   }
   return deal ?? null;
 }
@@ -345,6 +348,7 @@ export async function setDealOutcome(
       ownerId: deal.ownerId,
       link: "/pipeline",
     });
+    await invalidateDealCache(workspaceId, deal.id);
   }
   return deal ?? null;
 }
@@ -357,6 +361,7 @@ export async function deleteDeal(workspaceId: string, id: string) {
 
   if (deleted) {
     dispatchWebhookEvent(workspaceId, "deal.deleted", { id: deleted.id });
+    await invalidateWorkspaceCache(workspaceId);
   }
   return deleted ?? null;
 }

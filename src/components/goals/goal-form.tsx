@@ -1,20 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
-import { createGoalAction } from "@/actions/goals";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -22,157 +18,110 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-type Member = { id: string; name: string | null };
+import { createGoalAction } from "@/actions/goals";
 
 type Props = {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  members: Member[];
-  onSaved: () => void;
+  onCreated: () => void;
 };
 
-export function GoalFormDialog({ open, onOpenChange, members, onSaved }: Props) {
-  const [saving, setSaving] = useState(false);
-  const [userId, setUserId] = useState("");
+export function GoalForm({ onCreated }: Props) {
+  const [pending, startTransition] = useTransition();
   const [period, setPeriod] = useState("monthly");
   const [targetAmount, setTargetAmount] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  function reset() {
-    setUserId("");
-    setPeriod("monthly");
-    setTargetAmount("");
-    setStartDate("");
-    setEndDate("");
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSaving(true);
-
-    const result = await createGoalAction({
-      userId,
-      period: period as "monthly" | "quarterly" | "yearly",
-      targetAmount: Number(targetAmount),
-      startDate,
-      endDate,
-    });
-
-    setSaving(false);
-
-    if (!result.ok) {
-      toast.error("خطا در ایجاد هدف");
+    if (!targetAmount || !startDate || !endDate) {
+      toast.error("همه فیلدها را پر کنید");
       return;
     }
-
-    toast.success("هدف جدید ایجاد شد");
-    reset();
-    onSaved();
+    startTransition(async () => {
+      const res = await createGoalAction({
+        userId: "",
+        period,
+        targetAmount: Number(targetAmount),
+        startDate,
+        endDate,
+      });
+      if (res.ok) {
+        toast.success("هدف ایجاد شد");
+        setTargetAmount("");
+        setStartDate("");
+        setEndDate("");
+        onCreated();
+      } else {
+        toast.error("خطا در ایجاد هدف");
+      }
+    });
   }
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(v) => {
-        if (!v) reset();
-        onOpenChange(v);
-      }}
-    >
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+    <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border p-4">
+      <h3 className="font-semibold">هدف جدید</h3>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="space-y-2">
+          <Label>دوره</Label>
+          <Select value={period} onValueChange={setPeriod}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="monthly">ماهانه</SelectItem>
+              <SelectItem value="quarterly">فصلی</SelectItem>
+              <SelectItem value="yearly">سالانه</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>مبلغ هدف (تومان)</Label>
+          <Input
+            type="number"
+            value={targetAmount}
+            onChange={(e) => setTargetAmount(e.target.value)}
+            placeholder="50000000"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>تاریخ شروع</Label>
+          <Input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>تاریخ پایان</Label>
+          <Input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+          />
+        </div>
+      </div>
+      <Button type="submit" disabled={pending}>
+        {pending ? "در حال ایجاد..." : "ایجاد هدف"}
+      </Button>
+    </form>
+  );
+}
+
+type GoalFormDialogProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  members: { id: string; name: string | null }[];
+  onSaved: () => void;
+};
+
+export function GoalFormDialog({ open, onOpenChange, onSaved }: GoalFormDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>هدف فروش جدید</DialogTitle>
-          <DialogDescription>
-            اطلاعات هدف فروش را وارد کنید.
-          </DialogDescription>
+          <DialogTitle>هدف جدید</DialogTitle>
         </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="grid gap-4">
-          <div className="grid gap-2">
-            <Label>کاربر *</Label>
-            <Select value={userId} onValueChange={setUserId} required>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="انتخاب کاربر" />
-              </SelectTrigger>
-              <SelectContent>
-                {members.map((m) => (
-                  <SelectItem key={m.id} value={m.id}>
-                    {m.name ?? m.id}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid gap-2">
-            <Label>دوره *</Label>
-            <Select value={period} onValueChange={setPeriod}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="monthly">ماهانه</SelectItem>
-                <SelectItem value="quarterly">فصلی</SelectItem>
-                <SelectItem value="yearly">سالانه</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="goal-target">مبلغ هدف (تومان) *</Label>
-            <Input
-              id="goal-target"
-              type="number"
-              dir="rtl"
-              required
-              min={0}
-              value={targetAmount}
-              onChange={(e) => setTargetAmount(e.target.value)}
-              placeholder="مثلاً ۱۰۰,۰۰۰,۰۰۰"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="goal-start">تاریخ شروع *</Label>
-              <Input
-                id="goal-start"
-                type="date"
-                dir="rtl"
-                required
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="goal-end">تاریخ پایان *</Label>
-              <Input
-                id="goal-end"
-                type="date"
-                dir="rtl"
-                required
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={saving}
-            >
-              انصراف
-            </Button>
-            <Button type="submit" disabled={saving}>
-              {saving && <Loader2 className="size-4 animate-spin" />}
-              ایجاد هدف
-            </Button>
-          </DialogFooter>
-        </form>
+        <GoalForm onCreated={onSaved} />
       </DialogContent>
     </Dialog>
   );

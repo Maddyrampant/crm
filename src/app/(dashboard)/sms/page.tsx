@@ -1,25 +1,30 @@
 import type { Metadata } from "next";
-import { requireWorkspace } from "@/lib/session";
-import { listSmsCampaignsAction } from "@/actions/sms";
 import { PageHeader } from "@/components/ui/page-header";
-import { SmsManager } from "@/components/sms/sms-manager";
+import { SmsCampaignList } from "@/components/sms/sms-campaign-list";
+import { SmsCampaignForm } from "@/components/sms/sms-campaign-form";
+import { listSmsCampaignsAction } from "@/actions/sms";
+import { RefreshWrapper } from "@/components/shared/refresh-wrapper";
 
 export const metadata: Metadata = { title: "پیامک" };
 
 export default async function SmsPage() {
-  const { membership } = await requireWorkspace();
-  const result = await listSmsCampaignsAction();
+  const res = await listSmsCampaignsAction();
+  const campaigns = res.data ?? [];
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="کمپین‌های پیامکی"
-        description="ایجاد و مدیریت کمپین‌های پیامکی."
+        description="ایجاد و ارسال کمپین‌های پیامکی"
       />
-      <SmsManager
-        initialCampaigns={result.ok ? result.data : []}
-        canManage={membership.role === "admin" || membership.role === "manager"}
-      />
+      <RefreshWrapper>
+        {(refresh) => (
+          <>
+            <SmsCampaignForm onCreated={refresh} />
+            <SmsCampaignList campaigns={campaigns} onRefresh={refresh} />
+          </>
+        )}
+      </RefreshWrapper>
     </div>
   );
 }

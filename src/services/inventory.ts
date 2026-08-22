@@ -34,6 +34,7 @@ import {
   buildPaginatedResult,
   type PaginatedResult,
 } from "@/lib/pagination";
+import { invalidateInventoryCache, invalidateWorkspaceCache } from "@/lib/cache-invalidate";
 
 const num = (v: string | number | null | undefined) => Number(v ?? 0);
 const round2 = (v: number) => Math.round(v * 100) / 100;
@@ -192,6 +193,7 @@ export async function createProduct(workspaceId: string, raw: unknown) {
       notes: input.notes || null,
     })
     .returning();
+  await invalidateInventoryCache(workspaceId);
   return row;
 }
 
@@ -232,6 +234,7 @@ export async function updateProduct(
     })
     .where(and(eq(products.id, productId), eq(products.workspaceId, workspaceId)))
     .returning();
+  if (row) await invalidateInventoryCache(workspaceId);
   return row ?? null;
 }
 
@@ -240,6 +243,7 @@ export async function deleteProduct(workspaceId: string, productId: string) {
     .delete(products)
     .where(and(eq(products.id, productId), eq(products.workspaceId, workspaceId)))
     .returning({ id: products.id });
+  if (row) await invalidateInventoryCache(workspaceId);
   return row ?? null;
 }
 
@@ -464,6 +468,7 @@ export async function adjustStock(
   });
 
   await checkLowStock(workspaceId, input.productId, prevTotal);
+  await invalidateInventoryCache(workspaceId);
   return { prevTotal, newTotal };
 }
 
@@ -546,6 +551,33 @@ export async function listLowStock(workspaceId: string, limit = 50) {
     ...r.product,
     totalStock: num(r.totalStock),
   })) as ProductWithStock[];
+}
+
+/** کالاهای کم‌موجودی به تفکیک ورک‌اسپیس — یک query برای همه (نه N query). */
+export async function listAllLowStock(limit = 20) {
+  const rows = await db
+    .select({
+      workspaceId: stockLevels.workspaceId,
+      productName: products.name,
+      totalStock: sql<string>`coalesce(sum(${stockLevels.quantity}::numeric), 0)::text`,
+    })
+    .from(stockLevels)
+    .innerJoin(products, eq(products.id, stockLevels.productId))
+    .where(sql`${stockLevels.reorderLevel} is not null`)
+    .groupBy(stockLevels.workspaceId, products.id)
+    .having(
+      sql`coalesce(sum(${stockLevels.quantity}::numeric), 0) <= min(${stockLevels.reorderLevel}::numeric)`
+    )
+    .orderBy(sql`coalesce(sum(${stockLevels.quantity}::numeric), 0)`)
+    .limit(limit);
+
+  const byWorkspace = new Map<string, { name: string; totalStock: number }[]>();
+  for (const r of rows) {
+    const list = byWorkspace.get(r.workspaceId) ?? [];
+    list.push({ name: r.productName, totalStock: num(r.totalStock) });
+    byWorkspace.set(r.workspaceId, list);
+  }
+  return byWorkspace;
 }
 
 /* ─────────────────── تأمین‌کنندگان ─────────────────── */
@@ -838,4 +870,222 @@ export async function deletePurchaseOrder(workspaceId: string, orderId: string) 
     )
     .returning({ id: purchaseOrders.id });
   return row ?? null;
+}
+
+/* ─────────────────── ایمپورت CSV ─────────────────── */
+
+import { parse } from "csv-parse/sync";
+
+function escapeCsvValue(v: unknown): string {
+  const s = String(v ?? "").replace(/"/g, '""');
+  return `"${s}"`;
+}
+
+function parseSimpleCsv(csv: string): { headers: string[]; rows: string[][] } {
+  const firstLine = csv.split(/\r?\n/, 1)[0] ?? "";
+  const delimChar = [",", ";", "\t"]
+    .map((d) => ({ d, n: firstLine.split(d).length - 1 }))
+    .reduce((a, b) => (b.n > a.n ? b : a), { d: ",", n: 0 });
+  const delimiter = delimChar.n > 0 ? delimChar.d : ",";
+
+  const raw = parse(csv, {
+    bom: true,
+    delimiter,
+    skipEmptyLines: true,
+    trim: true,
+    relax_column_count: true,
+    relax_quotes: true,
+    columns: false,
+  }) as string[][];
+
+  if (raw.length === 0) return { headers: [], rows: [] };
+  return { headers: raw[0], rows: raw.slice(1) };
+}
+
+function normalizeHeader(input: string): string {
+  return input
+    .replace(/ي/g, "ی")
+    .replace(/ك/g, "ک")
+    .trim()
+    .toLowerCase()
+    .replace(/[_\-\s]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export type ProductsImportSummary = {
+  totalRows: number;
+  created: number;
+  errors: { row: number; message: string }[];
+};
+
+const PRODUCT_HEADER_MAP: Record<string, keyof typeof productSchema.shape> = {
+  "نام": "name",
+  "name": "name",
+  "کد کالا": "sku",
+  "sku": "sku",
+  "بارکد": "barcode",
+  "barcode": "barcode",
+  "واحد": "unit",
+  "unit": "unit",
+  "قیمت فروش": "unitPrice",
+  "unit price": "unitPrice",
+  "unitprice": "unitPrice",
+  "قیمت تمام شده": "costPrice",
+  "cost price": "costPrice",
+  "costprice": "costPrice",
+  "مشمول مالیات": "taxable",
+  "taxable": "taxable",
+  "وضعیت": "active",
+  "active": "active",
+  "یادداشت": "notes",
+  "notes": "notes",
+};
+
+export async function importProductsCsv(workspaceId: string, csv: string): Promise<ProductsImportSummary> {
+  const { headers, rows } = parseSimpleCsv(csv);
+  const normalizedHeaders = headers.map(normalizeHeader);
+
+  const colMap = new Map<string, number>();
+  normalizedHeaders.forEach((h, i) => {
+    if (h && !colMap.has(h)) colMap.set(h, i);
+  });
+
+  const mapped = new Map<string, number>();
+  for (const [label, key] of Object.entries(PRODUCT_HEADER_MAP)) {
+    const idx = colMap.get(normalizeHeader(label));
+    if (idx !== undefined) mapped.set(key, idx);
+  }
+
+  if (!mapped.has("name")) {
+    throw new Error("ستون «نام» یافت نشد");
+  }
+  if (!mapped.has("sku")) {
+    throw new Error("ستون «کد کالا» یافت نشد");
+  }
+
+  const summary: ProductsImportSummary = { totalRows: rows.length, created: 0, errors: [] };
+
+  for (let i = 0; i < rows.length; i++) {
+    const rowNum = i + 2;
+    const cells = rows[i];
+    const name = (cells[mapped.get("name")!] ?? "").trim();
+    const sku = (cells[mapped.get("sku")!] ?? "").trim();
+
+    if (!name || !sku) {
+      summary.errors.push({ row: rowNum, message: "نام یا کد کالا خالی است" });
+      continue;
+    }
+
+    const raw: Record<string, unknown> = { name, sku };
+    const barcode = cells[mapped.get("barcode")!] ?? "";
+    const unit = cells[mapped.get("unit")!] ?? "";
+    const unitPrice = cells[mapped.get("unitPrice")!] ?? "";
+    const costPrice = cells[mapped.get("costPrice")!] ?? "";
+    const taxable = cells[mapped.get("taxable")!] ?? "";
+    const active = cells[mapped.get("active")!] ?? "";
+    const notes = cells[mapped.get("notes")!] ?? "";
+
+    if (barcode) raw.barcode = barcode.trim();
+    if (unit) raw.unit = unit.trim();
+    if (unitPrice) raw.unitPrice = Number(unitPrice.replace(/[^\d.\-]/g, "")) || 0;
+    if (costPrice) raw.costPrice = Number(costPrice.replace(/[^\d.\-]/g, "")) || 0;
+    if (taxable) raw.taxable = taxable.trim() === "بله" || taxable.trim().toLowerCase() === "yes" || taxable.trim() === "true";
+    if (active) raw.active = !(active.trim() === "غیرفعال" || active.trim().toLowerCase() === "inactive" || active.trim() === "false");
+    if (notes) raw.notes = notes.trim();
+
+    try {
+      await createProduct(workspaceId, raw);
+      summary.created++;
+    } catch (e) {
+      summary.errors.push({
+        row: rowNum,
+        message: e instanceof Error ? e.message : "خطای ناشناخته",
+      });
+    }
+  }
+
+  return summary;
+}
+
+export type SuppliersImportSummary = {
+  totalRows: number;
+  created: number;
+  errors: { row: number; message: string }[];
+};
+
+const SUPPLIER_HEADER_MAP: Record<string, keyof typeof supplierSchema.shape> = {
+  "نام": "name",
+  "name": "name",
+  "شخص تماس": "contactName",
+  "contact person": "contactName",
+  "contactname": "contactName",
+  "موبایل": "phone",
+  "تلفن": "phone",
+  "phone": "phone",
+  "mobile": "phone",
+  "ایمیل": "email",
+  "email": "email",
+  "آدرس": "address",
+  "address": "address",
+  "یادداشت": "notes",
+  "notes": "notes",
+};
+
+export async function importSuppliersCsv(workspaceId: string, csv: string): Promise<SuppliersImportSummary> {
+  const { headers, rows } = parseSimpleCsv(csv);
+  const normalizedHeaders = headers.map(normalizeHeader);
+
+  const colMap = new Map<string, number>();
+  normalizedHeaders.forEach((h, i) => {
+    if (h && !colMap.has(h)) colMap.set(h, i);
+  });
+
+  const mapped = new Map<string, number>();
+  for (const [label, key] of Object.entries(SUPPLIER_HEADER_MAP)) {
+    const idx = colMap.get(normalizeHeader(label));
+    if (idx !== undefined) mapped.set(key, idx);
+  }
+
+  if (!mapped.has("name")) {
+    throw new Error("ستون «نام» یافت نشد");
+  }
+
+  const summary: SuppliersImportSummary = { totalRows: rows.length, created: 0, errors: [] };
+
+  for (let i = 0; i < rows.length; i++) {
+    const rowNum = i + 2;
+    const cells = rows[i];
+    const name = (cells[mapped.get("name")!] ?? "").trim();
+
+    if (!name) {
+      summary.errors.push({ row: rowNum, message: "نام تأمین‌کننده خالی است" });
+      continue;
+    }
+
+    const raw: Record<string, unknown> = { name };
+    const contactName = cells[mapped.get("contactName")!] ?? "";
+    const phone = cells[mapped.get("phone")!] ?? "";
+    const email = cells[mapped.get("email")!] ?? "";
+    const address = cells[mapped.get("address")!] ?? "";
+    const notes = cells[mapped.get("notes")!] ?? "";
+
+    if (contactName) raw.contactName = contactName.trim();
+    if (phone) raw.phone = phone.trim();
+    if (email) raw.email = email.trim();
+    if (address) raw.address = address.trim();
+    if (notes) raw.notes = notes.trim();
+
+    try {
+      await createSupplier(workspaceId, raw);
+      summary.created++;
+    } catch (e) {
+      summary.errors.push({
+        row: rowNum,
+        message: e instanceof Error ? e.message : "خطای ناشناخته",
+      });
+    }
+  }
+
+  return summary;
 }

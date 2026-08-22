@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireWorkspace } from "@/lib/session";
+import { requireWorkspace, requireWorkspaceRole } from "@/lib/session";
 import {
   convertInvoice,
   createInvoice,
@@ -25,7 +25,7 @@ export async function listInvoicesAction(params?: {
 }
 
 export async function createInvoiceAction(raw: unknown) {
-  const { user, workspaceId } = await requireWorkspace();
+  const { user, workspaceId } = await requireWorkspaceRole("seller");
   const invoice = await createInvoice(workspaceId, user.id, raw);
   revalidatePath("/invoices");
   return { ok: true, id: invoice.id };
@@ -35,7 +35,7 @@ export async function updateInvoiceStatusAction(
   invoiceId: string,
   status: "draft" | "sent" | "paid" | "overdue" | "cancelled"
 ) {
-  const { user, workspaceId } = await requireWorkspace();
+  const { user, workspaceId } = await requireWorkspaceRole("seller");
   const row = await updateInvoiceStatus(workspaceId, user.id, invoiceId, status);
   revalidatePath("/invoices");
   revalidatePath(`/invoices/${invoiceId}`);
@@ -44,7 +44,7 @@ export async function updateInvoiceStatusAction(
 
 /** تبدیل پیش‌فاکتور به فاکتور رسمی (draft → sent). */
 export async function convertInvoiceAction(invoiceId: string) {
-  const { user, workspaceId } = await requireWorkspace();
+  const { user, workspaceId } = await requireWorkspaceRole("seller");
   const result = await convertInvoice(workspaceId, user.id, invoiceId);
   if (!result.ok) return { ok: false, error: result.error };
   revalidatePath("/invoices");
@@ -57,7 +57,7 @@ export async function recordPaymentAction(
   invoiceId: string,
   raw: { amount: number; method?: string; reference?: string }
 ) {
-  const { user, workspaceId } = await requireWorkspace();
+  const { user, workspaceId } = await requireWorkspaceRole("seller");
   const result = await recordPayment(workspaceId, user.id, invoiceId, raw);
   revalidatePath("/invoices");
   revalidatePath(`/invoices/${invoiceId}`);
@@ -65,7 +65,7 @@ export async function recordPaymentAction(
 }
 
 export async function deleteInvoiceAction(invoiceId: string) {
-  const { workspaceId } = await requireWorkspace();
+  const { workspaceId } = await requireWorkspaceRole("seller");
   const row = await deleteInvoice(workspaceId, invoiceId);
   revalidatePath("/invoices");
   return { ok: Boolean(row) };

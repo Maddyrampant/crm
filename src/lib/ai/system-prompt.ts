@@ -3,6 +3,7 @@ import "server-only";
 import { listPipelines } from "@/services/pipelines";
 import { listCustomFields, listTags } from "@/services/contacts";
 import { getWorkspaceMembers } from "@/services/workspace";
+import { getAiSettings } from "@/services/workspace-settings";
 import {
   SOURCE_LABELS,
   STAGE_LABELS,
@@ -11,21 +12,25 @@ import {
 
 const BASE_PROMPT = `تو دستیار هوش مصنوعی CRM فارسی هستی. کاربرها را با زبان فارسی و لحن حرفه‌ای راهنمایی می‌کنی.
 
-قوانین:
-- اطلاعات را بر اساس ابزارهای موجود از پایگاه داده بخوان و گزارش کن؛ هرگز عدد را حدس نزن.
-- عملیات نوشتنی (ساخت مخاطب یا تسک) ابتدا به‌صورت درخواست تأیید ثبت می‌شوند؛ اگر نتیجه ابزار needsApproval=true بود، به کاربر اطلاع بده که عملیات در انتظار تأیید اوست و در پنل «در انتظار تأیید» قابل تأیید است.
-- برای ثبت برد/باخت فروش (updateDealStage یا ثبت نتیجه) درخواست تأیید بده؛ هرگز بدون تأیید وضعیت فروش را تغییر نده.
-- در پاسخ‌های عددی از اعداد فارسی استفاده کن.
-- اگر ابزار خطا داد یا داده‌ای نبود، صادقانه بگو.`;
+ قوانین:
+ - اطلاعات را بر اساس ابزارهای موجود از پایگاه داده بخوان و گزارش کن؛ هرگز عدد را حدس نزن.
+ - عملیات نوشتنی (ساخت مخاطب یا تسک، تخصیص محتوا) ابتدا به‌صورت درخواست تأیید ثبت می‌شوند؛ اگر نتیجه ابزار needsApproval=true بود، به کاربر اطلاع بده که عملیات در انتظار تأیید اوست و در پنل «در انتظار تأیید» قابل تأیید است.
+ - برای ثبت برد/باخت فروش (updateDealStage یا ثبت نتیجه) درخواست تأیید بده؛ هرگز بدون تأیید وضعیت فروش را تغییر نده.
+ - در پاسخ‌های عددی از اعداد فارسی استفاده کن.
+ - اگر ابزار خطا داد یا داده‌ای نبود، صادقانه بگو.
+ - برای تخصیص محتوا (ویدیو/مستند) به مخاطب از ابزار assignContent استفاده کن (نیاز به تأیید).
+ - برای علامت‌گذاری محتوا به‌عنوان مشاهده‌شده از ابزار markContentViewed استفاده کن (نیاز به تأیید).
+ - پایگاه دانش شامل توصیه‌های فروش، اطلاعات محصول و سوالات متداول است — از searchKnowledgeBase برای پاسخ به سوالات استفاده کن.`;
 
 export async function buildSystemPrompt(workspaceId: string) {
   const parts: string[] = [BASE_PROMPT];
 
-  const [pipelines, tags, customFields, members] = await Promise.allSettled([
+  const [pipelines, tags, customFields, members, aiSettings] = await Promise.allSettled([
     listPipelines(workspaceId),
     listTags(workspaceId),
     listCustomFields(workspaceId),
     getWorkspaceMembers(workspaceId),
+    getAiSettings(workspaceId),
   ]);
 
   if (pipelines.status === "fulfilled" && pipelines.value.length > 0) {
@@ -75,6 +80,10 @@ export async function buildSystemPrompt(workspaceId: string) {
     `منابع مشتری: ${Object.values(SOURCE_LABELS).join("، ")}`,
     `وضعیت‌های فروش: ${Object.values(STATUS_LABELS).join("، ")}`
   );
+
+  if (aiSettings.status === "fulfilled" && aiSettings.value.systemPromptSuffix) {
+    parts.push(`دستورالعمل اضافی مدیر:\n${aiSettings.value.systemPromptSuffix}`);
+  }
 
   return parts.join("\n\n");
 }

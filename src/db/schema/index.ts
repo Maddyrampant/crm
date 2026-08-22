@@ -19,5 +19,8 @@ export * from "./sms-campaigns";
 export * from "./sales-goals";
 export * from "./audit-logs";
 export * from "./woocommerce";
+export * from "./ai-knowledge";
+export * from "./ai-content";
+export * from "./workspace-settings";
 export * from "./attachments";
 export * from "./lead-score-settings";

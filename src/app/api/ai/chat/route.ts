@@ -8,15 +8,12 @@ import { getActiveWorkspace } from "@/lib/session";
 import { getChatModel } from "@/lib/ai/provider";
 import { readTools, writeTools } from "@/lib/ai/tools";
 import { buildSystemPrompt } from "@/lib/ai/system-prompt";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { getAiSettings } from "@/services/workspace-settings";
 import {
   createConversation,
   getConversation,
   saveMessage,
 } from "@/services/ai";
-
-/** حداکثر تعداد گام‌های مدل در هر پیام (جلوگیری از حلقه‌های طولانی ابزار) */
-const MAX_STEPS = 4;
 
 export async function POST(req: NextRequest) {
   const session = await getSession();
@@ -29,11 +26,6 @@ export async function POST(req: NextRequest) {
   }
   const workspaceId = membership.workspaceId;
   const userId = session.user.id;
-
-  const rl = await checkRateLimit(`ai:${workspaceId}`, 30, 60_000);
-  if (!rl.ok) {
-    return Response.json({ error: "درخواست‌ها بیش از حد مجاز است" }, { status: 429 });
-  }
 
   const body = (await req.json().catch(() => null)) as {
     messages?: Array<{ role: string; content: string }>;
@@ -98,6 +90,7 @@ export async function POST(req: NextRequest) {
   }
 
   const modelId = requestedModel ?? updatedHistory.conversation.model;
+  const aiSettings = await getAiSettings(workspaceId);
 
   const result = streamText({
     model: getChatModel(modelId),
@@ -107,7 +100,7 @@ export async function POST(req: NextRequest) {
       content: m.content ?? "",
     })),
     tools: { ...readTools(ctx), ...writeTools(ctx) },
-    stopWhen: stepCountIs(MAX_STEPS),
+    stopWhen: stepCountIs(aiSettings.maxSteps),
     maxRetries: 1,
     onFinish: async ({ text, toolResults, usage, steps, finishReason }) => {
       await saveMessage(

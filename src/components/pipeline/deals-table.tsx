@@ -54,16 +54,17 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Checkbox } from "@/components/ui/checkbox";
+import { showUndoToast } from "@/components/ui/undo-toast";
+import { InlineEdit } from "@/components/ui/inline-edit";
 import {
   deleteDealAction,
   listDealsAction,
+  patchDealAction,
   setDealOutcomeAction,
 } from "@/actions/deals";
-import { bulkDeleteDealsAction } from "@/actions/bulk";
 import { STATUS_LABELS } from "@/lib/labels";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/format";
-import type { DealRow, PipelineRow } from "@/lib/api-types";
+import type { DealRow, DealStatus, PipelineRow } from "@/lib/api-types";
 import type { WorkspaceMemberRow } from "@/services/workspace";
 
 type Props = {
@@ -123,8 +124,6 @@ export function DealsTable({
   const [deleting, setDeleting] = useState<DealRow | null>(null);
   const [busy, setBusy] = useState(false);
   const [sort, setSort] = useState<ColumnSort | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [bulkBusy, setBulkBusy] = useState(false);
 
   function toggleSort(col: string) {
     setSort((prev) => ({
@@ -205,7 +204,10 @@ export function DealsTable({
       toast.error(result.error);
       return;
     }
-    toast.success("فروش حذف شد");
+    showUndoToast({
+      message: "فروش حذف شد",
+      onUndo: () => load(),
+    });
     setData((d) => ({
       items: d.items.filter((x) => x.id !== deleting.id),
       total: Math.max(0, d.total - 1),
@@ -213,36 +215,17 @@ export function DealsTable({
     setDeleting(null);
   }
 
-  function toggleSelectAll() {
-    if (selectedIds.size === data.items.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(data.items.map((d) => d.id)));
-    }
-  }
-
-  function toggleSelect(id: string) {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  async function handleBulkDelete() {
-    const ids = Array.from(selectedIds);
-    if (!ids.length) return;
-    setBulkBusy(true);
-    const result = await bulkDeleteDealsAction(ids);
-    setBulkBusy(false);
+  async function handlePatchDeal(id: string, patch: { title?: string; amount?: number; status?: DealStatus }) {
+    const previous = data;
+    setData((d) => ({
+      ...d,
+      items: d.items.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+    }));
+    const result = await patchDealAction(id, patch);
     if (!result.ok) {
+      setData(previous);
       toast.error(result.error);
-      return;
     }
-    toast.success(`${result.deleted} فروش حذف شد`);
-    setSelectedIds(new Set());
-    load();
   }
 
   const totalPages = Math.max(1, Math.ceil(data.total / pageSize));
@@ -351,14 +334,6 @@ export function DealsTable({
             <Table>
               <TableHeader>
                 <TableRow>
-                  {canDelete && (
-                    <TableHead className="w-10">
-                      <Checkbox
-                        checked={data.items.length > 0 && selectedIds.size === data.items.length}
-                        onCheckedChange={toggleSelectAll}
-                      />
-                    </TableHead>
-                  )}
                   <TableHead>
                     <button onClick={() => toggleSort("title")} className="inline-flex items-center gap-1 hover:text-foreground">
                       عنوان
@@ -388,7 +363,7 @@ export function DealsTable({
               <TableBody>
                 {data.items.length === 0 && !isPending ? (
                   <TableRow>
-                    <TableCell colSpan={canDelete ? 10 : 9} className="border-0">
+                    <TableCell colSpan={9} className="border-0">
                       <EmptyState
                         icon={Trophy}
                         title="فروشی یافت نشد"
@@ -405,23 +380,16 @@ export function DealsTable({
                   </TableRow>
                 ) : (
                   data.items.map((d) => (
-                    <TableRow key={d.id} className={selectedIds.has(d.id) ? "bg-muted/50" : ""}>
-                      {canDelete && (
-                        <TableCell>
-                          <Checkbox
-                            checked={selectedIds.has(d.id)}
-                            onCheckedChange={() => toggleSelect(d.id)}
-                          />
-                        </TableCell>
-                      )}
+                    <TableRow key={d.id}>
                       <TableCell>
                         <div className="min-w-0">
-                          <Link
-                            href="/pipeline"
-                            className="block truncate font-medium hover:underline"
-                          >
-                            {d.title}
-                          </Link>
+                          <InlineEdit
+                            value={d.title}
+                            disabled={!canManageDeal}
+                            onSave={(v) => handlePatchDeal(d.id, { title: String(v) })}
+                            className="max-w-[200px]"
+                            displayClassName="font-medium"
+                          />
                           {d.closeDate ? (
                             <span className="block text-xs text-muted-foreground">
                               بستن: {formatDate(d.closeDate)}
@@ -458,15 +426,34 @@ export function DealsTable({
                         {d.ownerName || "—"}
                       </TableCell>
                       <TableCell className="font-medium">
-                        {formatCurrency(d.amount)}
+                        <InlineEdit
+                          value={d.amount}
+                          type="number"
+                          min={0}
+                          disabled={!canManageDeal}
+                          onSave={(v) => handlePatchDeal(d.id, { amount: Number(v) })}
+                          formatDisplay={(v) => formatCurrency(v)}
+                        />
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {d.closeDate ? formatDate(d.closeDate) : "—"}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={STATUS_VARIANT[d.status]}>
-                          {STATUS_LABELS[d.status]}
-                        </Badge>
+                        <InlineEdit
+                          value={d.status}
+                          type="select"
+                          disabled={!canManageDeal}
+                          options={Object.entries(STATUS_LABELS).map(([value, label]) => ({
+                            value,
+                            label,
+                          }))}
+                          onSave={(v) => handlePatchDeal(d.id, { status: v as DealStatus })}
+                          formatDisplay={(v) => (
+                            <Badge variant={STATUS_VARIANT[v as DealStatus]}>
+                              {STATUS_LABELS[v as DealStatus]}
+                            </Badge>
+                          )}
+                        />
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
@@ -577,26 +564,8 @@ export function DealsTable({
         </CardContent>
       </Card>
 
-      {selectedIds.size > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
-            <span className="text-sm text-muted-foreground">
-              {formatNumber(selectedIds.size)} مورد انتخاب شده
-            </span>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleBulkDelete}
-              disabled={bulkBusy}
-            >
-              {bulkBusy && <Loader2 className="size-4 animate-spin" />}
-              حذف گروهی
-            </Button>
-          </div>
-        </div>
-      )}
-
       <Dialog
+        open={outcomeDeal !== null && outcome !== null}
         onOpenChange={(o) => {
           if (!o) {
             setOutcomeDeal(null);

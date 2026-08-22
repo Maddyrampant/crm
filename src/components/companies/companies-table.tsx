@@ -40,6 +40,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { showUndoToast } from "@/components/ui/undo-toast";
 import { CompanyFormDialog } from "@/components/companies/company-form-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { listCompaniesAction, deleteCompanyAction } from "@/actions/contacts";
@@ -99,7 +100,10 @@ export function CompaniesTable({ initialData, canManage, canDelete }: Props) {
       toast.error(result.error);
       return;
     }
-    toast.success("شرکت حذف شد");
+    showUndoToast({
+      message: "شرکت حذف شد",
+      onUndo: () => load(),
+    });
     setData((d) => ({
       items: d.items.filter((c) => c.id !== deleting.id),
       total: Math.max(0, d.total - 1),

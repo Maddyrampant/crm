@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { requireWorkspace } from "@/lib/session";
+import { requireWorkspace, requireWorkspaceRole } from "@/lib/session";
 import * as goalsService from "@/services/goals";
 
 const goalSchema = z.object({
@@ -20,7 +20,7 @@ export async function listGoalsAction() {
 }
 
 export async function createGoalAction(input: unknown) {
-  const { workspaceId } = await requireWorkspace();
+  const { workspaceId } = await requireWorkspaceRole("seller");
   const parsed = goalSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "ورودی نامعتبر" };
   const row = await goalsService.createGoal(workspaceId, parsed.data);
@@ -29,7 +29,7 @@ export async function createGoalAction(input: unknown) {
 }
 
 export async function deleteGoalAction(id: string) {
-  const { workspaceId } = await requireWorkspace();
+  const { workspaceId } = await requireWorkspaceRole("seller");
   const row = await goalsService.deleteGoal(workspaceId, id);
   revalidatePath("/goals");
   return { ok: Boolean(row) };

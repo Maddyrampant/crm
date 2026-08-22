@@ -59,7 +59,7 @@ const typeColors: Record<Appointment["type"], string> = {
   call: "bg-emerald-500",
   follow_up: "bg-amber-500",
   demo: "bg-violet-500",
-  other: "bg-slate-500",
+  other: "bg-muted-foreground",
 };
 
 const typeLabels: Record<Appointment["type"], string> = {

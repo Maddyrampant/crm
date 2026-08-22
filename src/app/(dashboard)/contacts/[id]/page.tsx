@@ -11,7 +11,6 @@ import {
   toDealRow,
 } from "@/lib/serialize";
 import { ContactDetail } from "@/components/contacts/contact-detail";
-import { AttachmentPanel } from "@/components/attachments/attachment-panel";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 
 export default async function ContactDetailPage({
@@ -33,33 +32,32 @@ export default async function ContactDetailPage({
   ]);
 
   return (
-    <div className="space-y-4">
+    <>
       <Breadcrumb items={[{ label: "مخاطبین", href: "/contacts" }, { label: "جزئیات مخاطب" }]} />
       <ContactDetail
-        contact={toContactRow({
-          ...contact,
-          companyName: contact.company?.name ?? null,
-          ownerName: contact.owner?.name ?? null,
-        })}
-        customFields={customFields.map(toCustomFieldRow)}
-        activity={contact.activity.map(toActivityRow)}
-        deals={dealsResult.items.map((r) =>
-          toDealRow({
-            ...r.deal,
-            stageName: r.stageName,
-            stageColor: r.stageColor,
-            contactName: r.contactName,
-            contactLastName: r.contactLastName,
-            contactEmail: r.contactEmail,
-            companyName: r.companyName,
-            ownerName: r.ownerName,
-          })
-        )}
-        companies={companies.items.map((c) => ({ id: c.id, name: c.name }))}
-        members={membersResult.items}
-        canManage={hasPermission(membership, "seller")}
-      />
-      <AttachmentPanel entityType="contact" entityId={id} />
-    </div>
+      contact={toContactRow({
+        ...contact,
+        companyName: contact.company?.name ?? null,
+        ownerName: contact.owner?.name ?? null,
+      })}
+      customFields={customFields.map(toCustomFieldRow)}
+      activity={contact.activity.map(toActivityRow)}
+      deals={dealsResult.items.map((r) =>
+        toDealRow({
+          ...r.deal,
+          stageName: r.stageName,
+          stageColor: r.stageColor,
+          contactName: r.contactName,
+          contactLastName: r.contactLastName,
+          contactEmail: r.contactEmail,
+          companyName: r.companyName,
+          ownerName: r.ownerName,
+        })
+      )}
+      companies={companies.items.map((c) => ({ id: c.id, name: c.name }))}
+      members={membersResult.items}
+      canManage={hasPermission(membership, "seller")}
+    />
+    </>
   );
 }

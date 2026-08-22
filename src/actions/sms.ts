@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { requireWorkspace } from "@/lib/session";
+import { requireWorkspace, requireWorkspaceRole } from "@/lib/session";
 import * as smsService from "@/services/sms";
 
 const smsCampaignSchema = z.object({
@@ -26,7 +26,7 @@ export async function getSmsCampaignAction(id: string) {
 }
 
 export async function createSmsCampaignAction(input: unknown) {
-  const { workspaceId } = await requireWorkspace();
+  const { workspaceId } = await requireWorkspaceRole("seller");
   const parsed = smsCampaignSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "ورودی نامعتبر" };
   const row = await smsService.createSmsCampaign(workspaceId, parsed.data);
@@ -35,7 +35,7 @@ export async function createSmsCampaignAction(input: unknown) {
 }
 
 export async function updateSmsCampaignAction(id: string, input: unknown) {
-  const { workspaceId } = await requireWorkspace();
+  const { workspaceId } = await requireWorkspaceRole("seller");
   const parsed = smsCampaignSchema.partial().safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "ورودی نامعتبر" };
   const row = await smsService.updateSmsCampaign(workspaceId, id, parsed.data);
@@ -45,14 +45,14 @@ export async function updateSmsCampaignAction(id: string, input: unknown) {
 }
 
 export async function deleteSmsCampaignAction(id: string) {
-  const { workspaceId } = await requireWorkspace();
+  const { workspaceId } = await requireWorkspaceRole("seller");
   const row = await smsService.deleteSmsCampaign(workspaceId, id);
   revalidatePath("/sms");
   return { ok: Boolean(row) };
 }
 
 export async function sendSmsCampaignAction(id: string) {
-  const { workspaceId } = await requireWorkspace();
+  const { workspaceId } = await requireWorkspaceRole("seller");
   const row = await smsService.sendSmsCampaign(workspaceId, id);
   if (!row) return { ok: false, error: "کمپین پیامکی یافت نشد" };
   revalidatePath("/sms");

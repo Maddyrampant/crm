@@ -4,27 +4,25 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { AppHeader } from "@/components/layout/app-header";
+import { CommandPalette } from "@/components/ui/command-palette";
 import { requireWorkspace } from "@/lib/session";
-import { db } from "@/db";
-import { workspaces } from "@/db/schema";
-import { eq } from "drizzle-orm";
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { user, membership, workspaceId } = await requireWorkspace();
-  const [wsRows] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
+  const { user, membership } = await requireWorkspace();
 
   return (
     <TooltipProvider>
       <SidebarProvider>
-        <AppSidebar role={membership.role} workspaceName={wsRows?.name ?? "ورک‌اسپیس"} />
+        <AppSidebar role={membership.role} />
         <SidebarInset>
-          <AppHeader userName={user.name} userEmail={user.email} />
+          <AppHeader userName={user.name} userEmail={user.email} workspaceId={membership.workspaceId} />
           <main className="flex-1 p-4 md:p-6">{children}</main>
         </SidebarInset>
+        <CommandPalette />
       </SidebarProvider>
     </TooltipProvider>
   );

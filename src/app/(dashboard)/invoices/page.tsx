@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "فاکتورها" };
 
 export default async function InvoicesPage() {
   const { workspaceId } = await requireWorkspace();
-  const invoicesResult = await listInvoices(workspaceId);
+  const invoicesResult = await listInvoices(workspaceId, { page: 1, pageSize: 20 });
 
   return (
     <div className="space-y-6">
@@ -24,7 +24,7 @@ export default async function InvoicesPage() {
         </Button>
       </PageHeader>
 
-      <InvoiceList initialData={invoicesResult.items} />
+      <InvoiceList initialData={invoicesResult.items} initialTotal={invoicesResult.total} workspaceId={workspaceId} />
     </div>
   );
 }

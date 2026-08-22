@@ -3,7 +3,7 @@ import "server-only";
 import { and, eq, inArray, lt } from "drizzle-orm";
 import { db } from "@/db";
 import { invoices, tasks, workspaces } from "@/db/schema";
-import { listLowStock } from "./inventory";
+import { listAllLowStock } from "./inventory";
 import { notifyWorkspace, processDueReminders } from "./notifications";
 import { dispatchRuleEvent } from "./rules";
 
@@ -62,17 +62,16 @@ export async function runDailyMaintenance(): Promise<DailyCronResult> {
 
   const allWorkspaces = await db.select({ id: workspaces.id }).from(workspaces);
   let lowStockWorkspaces = 0;
-  for (const ws of allWorkspaces) {
-    const low = await listLowStock(ws.id, 5);
-    if (low.length === 0) continue;
+  const lowStockByWs = await listAllLowStock(20);
+  for (const [wsId, lowItems] of lowStockByWs) {
     lowStockWorkspaces += 1;
-    const names = low.map((p) => p.name).join("، ");
+    const names = lowItems.map((p) => p.name).join("، ");
     await notifyWorkspace({
-      workspaceId: ws.id,
+      workspaceId: wsId,
       type: "system",
       title: "هشدار کمبود موجودی",
       body:
-        low.length <= 5
+        lowItems.length <= 5
           ? `کالاهای زیر به حد هشدار رسیده‌اند: ${names}`
           : `بیش از ۵ کالا به حد هشدار موجودی رسیده‌اند (نمونه: ${names}).`,
       link: "/stock",

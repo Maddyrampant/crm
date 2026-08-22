@@ -4,13 +4,16 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { getSession, requireWorkspace, requireWorkspaceRole } from "@/lib/session";
+import { getSession, requireWorkspaceRole } from "@/lib/session";
 import { db } from "@/db";
-import { workspaces, workspaceMembers, user } from "@/db/schema";
+import { workspaces, workspaceMembers } from "@/db/schema";
 import {
   addWorkspaceMember,
   removeWorkspaceMember,
   updateMemberRole,
+  updateWorkspaceName,
+  deleteWorkspace,
+  getUserWorkspaces,
   type EditableRole,
 } from "@/services/workspace";
 
@@ -124,28 +127,33 @@ export async function removeWorkspaceMemberAction(userId: string) {
   }
 }
 
-export async function updateWorkspaceNameAction(input: { name: string }) {
-  const { workspaceId } = await requireWorkspaceRole("admin");
-  if (!input.name.trim()) return { ok: false, error: "نام نمی‌تواند خالی باشد" };
-  await db.update(workspaces).set({ name: input.name.trim(), updatedAt: new Date() }).where(eq(workspaces.id, workspaceId));
+const updateNameSchema = z.object({
+  name: z.string().trim().min(1, "نام ورک‌اسپیس را وارد کنید").max(60),
+});
+
+export async function updateWorkspaceNameAction(raw: unknown) {
+  const { workspaceId } = await requireWorkspaceRole("owner");
+  const parsed = updateNameSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "ورودی نامعتبر" };
+  }
+  const row = await updateWorkspaceName(workspaceId, parsed.data.name);
+  if (!row) return { ok: false, error: "ورک‌اسپیس یافت نشد" };
   revalidatePath("/settings/workspace");
+  revalidatePath("/settings");
   return { ok: true };
 }
 
 export async function deleteWorkspaceAction() {
-  const { workspaceId, user: currentUser } = await requireWorkspaceRole("owner");
-  const ws = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
-  if (!ws[0] || ws[0].ownerId !== currentUser.id) return { ok: false, error: "فقط مالک می‌تواند ورک‌اسپیس را حذف کند" };
-  await db.delete(workspaces).where(eq(workspaces.id, workspaceId));
+  const { workspaceId } = await requireWorkspaceRole("owner");
+  const row = await deleteWorkspace(workspaceId);
+  if (!row) return { ok: false, error: "ورک‌اسپیس یافت نشد" };
   redirect("/workspace/new");
 }
 
-export async function listWorkspaceMembersAction() {
-  const { workspaceId } = await requireWorkspace();
-  const members = await db
-    .select({ id: workspaceMembers.userId, name: user.name })
-    .from(workspaceMembers)
-    .innerJoin(user, eq(user.id, workspaceMembers.userId))
-    .where(eq(workspaceMembers.workspaceId, workspaceId));
-  return { ok: true, data: members };
+export async function getUserWorkspacesAction() {
+  const session = await getSession();
+  if (!session?.user) return { ok: false, data: [] };
+  const workspaces = await getUserWorkspaces(session.user.id);
+  return { ok: true, data: workspaces };
 }

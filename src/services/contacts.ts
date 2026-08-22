@@ -24,6 +24,7 @@ import {
 import { getActivityFeed } from "@/services/activity";
 import { dispatchWebhookEvent } from "@/services/automation";
 import { dispatchRuleEvent } from "@/services/rules";
+import { invalidateContactCache, invalidateWorkspaceCache } from "@/lib/cache-invalidate";
 
 export type ContactListFilters = {
   workspaceId: string;
@@ -220,6 +221,7 @@ export async function createContact(workspaceId: string, input: ContactInput) {
     ownerId: contact.ownerId,
     link: "/contacts",
   });
+  await invalidateWorkspaceCache(workspaceId);
   return contact;
 }
 
@@ -248,6 +250,7 @@ export async function updateContact(
 
   if (contact) {
     dispatchWebhookEvent(workspaceId, "contact.updated", { id: contact.id });
+    await invalidateContactCache(workspaceId, contact.id);
   }
   return contact ?? null;
 }
@@ -260,6 +263,7 @@ export async function deleteContact(workspaceId: string, id: string) {
 
   if (deleted) {
     dispatchWebhookEvent(workspaceId, "contact.deleted", { id: deleted.id });
+    await invalidateWorkspaceCache(workspaceId);
   }
   return deleted ?? null;
 }
