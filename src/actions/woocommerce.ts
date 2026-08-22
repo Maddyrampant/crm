@@ -7,7 +7,6 @@ import { db } from "@/db";
 import { wooStores, wooSyncLogs } from "@/db/schema";
 import { getSession, getActiveWorkspace, hasPermission } from "@/lib/session";
 import { createWooClient } from "@/services/woocommerce-api";
-import { encrypt } from "@/lib/woo-crypto";
 
 const connectStoreSchema = z.object({
   name: z.string().trim().min(1, "نام فروشگاه را وارد کنید"),
@@ -66,18 +65,15 @@ export async function connectWooStore(input: ConnectStoreInput) {
   const connected = await client.testConnection();
   if (!connected) return { ok: false as const, error: "اتصال به فروشگاه برقرار نشد — آدرس و کلیدها را بررسی کنید" };
 
-  const encryptedKey = encrypt(parsed.data.consumerKey);
-  const encryptedSecret = encrypt(parsed.data.consumerSecret);
-
   const [store] = await db
     .insert(wooStores)
     .values({
       workspaceId: ctx.workspaceId,
       name: parsed.data.name,
       url: parsed.data.url,
-      consumerKey: encryptedKey,
-      consumerSecret: encryptedSecret,
-      webhookSecret: parsed.data.webhookSecret ? encrypt(parsed.data.webhookSecret) : null,
+      consumerKey: parsed.data.consumerKey,
+      consumerSecret: parsed.data.consumerSecret,
+      webhookSecret: parsed.data.webhookSecret,
     })
     .returning();
 

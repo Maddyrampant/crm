@@ -18,15 +18,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { navSections, type NavRole } from "@/config/nav";
-import { WorkspaceSwitcher } from "@/components/layout/workspace-switcher";
-
-const ROLE_LEVEL: Record<NavRole, number> = {
-  viewer: 0,
-  seller: 1,
-  manager: 2,
-  admin: 3,
-  owner: 4,
-};
+import { ROLE_LEVEL } from "@/lib/roles";
 
 function Brand() {
   return (
@@ -44,14 +36,13 @@ function Brand() {
   );
 }
 
-export function AppSidebar({ role, workspaceName }: { role: NavRole; workspaceName: string }) {
+export function AppSidebar({ role }: { role: NavRole }) {
   const pathname = usePathname();
 
   return (
     <Sidebar side="right" collapsible="icon" className="border-e">
       <SidebarHeader>
         <Brand />
-        <WorkspaceSwitcher name={workspaceName} />
       </SidebarHeader>
       <SidebarContent>
         {navSections.map((section) => {

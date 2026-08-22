@@ -14,6 +14,7 @@ import {
   LoaderCircle,
   Search,
   Settings,
+  Settings2,
   Sparkles,
   SquareCheckBig,
   Trophy,
@@ -40,6 +41,7 @@ import {
   markNotificationReadAction,
 } from "@/actions/notifications";
 import type { Notification } from "@/db/schema";
+import { NotificationPreferences } from "./notification-preferences";
 
 const ICON_BY_NAME: Record<string, LucideIcon> = {
   "file-text": FileText,
@@ -60,7 +62,7 @@ const TYPE_STYLE: Record<string, string> = {
   appointment: "bg-amber-500/10 text-amber-600",
   ai: "bg-fuchsia-500/10 text-fuchsia-600",
   contact: "bg-teal-500/10 text-teal-600",
-  system: "bg-slate-500/10 text-slate-600",
+  system: "bg-muted text-muted-foreground",
 };
 
 function formatRelativeTime(value: Date | string | null | undefined): string {
@@ -106,10 +108,12 @@ export function NotificationCenterPanel() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [searchInput, setSearchInput] = useState("");
   const [isPending, startTransition] = useTransition();
+  const [showPrefs, setShowPrefs] = useState(false);
 
   useEffect(() => {
     let active = true;
     const run = async () => {
+      if (document.hidden) return;
       try {
         const data = await listNotificationsAction({
           page,
@@ -133,31 +137,45 @@ export function NotificationCenterPanel() {
   }, [page, pageSize, typeFilter]);
 
   const markRead = (id: string) => {
-    startTransition(async () => {
-      const res = await markNotificationReadAction(id);
-      if (!res.ok) {
-        toast.error("خطا در علامت‌گذاری اعلان");
-        return;
-      }
+    const previousItems = items;
+    const previousUnread = unread;
+
+    startTransition(() => {
       setItems((prev) =>
         (prev ?? []).map((n) => (n.id === id ? { ...n, readAt: new Date() } : n))
       );
       setUnread((u) => Math.max(0, u - 1));
     });
+
+    void (async () => {
+      const res = await markNotificationReadAction(id);
+      if (!res.ok) {
+        setItems(previousItems);
+        setUnread(previousUnread);
+        toast.error("خطا در علامت‌گذاری اعلان");
+      }
+    })();
   };
 
   const markAllRead = () => {
-    startTransition(async () => {
-      const res = await markAllNotificationsReadAction();
-      if (!res.ok) {
-        toast.error("خطا در خواندن همهٔ اعلان‌ها");
-        return;
-      }
+    const previousItems = items;
+    const previousUnread = unread;
+
+    startTransition(() => {
       setItems((prev) =>
         (prev ?? []).map((n) => (n.readAt ? n : { ...n, readAt: new Date() }))
       );
       setUnread(0);
     });
+
+    void (async () => {
+      const res = await markAllNotificationsReadAction();
+      if (!res.ok) {
+        setItems(previousItems);
+        setUnread(previousUnread);
+        toast.error("خطا در خواندن همهٔ اعلان‌ها");
+      }
+    })();
   };
 
   const filteredItems = items ?? [];
@@ -187,18 +205,29 @@ export function NotificationCenterPanel() {
             </span>
           ) : null}
         </div>
-        {unread > 0 && (
+        <div className="flex items-center gap-1">
+          {unread > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 gap-1 text-xs"
+              onClick={markAllRead}
+              disabled={isPending}
+            >
+              <CheckCheck className="size-3.5" />
+              خواندن همه
+            </Button>
+          )}
           <Button
-            variant="ghost"
+            variant={showPrefs ? "secondary" : "ghost"}
             size="sm"
             className="h-8 gap-1 text-xs"
-            onClick={markAllRead}
-            disabled={isPending}
+            onClick={() => setShowPrefs(!showPrefs)}
           >
-            <CheckCheck className="size-3.5" />
-            خواندن همه
+            <Settings2 className="size-3.5" />
+            تنظیمات اعلان‌ها
           </Button>
-        )}
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2 border-b p-3">
@@ -229,7 +258,9 @@ export function NotificationCenterPanel() {
         </Select>
       </div>
 
-      {items === null ? (
+      {showPrefs ? (
+        <NotificationPreferences />
+      ) : items === null ? (
         <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
           <LoaderCircle className="size-4 animate-spin" />
           در حال بارگذاری…

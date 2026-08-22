@@ -1,82 +1,95 @@
 "use client";
 
 import {
-  BarChart,
   Bar,
-  XAxis,
-  YAxis,
+  BarChart,
   CartesianGrid,
-  Tooltip,
   Legend,
   ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
 } from "recharts";
-import { toFaDigits } from "@/lib/format";
-import { EmptyState } from "@/components/ui/empty-state";
-import { BarChart3 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatCurrency } from "@/lib/format";
 
-type SalesData = {
-  month: string;
-  invoiced: number;
-  collected: number;
-};
+type DataPoint = { month: string; invoiced: number; collected: number };
 
 type Props = {
-  data: SalesData[];
+  data: DataPoint[];
+  months: number;
 };
 
-function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number }>; label?: string }) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="rounded-lg border bg-card p-3 text-sm shadow-md">
-      <p className="mb-1 font-medium">{label}</p>
-      {payload.map((entry) => (
-        <p key={entry.name} className="text-muted-foreground">
-          {entry.name === "invoiced" ? "صورتحساب شده" : "وصول شده"}:{" "}
-          {toFaDigits(entry.value)} تومان
-        </p>
-      ))}
-    </div>
-  );
+const PERSIAN_MONTHS: Record<string, string> = {
+  "01": "فروردین",
+  "02": "اردیبهشت",
+  "03": "خرداد",
+  "04": "تیر",
+  "05": "مرداد",
+  "06": "شهریور",
+  "07": "مهر",
+  "08": "آبان",
+  "09": "آذر",
+  "10": "دی",
+  "11": "بهمن",
+  "12": "اسفند",
+};
+
+function formatMonth(raw: string) {
+  const [year, month] = raw.split("-");
+  const fa = PERSIAN_MONTHS[month] ?? month;
+  return `${fa} ${year}`;
 }
 
-export function SalesChart({ data }: Props) {
-  if (!data.length) {
-    return (
-      <EmptyState
-        icon={BarChart3}
-        title="داده‌ای موجود نیست"
-        description="هنوز اطلاعات فروشی ثبت نشده است."
-      />
-    );
-  }
+export function SalesChart({ data, months }: Props) {
+  const chartData = data.map((d) => ({
+    ...d,
+    label: formatMonth(d.month),
+  }));
 
   return (
-    <div className="h-[350px] w-full">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-          <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-          <YAxis tick={{ fontSize: 12 }} tickFormatter={(v: number) => toFaDigits(v)} />
-          <Tooltip content={<CustomTooltip />} />
-          <Legend
-            formatter={(value: string) =>
-              value === "invoiced" ? "صورتحساب شده" : "وصول شده"
-            }
-          />
-          <Bar
-            dataKey="invoiced"
-            name="invoiced"
-            fill="hsl(var(--chart-1))"
-            radius={[4, 4, 0, 0]}
-          />
-          <Bar
-            dataKey="collected"
-            name="collected"
-            fill="hsl(var(--chart-2))"
-            radius={[4, 4, 0, 0]}
-          />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">
+          روند فروش — صدور فاکتور در برابر وصول ({months} ماه)
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="h-80">
+        {chartData.length === 0 ? (
+          <p className="text-sm text-muted-foreground">داده‌ای برای نمایش نیست</p>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+              <YAxis
+                tick={{ fontSize: 11 }}
+                tickFormatter={(v) =>
+                  v >= 1_000_000
+                    ? `${(v / 1_000_000).toFixed(1)}M`
+                    : v >= 1_000
+                      ? `${(v / 1_000).toFixed(0)}K`
+                      : String(v)
+                }
+              />
+              <Tooltip
+                formatter={(value, name) => [
+                  formatCurrency(Number(value ?? 0)),
+                  name === "invoiced" ? "صادر شده" : "وصول شده",
+                ]}
+                labelFormatter={(label) => `ماه: ${label}`}
+              />
+              <Legend
+                formatter={(value) =>
+                  value === "invoiced" ? "صادر شده" : "وصول شده"
+                }
+              />
+              <Bar dataKey="invoiced" fill="#6366f1" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="collected" fill="#10b981" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </CardContent>
+    </Card>
   );
 }

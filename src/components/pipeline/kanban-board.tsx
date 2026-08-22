@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -69,7 +69,7 @@ type Props = {
   canManagePipeline: boolean;
 };
 
-function DealCard({
+const DealCard = memo(function DealCard({
   deal,
   onOpen,
   onWon,
@@ -178,9 +178,9 @@ function DealCard({
       </div>
     </div>
   );
-}
+});
 
-function StageColumn({
+const StageColumn = memo(function StageColumn({
   stage,
   onNewDeal,
   onOpenDeal,
@@ -255,7 +255,7 @@ function StageColumn({
       )}
     </div>
   );
-}
+});
 
 export function KanbanBoard({
   initialBoard,
@@ -283,6 +283,12 @@ export function KanbanBoard({
   const [lostDeal, setLostDeal] = useState<DealRow | null>(null);
   const [lostReason, setLostReason] = useState("");
   const [losing, setLosing] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => { abortRef.current?.abort(); };
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -322,23 +328,27 @@ export function KanbanBoard({
     }
     if (targetStageId === deal.stageId) return;
 
-    setBoard((b) => ({
-      ...b,
-      stages: b.stages.map((s) => ({
-        ...s,
-        deals:
-          s.id === deal.stageId
-            ? s.deals.filter((d) => d.id !== deal.id)
-            : s.id === targetStageId
-              ? [{ ...deal, stageId: targetStageId }, ...s.deals]
-              : s.deals,
-      })),
-    }));
+    const previousBoard = board;
+
+    startTransition(() => {
+      setBoard((b) => ({
+        ...b,
+        stages: b.stages.map((s) => ({
+          ...s,
+          deals:
+            s.id === deal.stageId
+              ? s.deals.filter((d) => d.id !== deal.id)
+              : s.id === targetStageId
+                ? [{ ...deal, stageId: targetStageId }, ...s.deals]
+                : s.deals,
+        })),
+      }));
+    });
 
     const result = await moveDealAction(deal.id, targetStageId);
     if (!result.ok) {
+      setBoard(previousBoard);
       toast.error(result.error);
-      reloadBoard();
     }
   }
 
@@ -405,9 +415,12 @@ export function KanbanBoard({
           <Select
             value={selectedPipelineId}
             onValueChange={async (v) => {
+              abortRef.current?.abort();
+              const controller = new AbortController();
+              abortRef.current = controller;
               setSelectedPipelineId(v);
               const result = await getKanbanBoardAction(v);
-              if (result.ok && result.data) setBoard(result.data);
+              if (!controller.signal.aborted && result.ok && result.data) setBoard(result.data);
             }}
           >
             <SelectTrigger className="w-full sm:w-52">

@@ -203,7 +203,7 @@ export function PurchaseOrderFormDialog({
         onOpenChange(o);
       }}
     >
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>سفارش خرید جدید</DialogTitle>
           <DialogDescription>
@@ -211,130 +211,132 @@ export function PurchaseOrderFormDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="grid gap-4">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label>تأمین‌کننده</Label>
-              <Select value={supplierId} onValueChange={setSupplierId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="بدون تأمین‌کننده" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="no-supplier">بدون تأمین‌کننده</SelectItem>
-                  {suppliers.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        <div className="overflow-y-auto flex-1 px-4">
+          <form onSubmit={handleSubmit} className="grid gap-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label>تأمین‌کننده</Label>
+                <Select value={supplierId} onValueChange={setSupplierId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="بدون تأمین‌کننده" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="no-supplier">بدون تأمین‌کننده</SelectItem>
+                    {suppliers.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="expectedAt">تاریخ دریافت مورد انتظار</Label>
+                <JalaliDateTimeInput value={expectedAt} onChange={(v) => setExpectedAt(v ?? "")} id="expectedAt" />
+              </div>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="expectedAt">تاریخ دریافت مورد انتظار</Label>
-              <JalaliDateTimeInput value={expectedAt} onChange={(v) => setExpectedAt(v ?? "")} id="expectedAt" />
-            </div>
-          </div>
 
-          <div className="grid gap-2">
-            <Label>اقلام</Label>
             <div className="grid gap-2">
-              {items.map((row, index) => {
-                return (
-                  <div
-                    key={index}
-                    className="grid grid-cols-2 sm:grid-cols-[1fr_5rem_7rem_auto] items-start gap-2 rounded-lg border p-2"
-                  >
-                    <div className="min-w-0">
-                      <ProductPicker
-                        products={products}
-                        item={row}
-                        onPick={(patch) => updateItem(index, patch)}
-                      />
-                    </div>
-                    <div className="grid gap-1">
-                      <Label className="text-xs">تعداد</Label>
-                      <Input
-                        dir="ltr"
-                        type="number"
-                        min="0"
-                        step="any"
-                        className="h-9 text-end"
-                        value={row.quantity}
-                        onChange={(e) =>
-                          updateItem(index, { quantity: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="grid gap-1">
-                      <Label className="text-xs">قیمت واحد (تومان)</Label>
-                      <Input
-                        dir="ltr"
-                        type="number"
-                        min="0"
-                        step="any"
-                        className="h-9 text-end"
-                        value={row.unitPrice}
-                        onChange={(e) =>
-                          updateItem(index, { unitPrice: e.target.value })
-                        }
-                      />
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      className="mt-4"
-                      disabled={items.length <= 1}
-                      onClick={() =>
-                        setItems((rows) => rows.filter((_, i) => i !== index))
-                      }
+              <Label>اقلام</Label>
+              <div className="grid gap-2">
+                {items.map((row, index) => {
+                  return (
+                    <div
+                      key={index}
+                      className="grid grid-cols-2 sm:grid-cols-[1fr_5rem_7rem_auto] items-start gap-2 rounded-lg border p-2"
                     >
-                      <Trash2 className="size-4 text-destructive" />
-                    </Button>
-                  </div>
-                );
-              })}
+                      <div className="min-w-0">
+                        <ProductPicker
+                          products={products}
+                          item={row}
+                          onPick={(patch) => updateItem(index, patch)}
+                        />
+                      </div>
+                      <div className="grid gap-1">
+                        <Label className="text-xs">تعداد</Label>
+                        <Input
+                          dir="ltr"
+                          type="number"
+                          min="0"
+                          step="any"
+                          className="h-9 text-end"
+                          value={row.quantity}
+                          onChange={(e) =>
+                            updateItem(index, { quantity: e.target.value })
+                          }
+                        />
+                      </div>
+                      <div className="grid gap-1">
+                        <Label className="text-xs">قیمت واحد (تومان)</Label>
+                        <Input
+                          dir="ltr"
+                          type="number"
+                          min="0"
+                          step="any"
+                          className="h-9 text-end"
+                          value={row.unitPrice}
+                          onChange={(e) =>
+                            updateItem(index, { unitPrice: e.target.value })
+                          }
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        className="mt-4"
+                        disabled={items.length <= 1}
+                        onClick={() =>
+                          setItems((rows) => rows.filter((_, i) => i !== index))
+                        }
+                      >
+                        <Trash2 className="size-4 text-destructive" />
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setItems((rows) => [...rows, emptyItem])}
+              >
+                <Plus className="size-4" />
+                افزودن ردیف
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                موجودی هر کالا در انتخاب نمایش داده می‌شود؛ قیمت واحد خودکار پر
+                می‌شود و قابل ویرایش است.
+              </p>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setItems((rows) => [...rows, emptyItem])}
-            >
-              <Plus className="size-4" />
-              افزودن ردیف
-            </Button>
-            <p className="text-xs text-muted-foreground">
-              موجودی هر کالا در انتخاب نمایش داده می‌شود؛ قیمت واحد خودکار پر
-              می‌شود و قابل ویرایش است.
-            </p>
-          </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="poNotes">یادداشت</Label>
-            <Textarea
-              id="poNotes"
-              rows={2}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </div>
+            <div className="grid gap-2">
+              <Label htmlFor="poNotes">یادداشت</Label>
+              <Textarea
+                id="poNotes"
+                rows={2}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
+            </div>
+          </form>
+        </div>
 
-          <DialogFooter className="gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={saving}
-            >
-              انصراف
-            </Button>
-            <Button type="submit" disabled={saving}>
-              {saving && <Loader2 className="size-4 animate-spin" />}
-              ثبت سفارش
-            </Button>
-          </DialogFooter>
-        </form>
+        <DialogFooter className="gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={saving}
+          >
+            انصراف
+          </Button>
+          <Button type="submit" disabled={saving}>
+            {saving && <Loader2 className="size-4 animate-spin" />}
+            ثبت سفارش
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

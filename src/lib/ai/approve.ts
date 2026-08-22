@@ -9,6 +9,7 @@ import {
   sendEmail,
   sendSms,
 } from "@/services/automation";
+import { assignContent, markContentViewed } from "@/services/ai-content";
 import type { AiToolRun } from "@/db/schema";
 
 export async function executeApprovedTool(
@@ -160,6 +161,22 @@ export async function executeApprovedTool(
       body: String(input.body),
       contactId: input.contactId ? String(input.contactId) : undefined,
     });
+  }
+
+  if (run.toolName === "assignContent") {
+    const assignment = await assignContent(
+      workspaceId,
+      String(input.contentId),
+      String(input.contactId),
+      userId,
+      input.notes ? String(input.notes) : undefined
+    );
+    return { id: assignment.id, status: assignment.status };
+  }
+
+  if (run.toolName === "markContentViewed") {
+    const row = await markContentViewed(workspaceId, String(input.assignmentId));
+    return { id: row?.id, status: row?.status };
   }
 
   throw new Error(`Unknown tool: ${run.toolName}`);

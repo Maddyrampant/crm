@@ -78,7 +78,7 @@ export function WooConnectForm({ open, onOpenChange }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>اتصال فروشگاه ووکامرس</DialogTitle>
           <DialogDescription>

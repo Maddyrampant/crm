@@ -1,17 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Eye, Loader2, Search, Trash2 } from "lucide-react";
+import { Eye, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { deleteInvoiceAction } from "@/actions/invoices";
-import { bulkDeleteInvoicesAction } from "@/actions/bulk";
-import { formatCurrency, formatDate, formatNumber } from "@/lib/format";
+import { deleteInvoiceAction, listInvoicesAction } from "@/actions/invoices";
+import { formatCurrency, formatDate, toFaDigits } from "@/lib/format";
 import type { InvoiceRow } from "@/services/invoices";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import {
   Table,
   TableBody,
@@ -22,48 +21,43 @@ import {
 } from "@/components/ui/table";
 import { InvoiceStatusBadge } from "./status-badge";
 
-export function InvoiceList({ initialData }: { initialData: InvoiceRow[] }) {
+export function InvoiceList({
+  initialData,
+  initialTotal,
+  workspaceId,
+}: {
+  initialData: InvoiceRow[];
+  initialTotal: number;
+  workspaceId: string;
+}) {
+  const [items, setItems] = useState(initialData);
+  const [total, setTotal] = useState(initialTotal);
+  const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [bulkBusy, setBulkBusy] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const router = useRouter();
+  const pageSize = 20;
 
-  const filtered = initialData.filter(
-    (row) =>
-      row.invoice.number.toLowerCase().includes(search.toLowerCase()) ||
-      row.contactName.toLowerCase().includes(search.toLowerCase())
+  const fetchPage = useCallback(
+    (p: number, q: string) => {
+      startTransition(async () => {
+        const result = await listInvoicesAction({ page: p, pageSize, search: q || undefined });
+        setItems(result.items);
+        setTotal(result.total);
+      });
+    },
+    [pageSize]
   );
 
-  function toggleSelectAll() {
-    if (selectedIds.size === filtered.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(filtered.map((r) => r.invoice.id)));
-    }
+  function handleSearch(value: string) {
+    setSearch(value);
+    setPage(1);
+    fetchPage(1, value);
   }
 
-  function toggleSelect(id: string) {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  async function handleBulkDelete() {
-    const ids = Array.from(selectedIds);
-    if (!ids.length) return;
-    setBulkBusy(true);
-    const result = await bulkDeleteInvoicesAction(ids);
-    setBulkBusy(false);
-    if (!result.ok) {
-      toast.error(result.error);
-      return;
-    }
-    toast.success(`${result.deleted} فاکتور حذف شد`);
-    setSelectedIds(new Set());
-    router.refresh();
+  function handlePageChange(p: number) {
+    setPage(p);
+    fetchPage(p, search);
   }
 
   async function handleDelete(invoiceId: string) {
@@ -71,7 +65,7 @@ export function InvoiceList({ initialData }: { initialData: InvoiceRow[] }) {
     const result = await deleteInvoiceAction(invoiceId);
     if (result.ok) {
       toast.success("فاکتور حذف شد");
-      router.refresh();
+      fetchPage(page, search);
     } else {
       toast.error("خطا در حذف");
     }
@@ -85,7 +79,7 @@ export function InvoiceList({ initialData }: { initialData: InvoiceRow[] }) {
           placeholder="جستجوی شماره یا نام مشتری…"
           className="ps-3 pe-9"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => handleSearch(e.target.value)}
         />
       </div>
 
@@ -93,12 +87,6 @@ export function InvoiceList({ initialData }: { initialData: InvoiceRow[] }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-10">
-                <Checkbox
-                  checked={filtered.length > 0 && selectedIds.size === filtered.length}
-                  onCheckedChange={toggleSelectAll}
-                />
-              </TableHead>
               <TableHead>شماره</TableHead>
               <TableHead>مشتری</TableHead>
               <TableHead>تاریخ</TableHead>
@@ -110,21 +98,15 @@ export function InvoiceList({ initialData }: { initialData: InvoiceRow[] }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.length === 0 && (
+            {items.length === 0 && (
               <TableRow>
-                <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
-                  فاکتوری یافت نشد
+                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                  {isPending ? "در حال بارگذاری…" : "فاکتوری یافت نشد"}
                 </TableCell>
               </TableRow>
             )}
-            {filtered.map((row) => (
-              <TableRow key={row.invoice.id} className={selectedIds.has(row.invoice.id) ? "bg-muted/50" : ""}>
-                <TableCell>
-                  <Checkbox
-                    checked={selectedIds.has(row.invoice.id)}
-                    onCheckedChange={() => toggleSelect(row.invoice.id)}
-                  />
-                </TableCell>
+            {items.map((row) => (
+              <TableRow key={row.invoice.id}>
                 <TableCell className="font-medium" dir="ltr">
                   {row.invoice.number}
                 </TableCell>
@@ -163,23 +145,14 @@ export function InvoiceList({ initialData }: { initialData: InvoiceRow[] }) {
         </Table>
       </div>
 
-      {selectedIds.size > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
-            <span className="text-sm text-muted-foreground">
-              {formatNumber(selectedIds.size)} مورد انتخاب شده
-            </span>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleBulkDelete}
-              disabled={bulkBusy}
-            >
-              {bulkBusy && <Loader2 className="size-4 animate-spin" />}
-              حذف گروهی
-            </Button>
-          </div>
-        </div>
+      {total > pageSize && (
+        <PaginationControls
+          page={page}
+          total={total}
+          pageSize={pageSize}
+          onPageChange={handlePageChange}
+          onPageSizeChange={() => {}}
+        />
       )}
     </div>
   );

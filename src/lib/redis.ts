@@ -78,13 +78,17 @@ export async function redisDel(key: string): Promise<void> {
   }
 }
 
-/** پاک‌سازی همزمان چند کلید (برای invalidate با پیشوند) */
+/** پاک‌سازی همزمان چند کلید (برای invalidate با پیشوند — غیربلوکه‌شده با SCAN) */
 export async function redisDelByPrefix(prefix: string): Promise<void> {
   const c = await ensureConnected();
   if (!c) return;
   try {
-    const keys = await c.keys(`${prefix}*`);
-    if (keys.length > 0) await c.del(keys);
+    let cursor = "0";
+    do {
+      const result = await c.scan(cursor, { MATCH: `${prefix}*`, COUNT: 100 });
+      cursor = result.cursor;
+      if (result.keys.length > 0) await c.del(result.keys);
+    } while (cursor !== "0");
   } catch {
     /* بی‌صدا */
   }

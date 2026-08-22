@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/dialog";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { deleteWarehouseAction, listWarehousesAction } from "@/actions/inventory";
+import { showUndoToast } from "@/components/ui/undo-toast";
 import { WarehouseFormDialog } from "@/components/inventory/warehouse-form-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatNumber } from "@/lib/format";
@@ -93,7 +94,10 @@ export function WarehousesTable({ initialData, canManage }: Props) {
     setBusy(true);
     try {
       await deleteWarehouseAction(deleting.id);
-      toast.success("انبار حذف شد");
+      showUndoToast({
+        message: "انبار حذف شد",
+        onUndo: () => load(),
+      });
       load();
       setDeleting(null);
     } catch (err) {

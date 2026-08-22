@@ -185,7 +185,7 @@ export function ImportCsvDialog() {
       </Button>
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-3xl">
+        <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>ایمپورت CSV</DialogTitle>
             <DialogDescription>
@@ -193,279 +193,281 @@ export function ImportCsvDialog() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2" dir="rtl">
-            {STEPS.map((label, i) => (
-              <Fragment key={label}>
-                <div className="flex items-center gap-2">
-                  <span
-                    className={cn(
-                      "flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-medium",
-                      i < stepIndex
-                        ? "bg-emerald-500 text-white"
-                        : i === stepIndex
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted text-muted-foreground"
-                    )}
-                  >
-                    {i < stepIndex ? <CheckCircle2 className="size-4" /> : i + 1}
+          <div className="overflow-y-auto flex-1 px-4">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2" dir="rtl">
+              {STEPS.map((label, i) => (
+                <Fragment key={label}>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={cn(
+                        "flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-medium",
+                        i < stepIndex
+                          ? "bg-emerald-500 text-white"
+                          : i === stepIndex
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-muted-foreground"
+                      )}
+                    >
+                      {i < stepIndex ? <CheckCircle2 className="size-4" /> : i + 1}
+                    </span>
+                    <span
+                      className={cn(
+                        "text-sm",
+                        i === stepIndex
+                          ? "font-medium text-foreground"
+                          : "text-muted-foreground"
+                      )}
+                    >
+                      {label}
+                    </span>
+                  </div>
+                  {i < STEPS.length - 1 && (
+                    <Separator className="hidden w-8 sm:block" />
+                  )}
+                </Fragment>
+              ))}
+            </div>
+
+            {step === "انتخاب فایل" && (
+              <div className="space-y-4">
+                <label
+                  htmlFor="csv-file"
+                  className={cn(
+                    "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-10 text-center transition-colors sm:p-8",
+                    file
+                      ? "border-emerald-500/60 bg-emerald-500/5"
+                      : "hover:bg-muted/50"
+                  )}
+                >
+                  <FileText className="size-8 text-muted-foreground" />
+                  <span className="text-sm font-medium">
+                    {file ? file.name : "برای انتخاب فایل کلیک کنید"}
                   </span>
-                  <span
-                    className={cn(
-                      "text-sm",
-                      i === stepIndex
-                        ? "font-medium text-foreground"
-                        : "text-muted-foreground"
-                    )}
-                  >
-                    {label}
+                  <span className="text-xs text-muted-foreground">
+                    {file
+                      ? `${(file.size / 1024).toFixed(1)} کیلوبایت`
+                      : "فرمت CSV — حداکثر ۲ مگابایت و ۵,۰۰۰ ردیف"}
                   </span>
+                  <input
+                    id="csv-file"
+                    type="file"
+                    accept=".csv,text/csv"
+                    className="hidden"
+                    onChange={handleFileChange}
+                  />
+                </label>
+
+                {file && (
+                  <div className="flex items-center gap-2 rounded-md bg-muted/50 px-3 py-2 text-sm">
+                    <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />
+                    <span className="truncate">{file.name}</span>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="ms-auto"
+                      onClick={() => {
+                        setFile(null);
+                        setContent("");
+                        setFileError(null);
+                      }}
+                    >
+                      <X className="size-4" />
+                    </Button>
+                  </div>
+                )}
+
+                {fileError && (
+                  <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                    <AlertCircle className="mt-0.5 size-4 shrink-0" />
+                    {fileError}
+                  </div>
+                )}
+
+                <div>
+                  <div className="mb-2 text-sm font-medium">ستون‌های پشتیبانی‌شده</div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 sm:grid-cols-3">
+                    {IMPORT_COLUMN_DEFS.map((def) => (
+                      <div
+                        key={def.key}
+                        className="flex items-center gap-1.5 text-sm text-muted-foreground"
+                      >
+                        <CheckCircle2 className="size-3.5 shrink-0" />
+                        {def.labels[0]}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                {i < STEPS.length - 1 && (
-                  <Separator className="hidden w-8 sm:block" />
-                )}
-              </Fragment>
-            ))}
-          </div>
 
-          {step === "انتخاب فایل" && (
-            <div className="space-y-4">
-              <label
-                htmlFor="csv-file"
-                className={cn(
-                  "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-10 text-center transition-colors sm:p-8",
-                  file
-                    ? "border-emerald-500/60 bg-emerald-500/5"
-                    : "hover:bg-muted/50"
-                )}
-              >
-                <FileText className="size-8 text-muted-foreground" />
-                <span className="text-sm font-medium">
-                  {file ? file.name : "برای انتخاب فایل کلیک کنید"}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {file
-                    ? `${(file.size / 1024).toFixed(1)} کیلوبایت`
-                    : "فرمت CSV — حداکثر ۲ مگابایت و ۵,۰۰۰ ردیف"}
-                </span>
-                <input
-                  id="csv-file"
-                  type="file"
-                  accept=".csv,text/csv"
-                  className="hidden"
-                  onChange={handleFileChange}
-                />
-              </label>
-
-              {file && (
-                <div className="flex items-center gap-2 rounded-md bg-muted/50 px-3 py-2 text-sm">
-                  <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />
-                  <span className="truncate">{file.name}</span>
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
                   <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    className="ms-auto"
-                    onClick={() => {
-                      setFile(null);
-                      setContent("");
-                      setFileError(null);
-                    }}
+                    variant="outline"
+                    size="sm"
+                    onClick={handleTemplateDownload}
+                    disabled={downloading}
                   >
-                    <X className="size-4" />
+                    {downloading ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Download className="size-4" />
+                    )}
+                    دانلود قالب نمونه
+                  </Button>
+                  <Button size="sm" onClick={goToPreview} disabled={!content}>
+                    ادامه
+                    <ArrowLeft className="size-4" />
                   </Button>
                 </div>
-              )}
+              </div>
+            )}
 
-              {fileError && (
-                <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                  <AlertCircle className="mt-0.5 size-4 shrink-0" />
-                  {fileError}
+            {step === "پیش‌نمایش" && parsed && (
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                  <span>
+                    تعداد ردیف: {parsed.rows.length.toLocaleString("fa-IR")}
+                  </span>
+                  <span>
+                    ستون‌های شناسایی‌شده: {parsed.headers.length}
+                  </span>
                 </div>
-              )}
 
-              <div>
-                <div className="mb-2 text-sm font-medium">ستون‌های پشتیبانی‌شده</div>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 sm:grid-cols-3">
-                  {IMPORT_COLUMN_DEFS.map((def) => (
-                    <div
-                      key={def.key}
-                      className="flex items-center gap-1.5 text-sm text-muted-foreground"
-                    >
-                      <CheckCircle2 className="size-3.5 shrink-0" />
-                      {def.labels[0]}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleTemplateDownload}
-                  disabled={downloading}
-                >
-                  {downloading ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Download className="size-4" />
-                  )}
-                  دانلود قالب نمونه
-                </Button>
-                <Button size="sm" onClick={goToPreview} disabled={!content}>
-                  ادامه
-                  <ArrowLeft className="size-4" />
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {step === "پیش‌نمایش" && parsed && (
-            <div className="space-y-4">
-              <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-                <span>
-                  تعداد ردیف: {parsed.rows.length.toLocaleString("fa-IR")}
-                </span>
-                <span>
-                  ستون‌های شناسایی‌شده: {parsed.headers.length}
-                </span>
-              </div>
-
-              <div className="overflow-x-auto rounded-lg border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-16">ردیف</TableHead>
-                      {parsed.headers.map((h) => (
-                        <TableHead key={h.key}>{COLUMN_LABEL[h.key]}</TableHead>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {previewRows.map((r) => (
-                      <TableRow key={r.rowNumber}>
-                        <TableCell className="text-muted-foreground">
-                          {r.rowNumber}
-                        </TableCell>
+                <div className="overflow-x-auto rounded-lg border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-16">ردیف</TableHead>
                         {parsed.headers.map((h) => (
-                          <TableCell key={h.key} className="max-w-40 truncate">
-                            {r.values[h.key] || "—"}
-                          </TableCell>
+                          <TableHead key={h.key}>{COLUMN_LABEL[h.key]}</TableHead>
                         ))}
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-              {parsed.rows.length > previewRows.length && (
-                <p className="text-xs text-muted-foreground">
-                  نمایش {previewRows.length} ردیف از{" "}
-                  {parsed.rows.length.toLocaleString("fa-IR")} ردیف
-                </p>
-              )}
-
-              {actionError && (
-                <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                  <AlertCircle className="mt-0.5 size-4 shrink-0" />
-                  {actionError}
-                </div>
-              )}
-
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setStep("انتخاب فایل")}
-                  disabled={importing}
-                >
-                  <ArrowRight className="size-4" />
-                  بازگشت
-                </Button>
-                <Button size="sm" onClick={handleImport} disabled={importing}>
-                  {importing ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Upload className="size-4" />
-                  )}
-                  {importing ? "در حال پردازش…" : "ایمپورت"}
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {step === "نتیجه" && summary && (
-            <div className="space-y-4">
-              <div className="flex items-start gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-400">
-                <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
-                <span>
-                  ایمپورت با موفقیت انجام شد —{" "}
-                  {summary.totalRows.toLocaleString("fa-IR")} ردیف پردازش شد.
-                </span>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                <div className="rounded-lg border p-3 text-center">
-                  <div className="truncate text-xl font-bold sm:text-2xl">
-                    {summary.created.companies.toLocaleString("fa-IR")}
-                  </div>
-                  <div className="text-xs text-muted-foreground">شرکت‌ها</div>
-                </div>
-                <div className="rounded-lg border p-3 text-center">
-                  <div className="truncate text-xl font-bold sm:text-2xl">
-                    {summary.created.contacts.toLocaleString("fa-IR")}
-                  </div>
-                  <div className="text-xs text-muted-foreground">مشتریان</div>
-                </div>
-                <div className="rounded-lg border p-3 text-center">
-                  <div className="truncate text-xl font-bold sm:text-2xl">
-                    {summary.created.deals.toLocaleString("fa-IR")}
-                  </div>
-                  <div className="text-xs text-muted-foreground">فرصت‌ها</div>
-                </div>
-              </div>
-
-              {summary.errors.length > 0 && (
-                <div className="space-y-2">
-                  <div className="text-sm font-medium">
-                    خطاهای ردیف‌ها ({summary.errors.length.toLocaleString("fa-IR")})
-                  </div>
-                  <div className="max-h-64 overflow-y-auto rounded-lg border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-20">ردیف</TableHead>
-                          <TableHead className="w-28">موجودیت</TableHead>
-                          <TableHead>پیام</TableHead>
+                    </TableHeader>
+                    <TableBody>
+                      {previewRows.map((r) => (
+                        <TableRow key={r.rowNumber}>
+                          <TableCell className="text-muted-foreground">
+                            {r.rowNumber}
+                          </TableCell>
+                          {parsed.headers.map((h) => (
+                            <TableCell key={h.key} className="max-w-40 truncate">
+                              {r.values[h.key] || "—"}
+                            </TableCell>
+                          ))}
                         </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {summary.errors.map((err, idx) => (
-                          <TableRow key={idx}>
-                            <TableCell className="text-muted-foreground">
-                              {err.row}
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline">
-                                {ENTITY_LABEL[err.entity] ?? err.entity}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="break-words text-destructive">
-                              {err.message}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                {parsed.rows.length > previewRows.length && (
+                  <p className="text-xs text-muted-foreground">
+                    نمایش {previewRows.length} ردیف از{" "}
+                    {parsed.rows.length.toLocaleString("fa-IR")} ردیف
+                  </p>
+                )}
+
+                {actionError && (
+                  <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                    <AlertCircle className="mt-0.5 size-4 shrink-0" />
+                    {actionError}
+                  </div>
+                )}
+
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setStep("انتخاب فایل")}
+                    disabled={importing}
+                  >
+                    <ArrowRight className="size-4" />
+                    بازگشت
+                  </Button>
+                  <Button size="sm" onClick={handleImport} disabled={importing}>
+                    {importing ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Upload className="size-4" />
+                    )}
+                    {importing ? "در حال پردازش…" : "ایمپورت"}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {step === "نتیجه" && summary && (
+              <div className="space-y-4">
+                <div className="flex items-start gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-400">
+                  <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
+                  <span>
+                    ایمپورت با موفقیت انجام شد —{" "}
+                    {summary.totalRows.toLocaleString("fa-IR")} ردیف پردازش شد.
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                  <div className="rounded-lg border p-3 text-center">
+                    <div className="truncate text-xl font-bold sm:text-2xl">
+                      {summary.created.companies.toLocaleString("fa-IR")}
+                    </div>
+                    <div className="text-xs text-muted-foreground">شرکت‌ها</div>
+                  </div>
+                  <div className="rounded-lg border p-3 text-center">
+                    <div className="truncate text-xl font-bold sm:text-2xl">
+                      {summary.created.contacts.toLocaleString("fa-IR")}
+                    </div>
+                    <div className="text-xs text-muted-foreground">مشتریان</div>
+                  </div>
+                  <div className="rounded-lg border p-3 text-center">
+                    <div className="truncate text-xl font-bold sm:text-2xl">
+                      {summary.created.deals.toLocaleString("fa-IR")}
+                    </div>
+                    <div className="text-xs text-muted-foreground">فرصت‌ها</div>
                   </div>
                 </div>
-              )}
 
-              <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
-                <Button size="sm" onClick={() => handleOpenChange(false)}>
-                  پایان
-                </Button>
+                {summary.errors.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium">
+                      خطاهای ردیف‌ها ({summary.errors.length.toLocaleString("fa-IR")})
+                    </div>
+                    <div className="max-h-64 overflow-y-auto rounded-lg border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-20">ردیف</TableHead>
+                            <TableHead className="w-28">موجودیت</TableHead>
+                            <TableHead>پیام</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {summary.errors.map((err, idx) => (
+                            <TableRow key={idx}>
+                              <TableCell className="text-muted-foreground">
+                                {err.row}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline">
+                                  {ENTITY_LABEL[err.entity] ?? err.entity}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="break-words text-destructive">
+                                {err.message}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
+                  <Button size="sm" onClick={() => handleOpenChange(false)}>
+                    پایان
+                  </Button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </>

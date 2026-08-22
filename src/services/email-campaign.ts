@@ -94,13 +94,19 @@ export async function sendCampaign(workspaceId: string, id: string) {
   }
 
   let sentCount = 0;
-  for (const email of recipientEmails) {
-    const result = await sendEmail(workspaceId, {
-      to: email,
-      subject: campaign.subject,
-      body: campaign.htmlBody,
-    });
-    if (result.ok) sentCount++;
+  const BATCH_SIZE = 5;
+  for (let i = 0; i < recipientEmails.length; i += BATCH_SIZE) {
+    const batch = recipientEmails.slice(i, i + BATCH_SIZE);
+    const results = await Promise.all(
+      batch.map((email) =>
+        sendEmail(workspaceId, {
+          to: email,
+          subject: campaign.subject,
+          body: campaign.htmlBody,
+        })
+      )
+    );
+    sentCount += results.filter((r) => r.ok).length;
   }
 
   const [updated] = await db

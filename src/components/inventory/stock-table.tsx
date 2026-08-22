@@ -319,7 +319,7 @@ export function StockTable({ initialData, lowStockIds }: Props) {
         open={detailId !== null}
         onOpenChange={(o) => !o && setDetailId(null)}
       >
-        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
+        <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>
               {detail ? (
@@ -339,108 +339,110 @@ export function StockTable({ initialData, lowStockIds }: Props) {
             </DialogDescription>
           </DialogHeader>
 
-          {loadingDetail ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="size-5 animate-spin text-muted-foreground" />
-            </div>
-          ) : detail ? (
-            <div className="grid gap-4">
-              <div className="flex items-center justify-between rounded-lg border p-3">
-                <span className="text-sm text-muted-foreground">موجودی کل</span>
-                <span className="text-lg font-bold tabular-nums">
-                  {formatNumber(detail.totalStock)} {detail.unit}
-                </span>
+          <div className="overflow-y-auto flex-1 px-4">
+            {loadingDetail ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="size-5 animate-spin text-muted-foreground" />
               </div>
+            ) : detail ? (
+              <div className="grid gap-4">
+                <div className="flex items-center justify-between rounded-lg border p-3">
+                  <span className="text-sm text-muted-foreground">موجودی کل</span>
+                  <span className="text-lg font-bold tabular-nums">
+                    {formatNumber(detail.totalStock)} {detail.unit}
+                  </span>
+                </div>
 
-              <div className="grid gap-2">
-                <h3 className="text-sm font-semibold">سطح هر انبار</h3>
-                {detail.stock.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    در هیچ انباری موجودی ثبت نشده است.
-                  </p>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>انبار</TableHead>
-                        <TableHead className="text-end">موجودی</TableHead>
-                        <TableHead className="text-end">نقطهٔ سفارش</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {detail.stock.map((s) => (
-                        <TableRow key={s.id}>
-                          <TableCell>{s.warehouseName || "—"}</TableCell>
-                          <TableCell className="text-end tabular-nums">
-                            {formatNumber(s.quantity)} {detail.unit}
-                          </TableCell>
-                          <TableCell className="text-end tabular-nums">
-                            {s.reorderLevel
-                              ? `${formatNumber(Number(s.reorderLevel))} ${detail.unit}`
-                              : "—"}
-                          </TableCell>
+                <div className="grid gap-2">
+                  <h3 className="text-sm font-semibold">سطح هر انبار</h3>
+                  {detail.stock.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      در هیچ انباری موجودی ثبت نشده است.
+                    </p>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>انبار</TableHead>
+                          <TableHead className="text-end">موجودی</TableHead>
+                          <TableHead className="text-end">نقطهٔ سفارش</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-              </div>
-
-              <div className="grid gap-2">
-                <h3 className="text-sm font-semibold">گردش اخیر</h3>
-                {detail.movements.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    گردشی ثبت نشده است.
-                  </p>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>نوع</TableHead>
-                        <TableHead className="text-end">تعداد</TableHead>
-                        <TableHead>مرجع</TableHead>
-                        <TableHead>تاریخ</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {detail.movements.map((m) => {
-                        const qty = Number(m.quantity);
-                        return (
-                          <TableRow key={m.id}>
-                            <TableCell>
-                              <Badge variant={MOVEMENT_VARIANT[m.type]}>
-                                {STOCK_MOVEMENT_TYPE_LABELS[m.type]}
-                              </Badge>
+                      </TableHeader>
+                      <TableBody>
+                        {detail.stock.map((s) => (
+                          <TableRow key={s.id}>
+                            <TableCell>{s.warehouseName || "—"}</TableCell>
+                            <TableCell className="text-end tabular-nums">
+                              {formatNumber(s.quantity)} {detail.unit}
                             </TableCell>
-                            <TableCell
-                              className={
-                                qty >= 0
-                                  ? "text-end font-medium tabular-nums text-emerald-600"
-                                  : "text-end font-medium tabular-nums text-red-500"
-                              }
-                            >
-                              {qty >= 0 ? "+" : ""}
-                              {formatNumber(qty)}
-                            </TableCell>
-                            <TableCell className="text-xs text-muted-foreground" dir="ltr">
-                              {m.reference || m.notes || "—"}
-                            </TableCell>
-                            <TableCell className="text-xs text-muted-foreground">
-                              {formatDateTime(m.createdAt)}
+                            <TableCell className="text-end tabular-nums">
+                              {s.reorderLevel
+                                ? `${formatNumber(Number(s.reorderLevel))} ${detail.unit}`
+                                : "—"}
                             </TableCell>
                           </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                )}
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </div>
+
+                <div className="grid gap-2">
+                  <h3 className="text-sm font-semibold">گردش اخیر</h3>
+                  {detail.movements.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      گردشی ثبت نشده است.
+                    </p>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>نوع</TableHead>
+                          <TableHead className="text-end">تعداد</TableHead>
+                          <TableHead>مرجع</TableHead>
+                          <TableHead>تاریخ</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {detail.movements.map((m) => {
+                          const qty = Number(m.quantity);
+                          return (
+                            <TableRow key={m.id}>
+                              <TableCell>
+                                <Badge variant={MOVEMENT_VARIANT[m.type]}>
+                                  {STOCK_MOVEMENT_TYPE_LABELS[m.type]}
+                                </Badge>
+                              </TableCell>
+                              <TableCell
+                                className={
+                                  qty >= 0
+                                    ? "text-end font-medium tabular-nums text-emerald-600"
+                                    : "text-end font-medium tabular-nums text-red-500"
+                                }
+                              >
+                                {qty >= 0 ? "+" : ""}
+                                {formatNumber(qty)}
+                              </TableCell>
+                              <TableCell className="text-xs text-muted-foreground" dir="ltr">
+                                {m.reference || m.notes || "—"}
+                              </TableCell>
+                              <TableCell className="text-xs text-muted-foreground">
+                                {formatDateTime(m.createdAt)}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  )}
+                </div>
               </div>
-            </div>
-          ) : (
-            <div className="flex items-center justify-center py-8">
-              <Package className="size-6 text-muted-foreground" />
-            </div>
-          )}
+            ) : (
+              <div className="flex items-center justify-center py-8">
+                <Package className="size-6 text-muted-foreground" />
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

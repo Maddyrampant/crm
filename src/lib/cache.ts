@@ -8,6 +8,16 @@ type MemEntry = { value: string; expiresAt: number };
 /** fallback درون‌حافظه‌ای وقتی REDIS_URL تنظیم نشده باشد */
 const memStore = new Map<string, MemEntry>();
 
+// پاک‌سازی دوره‌ای entries منقضی‌شده (هر ۶۰ ثانیه)
+if (typeof setInterval !== "undefined") {
+  setInterval(() => {
+    const now = Date.now();
+    for (const [key, entry] of memStore) {
+      if (entry.expiresAt <= now) memStore.delete(key);
+    }
+  }, 60_000);
+}
+
 export function cacheKey(...parts: (string | number)[]): string {
   return `${PREFIX}${parts.join(":")}`;
 }

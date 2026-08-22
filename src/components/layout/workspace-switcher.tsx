@@ -1,49 +1,79 @@
 "use client";
 
-import { Building2, ChevronsUpDown } from "lucide-react";
+import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { SidebarMenuButton, useSidebar } from "@/components/ui/sidebar";
+import { Building2, Check, ChevronsUpDown } from "lucide-react";
+import { getUserWorkspacesAction } from "@/actions/workspace";
 
-/**
- * سوییچر ورک‌اسپیس — در فاز ۰ فقط نام فعلی را نشان می‌دهد.
- * مدیریت چند ورک‌اسپیس در فازهای بعدی تکمیل می‌شود.
- */
-export function WorkspaceSwitcher({ name }: { name: string }) {
-  const { isMobile } = useSidebar();
+type WorkspaceRow = {
+  id: string;
+  name: string;
+  slug: string;
+  role: string;
+};
+
+export function WorkspaceSwitcher({ currentWorkspaceId }: { currentWorkspaceId: string }) {
+  const [workspaces, setWorkspaces] = useState<WorkspaceRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [pending, startTransition] = useTransition();
+  const router = useRouter();
+
+  useEffect(() => {
+    getUserWorkspacesAction().then((res) => {
+      if (res.ok) setWorkspaces(res.data);
+      setLoading(false);
+    });
+  }, []);
+
+  if (loading || workspaces.length <= 1) return null;
+
+  const current = workspaces.find((w) => w.id === currentWorkspaceId);
+
+  function handleSwitch(wsId: string) {
+    if (wsId === currentWorkspaceId) return;
+    startTransition(async () => {
+      // TODO: implement workspace switch server action
+      toast.info("سوئیچ ورک‌اسپیس — به زودی فعال می‌شود");
+    });
+  }
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <SidebarMenuButton
-          size="lg"
-          className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-        >
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Building2 className="size-4" />
-          </div>
-          <div className="grid flex-1 text-right text-sm leading-tight">
-            <span className="truncate font-semibold">{name}</span>
-            <span className="truncate text-xs text-muted-foreground">
-              ورک‌اسپیس من
-            </span>
-          </div>
-          <ChevronsUpDown className="ms-auto size-4" />
-        </SidebarMenuButton>
+        <Button variant="ghost" size="sm" className="gap-1.5 text-sm">
+          <Building2 className="h-4 w-4" />
+          <span className="max-w-[120px] truncate">{current?.name ?? "ورک‌اسپیس"}</span>
+          <ChevronsUpDown className="h-3 w-3 text-muted-foreground" />
+        </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent
-        className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
-        align="start"
-        side={isMobile ? "bottom" : "left"}
-        sideOffset={4}
-      >
-        <DropdownMenuLabel className="text-xs text-muted-foreground">
-          ورک‌اسپیس‌ها (به‌زودی)
-        </DropdownMenuLabel>
+      <DropdownMenuContent align="start" className="w-56">
+        <DropdownMenuLabel>سوئیچ ورک‌اسپیس</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {workspaces.map((ws) => (
+          <DropdownMenuItem
+            key={ws.id}
+            disabled={pending || ws.id === currentWorkspaceId}
+            onClick={() => handleSwitch(ws.id)}
+            className="flex items-center gap-2"
+          >
+            <Building2 className="h-4 w-4 text-muted-foreground" />
+            <div className="flex-1 truncate">
+              <p className="text-sm">{ws.name}</p>
+              <p className="text-xs text-muted-foreground">{ws.role}</p>
+            </div>
+            {ws.id === currentWorkspaceId && <Check className="h-4 w-4" />}
+          </DropdownMenuItem>
+        ))}
       </DropdownMenuContent>
     </DropdownMenu>
   );

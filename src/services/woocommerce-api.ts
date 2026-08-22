@@ -1,10 +1,5 @@
 import "server-only";
 
-import { decrypt } from "@/lib/woo-crypto";
-import { db } from "@/db";
-import { wooStores } from "@/db/schema";
-import { eq } from "drizzle-orm";
-
 export interface WooCustomer {
   id: number;
   date_created: string;
@@ -134,17 +129,14 @@ interface WooApiListResponse<T> {
 }
 
 function isPrivateIP(ip: string): boolean {
-  const normalized = ip.startsWith("::ffff:")
-    ? ip.slice(7)
-    : ip;
-  if (normalized === "127.0.0.1" || normalized === "::1" || normalized === "localhost") return true;
-  if (normalized.startsWith("10.")) return true;
-  if (normalized.startsWith("172.")) {
-    const second = parseInt(normalized.split(".")[1], 10);
+  if (ip === "127.0.0.1" || ip === "::1" || ip === "localhost") return true;
+  if (ip.startsWith("10.")) return true;
+  if (ip.startsWith("172.")) {
+    const second = parseInt(ip.split(".")[1], 10);
     if (second >= 16 && second <= 31) return true;
   }
-  if (normalized.startsWith("192.168.")) return true;
-  if (normalized.startsWith("0.")) return true;
+  if (ip.startsWith("192.168.")) return true;
+  if (ip.startsWith("0.")) return true;
   return false;
 }
 
@@ -282,14 +274,12 @@ class WooCommerceApiClient {
     return this.request<WooProduct>(`/products/${id}`);
   }
 
-  private async getAllPaginated<T>(
-    fetchPage: (page: number) => Promise<WooApiListResponse<T>>
-  ): Promise<T[]> {
-    const all: T[] = [];
+  async getAllCustomers(): Promise<WooCustomer[]> {
+    const all: WooCustomer[] = [];
     let page = 1;
     const maxPages = 50;
     while (page <= maxPages) {
-      const { data, headers } = await fetchPage(page);
+      const { data, headers } = await this.getCustomers(page, 100);
       all.push(...data);
       if (page >= Number(headers.totalPages)) break;
       page++;
@@ -297,16 +287,30 @@ class WooCommerceApiClient {
     return all;
   }
 
-  async getAllCustomers(): Promise<WooCustomer[]> {
-    return this.getAllPaginated<WooCustomer>((p) => this.getCustomers(p, 100));
-  }
-
   async getAllOrders(status?: string): Promise<WooOrder[]> {
-    return this.getAllPaginated<WooOrder>((p) => this.getOrders(p, 100, status));
+    const all: WooOrder[] = [];
+    let page = 1;
+    const maxPages = 50;
+    while (page <= maxPages) {
+      const { data, headers } = await this.getOrders(page, 100, status);
+      all.push(...data);
+      if (page >= Number(headers.totalPages)) break;
+      page++;
+    }
+    return all;
   }
 
   async getAllProducts(): Promise<WooProduct[]> {
-    return this.getAllPaginated<WooProduct>((p) => this.getProducts(p, 100));
+    const all: WooProduct[] = [];
+    let page = 1;
+    const maxPages = 50;
+    while (page <= maxPages) {
+      const { data, headers } = await this.getProducts(page, 100);
+      all.push(...data);
+      if (page >= Number(headers.totalPages)) break;
+      page++;
+    }
+    return all;
   }
 }
 
@@ -316,17 +320,4 @@ export function createWooClient(
   consumerSecret: string
 ): WooCommerceApiClient {
   return new WooCommerceApiClient(url, consumerKey, consumerSecret);
-}
-
-export async function createWooClientFromStore(storeId: string): Promise<WooCommerceApiClient | null> {
-  const rows = await db
-    .select()
-    .from(wooStores)
-    .where(eq(wooStores.id, storeId))
-    .limit(1);
-  const store = rows[0];
-  if (!store || !store.active) return null;
-  const key = decrypt(store.consumerKey);
-  const secret = decrypt(store.consumerSecret);
-  return new WooCommerceApiClient(store.url, key, secret);
 }

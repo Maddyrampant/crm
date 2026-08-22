@@ -74,7 +74,7 @@ const ENTITY_COLORS: Record<string, string> = {
   appointment: "bg-purple-100 text-purple-600",
   task: "bg-orange-100 text-orange-600",
   payment: "bg-emerald-100 text-emerald-600",
-  note: "bg-gray-100 text-gray-600",
+  note: "bg-muted text-muted-foreground",
   email: "bg-indigo-100 text-indigo-600",
   sms: "bg-pink-100 text-pink-600",
 };
@@ -87,7 +87,7 @@ const ENTITY_DOT_COLORS: Record<string, string> = {
   appointment: "bg-purple-500",
   task: "bg-orange-500",
   payment: "bg-emerald-500",
-  note: "bg-gray-500",
+  note: "bg-muted-foreground",
   email: "bg-indigo-500",
   sms: "bg-pink-500",
 };
@@ -265,8 +265,8 @@ export function ActivityFeedPanel({ activities, members }: Props) {
           <ol className="relative space-y-4 border-s ps-4">
             {paginatedItems.map((a) => {
             const Icon = ENTITY_ICONS[a.entityType] ?? Inbox;
-            const colorClass = ENTITY_COLORS[a.entityType] ?? "bg-gray-100 text-gray-600";
-            const dotColor = ENTITY_DOT_COLORS[a.entityType] ?? "bg-gray-500";
+            const colorClass = ENTITY_COLORS[a.entityType] ?? "bg-muted text-muted-foreground";
+            const dotColor = ENTITY_DOT_COLORS[a.entityType] ?? "bg-muted-foreground";
             const href = ENTITY_HREF[a.entityType]?.(a.entityId);
             const userName = a.userId ? memberMap.get(a.userId) ?? null : null;
             const title = a.data?.title ? String(a.data.title) : null;

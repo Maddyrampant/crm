@@ -1,6 +1,6 @@
 import "server-only";
 
-import { timingSafeEqual } from "node:crypto";
+import { timingSafeEqual } from "crypto";
 import { and, eq, gte, ilike, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
@@ -19,6 +19,7 @@ import {
   wooSyncLogs,
 } from "@/db/schema";
 import {
+  createWooClient,
   type WooCustomer,
   type WooOrder,
   type WooProduct,
@@ -49,9 +50,9 @@ export async function verifyWebhookSignature(
   );
   const sig = await crypto.subtle.sign("HMAC", key, encoder.encode(body));
   const expected = Buffer.from(sig);
-  const actual = Buffer.from(signature, "base64");
-  if (expected.length !== actual.length) return false;
-  return timingSafeEqual(expected, actual);
+  const received = Buffer.from(signature, "base64");
+  if (expected.length !== received.length) return false;
+  return timingSafeEqual(expected, received);
 }
 
 export async function logSyncEvent(params: {
@@ -508,15 +509,9 @@ export async function handleWooWebhook(
 
   if (!store[0]) return { ok: false, error: "Store not found" };
   if (!store[0].active) return { ok: false, error: "Store is disabled" };
-  if (!store[0].webhookSecret) return { ok: false, error: "Webhook secret not configured" };
 
   const verified = await verifyWebhookSignature(rawBody, signature, store[0].webhookSecret);
   if (!verified) return { ok: false, error: "Invalid signature" };
-
-  const validEvents = ["created", "updated", "deleted"] as const;
-  if (!(validEvents as readonly string[]).includes(event)) {
-    return { ok: false, error: `Invalid event: ${event}` };
-  }
 
   const resourceId = String((payload as Record<string, unknown>).id ?? "");
   const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000);

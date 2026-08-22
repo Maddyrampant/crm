@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { requireWorkspace } from "@/lib/session";
+import { requireWorkspace, requireWorkspaceRole } from "@/lib/session";
 import * as quotesService from "@/services/quotes";
 
 const quoteItemSchema = z.object({
@@ -34,7 +34,7 @@ export async function getQuoteAction(id: string) {
 }
 
 export async function createQuoteAction(input: unknown) {
-  const { workspaceId } = await requireWorkspace();
+  const { workspaceId } = await requireWorkspaceRole("seller");
   const parsed = quoteSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "ورودی نامعتبر" };
   const row = await quotesService.createQuote(workspaceId, parsed.data);
@@ -43,7 +43,7 @@ export async function createQuoteAction(input: unknown) {
 }
 
 export async function updateQuoteAction(id: string, input: unknown) {
-  const { workspaceId } = await requireWorkspace();
+  const { workspaceId } = await requireWorkspaceRole("seller");
   const parsed = quoteSchema.partial().safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "ورودی نامعتبر" };
   const row = await quotesService.updateQuote(workspaceId, id, parsed.data);
@@ -53,14 +53,14 @@ export async function updateQuoteAction(id: string, input: unknown) {
 }
 
 export async function deleteQuoteAction(id: string) {
-  const { workspaceId } = await requireWorkspace();
+  const { workspaceId } = await requireWorkspaceRole("seller");
   const row = await quotesService.deleteQuote(workspaceId, id);
   revalidatePath("/quotes");
   return { ok: Boolean(row) };
 }
 
 export async function convertQuoteToInvoiceAction(id: string) {
-  const { workspaceId } = await requireWorkspace();
+  const { workspaceId } = await requireWorkspaceRole("seller");
   const invoice = await quotesService.convertToInvoice(workspaceId, id);
   if (!invoice) return { ok: false, error: "تبدیل انجام نشد" };
   revalidatePath("/quotes");

@@ -22,6 +22,7 @@ import { dispatchRuleEvent } from "./rules";
 import { adjustStock } from "./inventory";
 import { warehouses } from "@/db/schema";
 import { products } from "@/db/schema";
+import { invalidateInvoiceCache } from "@/lib/cache-invalidate";
 
 export const invoiceItemSchema = z.object({
   productId: z.string().nullable().optional(),
@@ -298,6 +299,7 @@ export async function createInvoice(
     number: invoice.number,
     total: invoice.total,
   });
+  await invalidateInvoiceCache(workspaceId);
 
   return invoice;
 }
@@ -341,6 +343,7 @@ export async function updateInvoiceStatus(
     id: invoice.id,
     status,
   });
+  await invalidateInvoiceCache(workspaceId);
   return invoice;
 }
 
@@ -475,5 +478,6 @@ export async function deleteInvoice(workspaceId: string, invoiceId: string) {
     .delete(invoices)
     .where(and(eq(invoices.id, invoiceId), eq(invoices.workspaceId, workspaceId)))
     .returning({ id: invoices.id });
+  if (deleted) await invalidateInvoiceCache(workspaceId);
   return deleted ?? null;
 }
