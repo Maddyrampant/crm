@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireWorkspace } from "@/lib/session";
+import { requireWorkspace, requireWorkspaceRole } from "@/lib/session";
 import {
   createAppointment,
   deleteAppointment,
@@ -15,7 +15,7 @@ import {
 } from "@/services/tasks";
 
 export async function createAppointmentAction(raw: unknown) {
-  const { user, workspaceId } = await requireWorkspace();
+  const { user, workspaceId } = await requireWorkspaceRole("seller");
   const row = await createAppointment(workspaceId, user.id, raw);
   revalidatePath("/calendar");
   return { ok: true, id: row.id };
@@ -25,7 +25,7 @@ export async function updateAppointmentAction(
   appointmentId: string,
   raw: unknown
 ) {
-  const { workspaceId } = await requireWorkspace();
+  const { workspaceId } = await requireWorkspaceRole("seller");
   const row = await updateAppointment(
     workspaceId,
     appointmentId,
@@ -36,21 +36,21 @@ export async function updateAppointmentAction(
 }
 
 export async function deleteAppointmentAction(appointmentId: string) {
-  const { workspaceId } = await requireWorkspace();
+  const { workspaceId } = await requireWorkspaceRole("seller");
   const row = await deleteAppointment(workspaceId, appointmentId);
   revalidatePath("/calendar");
   return { ok: Boolean(row) };
 }
 
 export async function createTaskAction(raw: unknown) {
-  const { user, workspaceId } = await requireWorkspace();
+  const { user, workspaceId } = await requireWorkspaceRole("seller");
   const row = await createTask(workspaceId, user.id, raw);
   revalidatePath("/calendar");
   return { ok: true, id: row.id };
 }
 
 export async function updateTaskAction(taskId: string, raw: unknown) {
-  const { workspaceId } = await requireWorkspace();
+  const { workspaceId } = await requireWorkspaceRole("seller");
   const row = await updateTask(
     workspaceId,
     taskId,
@@ -64,14 +64,14 @@ export async function updateTaskStatusAction(
   taskId: string,
   status: "open" | "in_progress" | "done" | "cancelled"
 ) {
-  const { workspaceId } = await requireWorkspace();
+  const { workspaceId } = await requireWorkspaceRole("seller");
   const row = await updateTaskStatus(workspaceId, taskId, status);
   revalidatePath("/calendar");
   return { ok: Boolean(row) };
 }
 
 export async function deleteTaskAction(taskId: string) {
-  const { workspaceId } = await requireWorkspace();
+  const { workspaceId } = await requireWorkspaceRole("seller");
   const row = await deleteTask(workspaceId, taskId);
   revalidatePath("/calendar");
   return { ok: Boolean(row) };
