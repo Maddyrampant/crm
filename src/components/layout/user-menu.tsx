@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { LogOut, User } from "lucide-react";
+import Link from "next/link";
+import { LogOut, User, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -56,9 +57,17 @@ export function UserMenu({
           </span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem disabled>
-          <User />
-          پروفایل (به‌زودی)
+        <DropdownMenuItem asChild>
+          <Link href="/profile">
+            <User />
+            پروفایل
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/settings/workspace">
+            <Settings />
+            تنظیمات ورک‌اسپیس
+          </Link>
         </DropdownMenuItem>
         <DropdownMenuItem variant="destructive" onClick={handleSignOut}>
           <LogOut />
