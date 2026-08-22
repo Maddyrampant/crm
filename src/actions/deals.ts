@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { getSession, getActiveWorkspace, hasPermission } from "@/lib/session";
+import { getSession, getActiveWorkspace, hasPermission, canSeeAllData } from "@/lib/session";
 import * as dealsService from "@/services/deals";
 import { logActivity } from "@/services/activity";
 import { toDealRow, toKanbanBoardRow } from "@/lib/serialize";
@@ -54,7 +54,8 @@ export async function getKanbanBoardAction(pipelineId?: string | null) {
   const ctx = await getWorkspaceContext();
   if (!ctx) return { ok: false, error: "ابتدا وارد شوید" };
 
-  const board = await dealsService.getKanbanBoard(ctx.workspaceId, pipelineId);
+  const forceOwnerId = canSeeAllData(ctx.membership) ? null : ctx.userId;
+  const board = await dealsService.getKanbanBoard(ctx.workspaceId, pipelineId, forceOwnerId);
   return { ok: true, data: toKanbanBoardRow(board) };
 }
 
@@ -67,9 +68,12 @@ export async function listDealsAction(input: unknown) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "ورودی نامعتبر" };
   }
 
+  const forceOwnerId = canSeeAllData(ctx.membership) ? undefined : ctx.userId;
+
   const result = await dealsService.listDeals({
     ...parsed.data,
     workspaceId: ctx.workspaceId,
+    ownerId: parsed.data.ownerId ?? forceOwnerId,
     closeDateFrom: parseDateOnly(parsed.data.closeDateFrom, false),
     closeDateTo: parseDateOnly(parsed.data.closeDateTo, true),
   });

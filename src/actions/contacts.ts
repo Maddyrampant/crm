@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { getSession, getActiveWorkspace, hasPermission } from "@/lib/session";
+import { getSession, getActiveWorkspace, hasPermission, canSeeAllData } from "@/lib/session";
 import * as contactsService from "@/services/contacts";
 import * as companiesService from "@/services/companies";
 import { logActivity, addNote, getNotes } from "@/services/activity";
@@ -90,9 +90,12 @@ export async function getContactsAction(input: unknown) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "ورودی نامعتبر" };
   }
 
+  const forceOwnerId = canSeeAllData(ctx.membership) ? undefined : ctx.userId;
+
   const result = await contactsService.listContacts({
     ...parsed.data,
     workspaceId: ctx.workspaceId,
+    ownerId: parsed.data.ownerId ?? forceOwnerId,
   });
 
   return {

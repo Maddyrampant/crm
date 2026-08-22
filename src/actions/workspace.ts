@@ -1,8 +1,9 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { getSession, requireWorkspaceRole } from "@/lib/session";
 import { db } from "@/db";
@@ -149,6 +150,34 @@ export async function deleteWorkspaceAction() {
   const row = await deleteWorkspace(workspaceId);
   if (!row) return { ok: false, error: "ورک‌اسپیس یافت نشد" };
   redirect("/workspace/new");
+}
+
+export async function switchWorkspaceAction(workspaceId: string) {
+  const session = await getSession();
+  if (!session?.user) return { ok: false, error: "ابتدا وارد شوید" };
+
+  const [membership] = await db
+    .select()
+    .from(workspaceMembers)
+    .where(
+      and(
+        eq(workspaceMembers.userId, session.user.id),
+        eq(workspaceMembers.workspaceId, workspaceId)
+      )
+    )
+    .limit(1);
+  if (!membership) {
+    return { ok: false, error: "عضو این ورک‌اسپیس نیستید" };
+  }
+
+  const store = await cookies();
+  store.set("active_workspace", workspaceId, {
+    path: "/",
+    httpOnly: true,
+    sameSite: "lax",
+    maxAge: 60 * 60 * 24 * 365,
+  });
+  return { ok: true };
 }
 
 export async function getUserWorkspacesAction() {
