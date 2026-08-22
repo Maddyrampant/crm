@@ -44,14 +44,14 @@ function Brand() {
   );
 }
 
-export function AppSidebar({ role }: { role: NavRole }) {
+export function AppSidebar({ role, workspaceName }: { role: NavRole; workspaceName: string }) {
   const pathname = usePathname();
 
   return (
     <Sidebar side="right" collapsible="icon" className="border-e">
       <SidebarHeader>
         <Brand />
-        <WorkspaceSwitcher />
+        <WorkspaceSwitcher name={workspaceName} />
       </SidebarHeader>
       <SidebarContent>
         {navSections.map((section) => {

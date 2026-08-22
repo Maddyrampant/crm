@@ -1,0 +1,57 @@
+services:
+  woo-db:
+    image: mariadb:11
+    container_name: crm-woo-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: crm_woo
+      MYSQL_USER: woo
+      MYSQL_PASSWORD: woo
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3307:3306"
+    volumes:
+      - crm_woo_db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  woo-wp:
+    image: wordpress:6.8-php8.3-apache
+    container_name: crm-woo-wp
+    restart: unless-stopped
+    depends_on:
+      woo-db: { condition: service_healthy }
+    ports:
+      - "8095:80"
+    environment:
+      WORDPRESS_DB_HOST: woo-db
+      WORDPRESS_DB_USER: woo
+      WORDPRESS_DB_PASSWORD: woo
+      WORDPRESS_DB_NAME: crm_woo
+      WORDPRESS_DEBUG: "1"
+    volumes:
+      - crm_woo_wp:/var/www/html
+
+  woo-cli:
+    image: wordpress:cli-php8.3
+    container_name: crm-woo-cli
+    depends_on:
+      woo-db: { condition: service_healthy }
+    environment:
+      WORDPRESS_DB_HOST: woo-db
+      WORDPRESS_DB_USER: woo
+      WORDPRESS_DB_PASSWORD: woo
+      WORDPRESS_DB_NAME: crm_woo
+    volumes:
+      - crm_woo_wp:/var/www/html
+      - ./docker/woo-seed.sh:/usr/local/bin/seed.sh
+    stdin_open: true
+    tty: true
+    entrypoint: ["tail", "-f", "/dev/null"]
+
+volumes:
+  crm_woo_db:
+  crm_woo_wp:

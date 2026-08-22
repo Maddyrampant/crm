@@ -13,7 +13,7 @@ import { SidebarMenuButton, useSidebar } from "@/components/ui/sidebar";
  * سوییچر ورک‌اسپیس — در فاز ۰ فقط نام فعلی را نشان می‌دهد.
  * مدیریت چند ورک‌اسپیس در فازهای بعدی تکمیل می‌شود.
  */
-export function WorkspaceSwitcher() {
+export function WorkspaceSwitcher({ name }: { name: string }) {
   const { isMobile } = useSidebar();
 
   return (
@@ -27,7 +27,7 @@ export function WorkspaceSwitcher() {
             <Building2 className="size-4" />
           </div>
           <div className="grid flex-1 text-right text-sm leading-tight">
-            <span className="truncate font-semibold">CRM</span>
+            <span className="truncate font-semibold">{name}</span>
             <span className="truncate text-xs text-muted-foreground">
               ورک‌اسپیس من
             </span>

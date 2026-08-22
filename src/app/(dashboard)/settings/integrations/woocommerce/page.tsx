@@ -14,7 +14,7 @@ export default async function WooSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <Breadcrumb items={[{ label: "تنظیمات", href: "/settings" }, { label: "یکپارچه‌سازی", href: "/settings/integrations" }, { label: "ووکامرس" }]} />
+      <Breadcrumb items={[{ label: "تنظیمات", href: "/settings" }, { label: "ووکامرس" }]} />
       <PageHeader
         title="اتصال فروشگاه ووکامرس"
         description="فروشگاه‌های ووکامرس متصل را مدیریت کنید"
