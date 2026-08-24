@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { ContentLibrary } from "@/components/ai/content-library";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "کتابخانه محتوا" };
 
 export default async function AiContentPage({

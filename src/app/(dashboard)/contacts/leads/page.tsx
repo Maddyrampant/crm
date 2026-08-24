@@ -3,6 +3,7 @@ import { getContactsAction } from "@/actions/contacts";
 import { LeadScoreTable } from "@/components/contacts/lead-score-table";
 import { PageHeader } from "@/components/ui/page-header";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "امتیازدهی لید" };
 
 export default async function LeadScoringPage() {

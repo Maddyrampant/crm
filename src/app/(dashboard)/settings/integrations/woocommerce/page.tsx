@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { WooStorePanel } from "./woo-store-panel";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "اتصال فروشگاه ووکامرس" };
 
 export default async function WooSettingsPage() {
