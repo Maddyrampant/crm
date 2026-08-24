@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { KnowledgePanel } from "@/components/ai/knowledge-panel";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "پایگاه دانش AI" };
 
 export default async function AiKnowledgePage({

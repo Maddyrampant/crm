@@ -10,6 +10,7 @@ import { WorkspaceInfoPanel } from "./workspace-info-panel";
 import { TeamMembersPanel } from "@/components/settings/team-members-panel";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "مدیریت ورک‌اسپیس" };
 
 export default async function WorkspacePage() {

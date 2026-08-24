@@ -7,6 +7,7 @@ import { listProducts } from "@/services/inventory";
 import { InvoiceForm } from "@/components/invoices/invoice-form";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "فاکتور جدید" };
 
 export default async function NewInvoicePage() {

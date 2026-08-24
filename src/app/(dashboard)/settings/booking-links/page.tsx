@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { BookingLinksPanel } from "@/components/bookings/booking-links-panel";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "لینک‌های رزرو" };
 
 export default async function BookingLinksPage() {

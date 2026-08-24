@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { TeamMembersPanel } from "@/components/settings/team-members-panel";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "اعضای تیم" };
 
 export default async function TeamPage() {

@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { RulesPanel } from "@/components/rules/rules-panel";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "قوانین اتوماسیون" };
 
 export default async function RulesPage() {

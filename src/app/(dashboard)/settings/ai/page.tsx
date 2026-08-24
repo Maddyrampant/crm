@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { AiSettingsForm } from "@/components/ai/ai-settings-form";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "تنظیمات هوش مصنوعی" };
 
 export default async function AiSettingsPage() {
