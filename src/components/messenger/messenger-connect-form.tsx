@@ -38,6 +38,27 @@ const channelPlaceholders: Record<string, string> = {
 };
 
 export function MessengerConnectForm({ open, onOpenChange }: Props) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>اتصال پیام‌رسان جدید</DialogTitle>
+          <DialogDescription>
+            اطلاعات اتصال واتساپ، تلگرام یا اینستاگرام را وارد کنید. پس از ثبت،
+            Webhook URL از کارت اتصال قابل کپی است.
+          </DialogDescription>
+        </DialogHeader>
+        <MessengerConnectFormBody onDone={() => onOpenChange(false)} />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function MessengerConnectFormBody({
+  onDone,
+}: {
+  onDone?: () => void;
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [channel, setChannel] = useState("whatsapp");
@@ -65,9 +86,7 @@ export function MessengerConnectForm({ open, onOpenChange }: Props) {
       });
       if (res.ok) {
         toast.success("اتصال با موفقیت ثبت شد");
-        onOpenChange(false);
-        setChannel("whatsapp");
-        setName("");
+        onDone?.();
         router.refresh();
       } else {
         toast.error("خطا در ثبت اتصال");
@@ -76,74 +95,62 @@ export function MessengerConnectForm({ open, onOpenChange }: Props) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>اتصال پیام‌رسان جدید</DialogTitle>
-          <DialogDescription>
-            اطلاعات اتصال واتساپ، تلگرام یا اینستاگرام را وارد کنید. پس از ثبت،
-            Webhook URL از کارت اتصال قابل کپی است.
-          </DialogDescription>
-        </DialogHeader>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="m-ch">کانال</Label>
+        <Select value={channel} onValueChange={setChannel}>
+          <SelectTrigger id="m-ch">
+            <SelectValue placeholder="انتخاب کانال" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="whatsapp">واتساپ</SelectItem>
+            <SelectItem value="telegram">تلگرام</SelectItem>
+            <SelectItem value="instagram">اینستاگرام</SelectItem>
+            <SelectItem value="other">سایر</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="m-ch">کانال</Label>
-            <Select value={channel} onValueChange={setChannel}>
-              <SelectTrigger id="m-ch">
-                <SelectValue placeholder="انتخاب کانال" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="whatsapp">واتساپ</SelectItem>
-                <SelectItem value="telegram">تلگرام</SelectItem>
-                <SelectItem value="instagram">اینستاگرام</SelectItem>
-                <SelectItem value="other">سایر</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+      <div className="space-y-2">
+        <Label htmlFor="m-name">نام اتصال</Label>
+        <Input
+          id="m-name"
+          name="name"
+          placeholder="مثلاً ربات پشتیبانی من"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+      </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="m-name">نام اتصال</Label>
-            <Input
-              id="m-name"
-              name="name"
-              placeholder="مثلاً ربات پشتیبانی من"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
+      <div className="space-y-2">
+        <Label htmlFor="m-config">پیکربندی (JSON اختیاری)</Label>
+        <Textarea
+          id="m-config"
+          name="config"
+          dir="ltr"
+          rows={3}
+          placeholder={channelPlaceholders[channel]}
+          className="font-mono text-xs"
+        />
+        <p className="text-xs text-muted-foreground">
+          توکن، نام کاربری و سایر تنظیمات هر کانال را اینجا وارد کنید.
+        </p>
+      </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="m-config">پیکربندی (JSON اختیاری)</Label>
-            <Textarea
-              id="m-config"
-              name="config"
-              dir="ltr"
-              rows={3}
-              placeholder={channelPlaceholders[channel]}
-              className="font-mono text-xs"
-            />
-            <p className="text-xs text-muted-foreground">
-              توکن، نام کاربری و سایر تنظیمات هر کانال را اینجا وارد کنید.
-            </p>
-          </div>
-
-          <DialogFooter className="gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={pending}
-            >
-              انصراف
-            </Button>
-            <Button type="submit" disabled={pending}>
-              {pending ? <Loader2 className="ml-1 h-4 w-4 animate-spin" /> : null}
-              ثبت اتصال
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      <div className="flex justify-end gap-2 pt-1">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => onDone?.()}
+          disabled={pending}
+        >
+          انصراف
+        </Button>
+        <Button type="submit" disabled={pending}>
+          {pending ? <Loader2 className="ml-1 h-4 w-4 animate-spin" /> : null}
+          ثبت اتصال
+        </Button>
+      </div>
+    </form>
   );
 }

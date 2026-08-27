@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { EmptyState } from "@/components/ui/empty-state";
-import { MessengerConnectForm } from "@/components/messenger/messenger-connect-form";
+import { WindowConnectMessenger } from "@/components/window/window-connect-messenger";
 import type { MessengerIntegration } from "@/db/schema";
 
 type Props = {
@@ -44,7 +44,6 @@ export function MessengerManager({ initialIntegrations, canManage }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [integrations, setIntegrations] = useState(initialIntegrations);
-  const [connectOpen, setConnectOpen] = useState(false);
 
   async function handleToggle(id: string, next: boolean) {
     startTransition(async () => {
@@ -92,10 +91,14 @@ export function MessengerManager({ initialIntegrations, canManage }: Props) {
           {integrations.length} اتصال فعال
         </p>
         {canManage && (
-          <Button onClick={() => setConnectOpen(true)}>
-            <Plus className="ml-1 h-4 w-4" />
-            اتصال جدید
-          </Button>
+          <WindowConnectMessenger
+            render={(open) => (
+              <Button onClick={open}>
+                <Plus className="ml-1 h-4 w-4" />
+                اتصال جدید
+              </Button>
+            )}
+          />
         )}
       </div>
 
@@ -106,10 +109,14 @@ export function MessengerManager({ initialIntegrations, canManage }: Props) {
           description="اتصال واتساپ، تلگرام یا اینستاگرام خود را اضافه کنید."
         >
           {canManage && (
-            <Button onClick={() => setConnectOpen(true)}>
-              <Plus className="ml-1 h-4 w-4" />
-              افزودن اتصال
-            </Button>
+            <WindowConnectMessenger
+              render={(open) => (
+                <Button onClick={open}>
+                  <Plus className="ml-1 h-4 w-4" />
+                  افزودن اتصال
+                </Button>
+              )}
+            />
           )}
         </EmptyState>
       ) : (
@@ -185,8 +192,6 @@ export function MessengerManager({ initialIntegrations, canManage }: Props) {
           })}
         </div>
       )}
-
-      <MessengerConnectForm open={connectOpen} onOpenChange={setConnectOpen} />
     </div>
   );
 }

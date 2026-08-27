@@ -58,6 +58,7 @@ import {
 import { showUndoToast } from "@/components/ui/undo-toast";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { ContactFormDialog } from "@/components/contacts/contact-form-dialog";
+import { WindowContactForm } from "@/components/window/window-contact-form";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SOURCE_LABELS, STAGE_LABELS, STAGE_VARIANT } from "@/lib/labels";
 import { formatDate, formatNumber } from "@/lib/format";
@@ -222,16 +223,23 @@ export function ContactsTable({
               خروجی CSV
             </Button>
             {canManage && (
-              <Button
-                size="sm"
-                onClick={() => {
-                  setEditing(null);
-                  setFormOpen(true);
+              <WindowContactForm
+                data={{
+                  companies,
+                  members: members.map((m) => ({
+                    id: m.id,
+                    name: m.name,
+                    email: m.email,
+                  })),
+                  customFields,
                 }}
-              >
-                <Plus className="size-4" />
-                مشتری جدید
-              </Button>
+                render={(open) => (
+                  <Button size="sm" onClick={open}>
+                    <Plus className="size-4" />
+                    مشتری جدید
+                  </Button>
+                )}
+              />
             )}
           </div>
         </CardHeader>
