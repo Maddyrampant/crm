@@ -57,10 +57,13 @@ import {
 } from "@/actions/contacts";
 import { showUndoToast } from "@/components/ui/undo-toast";
 import { useUrlFilters } from "@/hooks/use-url-filters";
+import { useRowSelection } from "@/hooks/use-row-selection";
+import { BulkActionBar } from "@/components/ui/bulk-action-bar";
 import { ContactFormDialog } from "@/components/contacts/contact-form-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SOURCE_LABELS, STAGE_LABELS, STAGE_VARIANT } from "@/lib/labels";
 import { formatDate, formatNumber } from "@/lib/format";
+import { bulkDeleteContactsAction } from "@/actions/bulk";
 import type { ContactRow, CustomFieldRow, TagRow } from "@/lib/api-types";
 import type { WorkspaceMemberRow } from "@/services/workspace";
 
@@ -119,6 +122,8 @@ export function ContactsTable({
   const [editing, setEditing] = useState<ContactRow | null>(null);
   const [deleting, setDeleting] = useState<ContactRow | null>(null);
   const [busy, setBusy] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const selection = useRowSelection<ContactRow>();
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -203,6 +208,27 @@ export function ContactsTable({
       total: Math.max(0, d.total - 1),
     }));
     setDeleting(null);
+  }
+
+  async function handleBulkDelete() {
+    const ids = selection.selectedIds;
+    if (!ids.length) return;
+    setBulkBusy(true);
+    const result = await bulkDeleteContactsAction(ids);
+    setBulkBusy(false);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    showUndoToast({
+      message: `${ids.length} مشتری حذف شد`,
+      onUndo: () => load(),
+    });
+    setData((d) => ({
+      items: d.items.filter((c) => !ids.includes(c.id)),
+      total: Math.max(0, d.total - ids.length),
+    }));
+    selection.clear();
   }
 
   const totalPages = Math.max(1, Math.ceil(data.total / pageSize));
@@ -335,6 +361,19 @@ export function ContactsTable({
             <Table>
               <TableHeader>
                 <TableRow>
+                  {canDelete && (
+                    <TableHead className="w-12">
+                      <input
+                        type="checkbox"
+                        className="size-4 cursor-pointer"
+                        checked={selection.isAllSelected(data.items)}
+                        ref={(el) => {
+                          if (el) el.indeterminate = selection.isPartial(data.items);
+                        }}
+                        onChange={() => selection.toggleAll(data.items)}
+                      />
+                    </TableHead>
+                  )}
                   <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("firstName")}>
                     <span className="inline-flex items-center gap-1">
                       نام {sortBy === "firstName" && sortIndicator()}
@@ -355,7 +394,7 @@ export function ContactsTable({
               <TableBody>
                 {data.items.length === 0 && !isPending ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="border-0">
+                    <TableCell colSpan={canDelete ? 8 : 7} className="border-0">
                       <EmptyState
                         icon={Search}
                         title="مشتری‌ای یافت نشد"
@@ -365,7 +404,17 @@ export function ContactsTable({
                   </TableRow>
                 ) : (
                   data.items.map((c) => (
-                    <TableRow key={c.id}>
+                    <TableRow key={c.id} data-state={selection.isSelected(c.id) ? "selected" : undefined}>
+                      {canDelete && (
+                        <TableCell>
+                          <input
+                            type="checkbox"
+                            className="size-4 cursor-pointer"
+                            checked={selection.isSelected(c.id)}
+                            onChange={() => selection.toggle(c.id)}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 font-medium text-primary">
@@ -555,6 +604,14 @@ export function ContactsTable({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <BulkActionBar
+        count={selection.count}
+        onClear={selection.clear}
+        onDelete={handleBulkDelete}
+        deleting={bulkBusy}
+        label="مشتری"
+      />
     </div>
   );
 }

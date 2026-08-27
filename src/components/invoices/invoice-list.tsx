@@ -6,7 +6,10 @@ import Link from "next/link";
 import { Eye, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { deleteInvoiceAction, listInvoicesAction } from "@/actions/invoices";
+import { bulkDeleteInvoicesAction } from "@/actions/bulk";
 import { formatCurrency, formatDate, toFaDigits } from "@/lib/format";
+import { useRowSelection } from "@/hooks/use-row-selection";
+import { BulkActionBar } from "@/components/ui/bulk-action-bar";
 import type { InvoiceRow } from "@/services/invoices";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -35,8 +38,10 @@ export function InvoiceList({
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [isPending, startTransition] = useTransition();
+  const [bulkBusy, setBulkBusy] = useState(false);
   const router = useRouter();
   const pageSize = 20;
+  const selection = useRowSelection<{ id: string }>();
 
   const fetchPage = useCallback(
     (p: number, q: string) => {
@@ -71,6 +76,21 @@ export function InvoiceList({
     }
   }
 
+  async function handleBulkDelete() {
+    const ids = selection.selectedIds;
+    if (!ids.length) return;
+    setBulkBusy(true);
+    const result = await bulkDeleteInvoicesAction(ids);
+    setBulkBusy(false);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success(`${ids.length} فاکتور حذف شد`);
+    selection.clear();
+    fetchPage(page, search);
+  }
+
   return (
     <div className="space-y-4">
       <div className="relative max-w-sm">
@@ -87,6 +107,23 @@ export function InvoiceList({
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12">
+                <input
+                  type="checkbox"
+                  className="size-4 cursor-pointer"
+                  checked={items.length > 0 && items.every((r) => selection.isSelected(r.invoice.id))}
+                  ref={(el) => {
+                    if (el) el.indeterminate = items.some((r) => selection.isSelected(r.invoice.id)) && !items.every((r) => selection.isSelected(r.invoice.id));
+                  }}
+                  onChange={() => {
+                    const allSelected = items.every((r) => selection.isSelected(r.invoice.id));
+                    items.forEach((r) => {
+                      if (allSelected && selection.isSelected(r.invoice.id)) selection.toggle(r.invoice.id);
+                      else if (!allSelected && !selection.isSelected(r.invoice.id)) selection.toggle(r.invoice.id);
+                    });
+                  }}
+                />
+              </TableHead>
               <TableHead>شماره</TableHead>
               <TableHead>مشتری</TableHead>
               <TableHead>تاریخ</TableHead>
@@ -100,13 +137,21 @@ export function InvoiceList({
           <TableBody>
             {items.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
                   {isPending ? "در حال بارگذاری…" : "فاکتوری یافت نشد"}
                 </TableCell>
               </TableRow>
             )}
             {items.map((row) => (
-              <TableRow key={row.invoice.id}>
+              <TableRow key={row.invoice.id} data-state={selection.isSelected(row.invoice.id) ? "selected" : undefined}>
+                <TableCell>
+                  <input
+                    type="checkbox"
+                    className="size-4 cursor-pointer"
+                    checked={selection.isSelected(row.invoice.id)}
+                    onChange={() => selection.toggle(row.invoice.id)}
+                  />
+                </TableCell>
                 <TableCell className="font-medium" dir="ltr">
                   {row.invoice.number}
                 </TableCell>
@@ -154,6 +199,14 @@ export function InvoiceList({
           onPageSizeChange={() => {}}
         />
       )}
+
+      <BulkActionBar
+        count={selection.count}
+        onClear={selection.clear}
+        onDelete={handleBulkDelete}
+        deleting={bulkBusy}
+        label="فاکتور"
+      />
     </div>
   );
 }
