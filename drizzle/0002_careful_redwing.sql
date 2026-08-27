@@ -1,1 +1,0 @@
-ALTER TABLE "ai_messages" ALTER COLUMN "usage" DROP DEFAULT;

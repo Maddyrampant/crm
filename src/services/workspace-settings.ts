@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { workspaceSettings } from "@/db/schema/workspace-settings";
 
@@ -19,13 +19,14 @@ export async function getSetting(workspaceId: string, key: string) {
 }
 
 export async function getSettings(workspaceId: string, keys: string[]) {
+  if (keys.length === 0) return {};
   const rows = await db
     .select()
     .from(workspaceSettings)
     .where(
       and(
         eq(workspaceSettings.workspaceId, workspaceId),
-        eq(workspaceSettings.key, keys[0])
+        sql`${workspaceSettings.key} IN ${keys}`
       )
     );
   const map: Record<string, string | null> = {};
