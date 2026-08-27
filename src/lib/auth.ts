@@ -32,6 +32,7 @@ export const auth = betterAuth({
     process.env.BETTER_AUTH_URL ?? "http://localhost:3001",
     "http://localhost:3000",
     "http://localhost:3001",
+    "http://192.168.1.168:3001",
   ],
   database: drizzleAdapter(db, {
     provider: "pg",
