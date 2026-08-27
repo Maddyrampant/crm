@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Building2,
   CalendarDays,
@@ -114,6 +115,7 @@ const ENTITY_FILTER_OPTIONS = [
 ];
 
 export function ActivityFeedPanel({ activities, members }: Props) {
+  const router = useRouter();
   const [entityFilter, setEntityFilter] = useState("_all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -191,7 +193,7 @@ export function ActivityFeedPanel({ activities, members }: Props) {
     }
     toast.success(quickActionType === "call" ? "تماس ثبت شد" : "جلسه ثبت شد");
     setQuickActionOpen(false);
-    window.location.reload();
+    router.refresh();
   }
 
   return (
