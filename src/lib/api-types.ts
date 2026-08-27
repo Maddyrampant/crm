@@ -112,3 +112,19 @@ export type KanbanBoardRow = {
   pipeline: { id: string; name: string; isDefault: boolean } | null;
   stages: KanbanStageRow[];
 };
+
+export type InvoiceRow = {
+  id: string;
+  number: string;
+  status: string;
+  total: string;
+  contactId: string;
+};
+
+export type ProductRow = {
+  id: string;
+  name: string;
+  sku: string;
+  unitPrice: string;
+  active: boolean;
+};

@@ -3,20 +3,22 @@
 import { memo, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Building2, Kanban, Loader2, Search, Users } from "lucide-react";
+import { Building2, FileText, Kanban, Loader2, Package, Search, Users } from "lucide-react";
 import { globalSearchAction } from "@/actions/search";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
-import type { CompanyRow, ContactRow, DealRow } from "@/lib/api-types";
+import type { CompanyRow, ContactRow, DealRow, InvoiceRow, ProductRow } from "@/lib/api-types";
 
 type Results = {
   contacts: ContactRow[];
   companies: CompanyRow[];
   deals: DealRow[];
+  invoices: InvoiceRow[];
+  products: ProductRow[];
 };
 
 type SearchItem = {
-  kind: "contact" | "company" | "deal";
+  kind: "contact" | "company" | "deal" | "invoice" | "product";
   id: string;
   href: string;
   title: string;
@@ -115,6 +117,30 @@ export function GlobalSearch() {
               title: d.title,
               subtitle: d.contactName ?? d.companyName ?? "",
               icon: Kanban,
+            })),
+          },
+          {
+            label: "فاکتورها",
+            seeAllHref: `/invoices`,
+            items: results.invoices.map((i) => ({
+              kind: "invoice",
+              id: i.id,
+              href: `/invoices/${i.id}`,
+              title: i.number,
+              subtitle: i.status,
+              icon: FileText,
+            })),
+          },
+          {
+            label: "کالاها",
+            seeAllHref: `/products`,
+            items: results.products.map((p) => ({
+              kind: "product",
+              id: p.id,
+              href: `/products`,
+              title: p.name,
+              subtitle: p.sku,
+              icon: Package,
             })),
           },
         ]
