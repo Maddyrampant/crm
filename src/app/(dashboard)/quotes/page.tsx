@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { QuotesManager } from "@/components/quotes/quotes-manager";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "پیشنهاد فروش" };
 
 export default async function QuotesPage() {

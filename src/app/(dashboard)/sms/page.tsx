@@ -5,6 +5,7 @@ import { SmsCampaignForm } from "@/components/sms/sms-campaign-form";
 import { listSmsCampaignsAction } from "@/actions/sms";
 import { RefreshWrapper } from "@/components/shared/refresh-wrapper";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "پیامک" };
 
 export default async function SmsPage() {

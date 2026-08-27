@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireWorkspace } from "@/lib/session";
@@ -10,6 +11,9 @@ import { STAGE_LABELS, STAGE_VARIANT } from "@/lib/labels";
 import { formatDate, formatNumber } from "@/lib/format";
 import { NotesPanel } from "@/components/notes/notes-panel";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
+
+export const dynamic = "force-dynamic";
+export const metadata: Metadata = { title: "جزئیات شرکت" };
 
 export default async function CompanyDetailPage({
   params,

@@ -19,6 +19,7 @@ import { IntegrationsPanel } from "@/components/settings/integrations-panel";
 import { LogsPanel } from "@/components/settings/logs-panel";
 import { WebhooksPanel } from "@/components/settings/webhooks-panel";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "تنظیمات" };
 
 export default async function SettingsPage() {

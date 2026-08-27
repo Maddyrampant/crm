@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { InvoiceList } from "@/components/invoices/invoice-list";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "فاکتورها" };
 
 export default async function InvoicesPage() {

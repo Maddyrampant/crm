@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { requireWorkspace, hasPermission } from "@/lib/session";
 import {
   listPurchaseOrders,
@@ -6,6 +7,9 @@ import {
 } from "@/services/inventory";
 import { PageHeader } from "@/components/ui/page-header";
 import { PurchaseOrdersTable } from "@/components/inventory/purchase-orders-table";
+
+export const dynamic = "force-dynamic";
+export const metadata: Metadata = { title: "سفارش‌های خرید" };
 
 export default async function PurchasesPage() {
   const { workspaceId, membership } = await requireWorkspace();

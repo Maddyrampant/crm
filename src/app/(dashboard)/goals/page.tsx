@@ -5,6 +5,7 @@ import { GoalForm } from "@/components/goals/goal-form";
 import { listGoalsAction } from "@/actions/goals";
 import { RefreshWrapper } from "@/components/shared/refresh-wrapper";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "اهداف فروش" };
 
 export default async function GoalsPage() {

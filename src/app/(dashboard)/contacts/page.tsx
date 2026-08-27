@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { requireWorkspace, hasPermission } from "@/lib/session";
 import { listContacts, listTags, listCustomFields } from "@/services/contacts";
 import { listCompanies } from "@/services/companies";
@@ -6,6 +7,9 @@ import { toContactRow, toCustomFieldRow } from "@/lib/serialize";
 import { PageHeader } from "@/components/ui/page-header";
 import { ContactsTable } from "@/components/contacts/contacts-table";
 import { ImportCsvDialog } from "@/components/contacts/import-csv-dialog";
+
+export const dynamic = "force-dynamic";
+export const metadata: Metadata = { title: "مشتریان" };
 
 export default async function ContactsPage() {
   const { workspaceId, membership } = await requireWorkspace();

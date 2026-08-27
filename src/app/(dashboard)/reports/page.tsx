@@ -20,6 +20,7 @@ import { Contact, Package, Banknote, TrendingUp, Clock3 } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { ReportExportButton } from "@/components/reports/report-export-button";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "گزارش‌ها" };
 
 const VALID_MONTHS = ["3", "6", "12"];

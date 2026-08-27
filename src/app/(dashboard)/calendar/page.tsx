@@ -8,6 +8,7 @@ import { eq } from "drizzle-orm";
 import { CalendarView } from "@/components/calendar/calendar-view";
 import { PageHeader } from "@/components/ui/page-header";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "تقویم و قرارها" };
 
 export default async function CalendarPage() {

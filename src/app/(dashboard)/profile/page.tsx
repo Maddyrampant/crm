@@ -3,6 +3,7 @@ import { requireWorkspace } from "@/lib/session";
 import { PageHeader } from "@/components/ui/page-header";
 import { ProfileManager } from "@/components/profile/profile-manager";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "پروفایل" };
 
 export default async function ProfilePage() {

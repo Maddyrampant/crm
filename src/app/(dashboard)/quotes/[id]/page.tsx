@@ -5,6 +5,7 @@ import { getQuoteAction } from "@/actions/quotes";
 import { QuoteDetail } from "@/components/quotes/quote-detail";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "جزئیات پیشنهاد" };
 
 export default async function QuoteDetailPage({

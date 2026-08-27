@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { LeadScoringSettings } from "@/components/lead-scoring/lead-scoring-settings";
 import { getLeadScoreSettingsAction } from "@/actions/lead-scoring";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "امتیازدهی لید" };
 
 export default async function LeadScoringPage() {

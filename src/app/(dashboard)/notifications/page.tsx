@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { PageHeader } from "@/components/ui/page-header";
 import { NotificationCenterPanel } from "@/components/notifications/notification-center-panel";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "مرکز اعلان" };
 
 export default function NotificationsPage() {
