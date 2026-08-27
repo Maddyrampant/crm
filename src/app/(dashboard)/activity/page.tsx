@@ -5,6 +5,7 @@ import { getWorkspaceMembers } from "@/services/workspace";
 import { PageHeader } from "@/components/ui/page-header";
 import { ActivityFeedPanel } from "@/components/activity/activity-feed-panel";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "فعالیت‌ها" };
 
 export default async function ActivityPage() {

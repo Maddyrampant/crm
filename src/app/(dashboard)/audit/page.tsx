@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { AuditLogList } from "@/components/audit/audit-log-list";
 import { getAuditLogsAction } from "@/actions/audit";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "لاگ تغییرات" };
 
 export default async function AuditPage() {

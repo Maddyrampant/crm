@@ -6,6 +6,7 @@ import { ChatPanel } from "@/components/assistant/chat-panel";
 import { AssistantNotice } from "@/components/assistant/assistant-notice";
 import { PageHeader } from "@/components/ui/page-header";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "دستیار هوش مصنوعی" };
 
 export default async function AssistantPage() {

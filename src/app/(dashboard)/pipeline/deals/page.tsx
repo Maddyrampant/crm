@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { DealsTable } from "@/components/pipeline/deals-table";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "فروش‌ها" };
 
 export default async function DealsPage() {

@@ -7,6 +7,7 @@ import {
 import { PageHeader } from "@/components/ui/page-header";
 import { EmailManager } from "@/components/email/email-manager";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "ایمیل مارکتینگ" };
 
 export default async function EmailPage() {

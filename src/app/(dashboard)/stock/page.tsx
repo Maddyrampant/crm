@@ -1,7 +1,11 @@
+import type { Metadata } from "next";
 import { requireWorkspace } from "@/lib/session";
 import { listProducts, listLowStock } from "@/services/inventory";
 import { PageHeader } from "@/components/ui/page-header";
 import { StockTable } from "@/components/inventory/stock-table";
+
+export const dynamic = "force-dynamic";
+export const metadata: Metadata = { title: "موجودی انبار" };
 
 export default async function StockPage() {
   const { workspaceId } = await requireWorkspace();

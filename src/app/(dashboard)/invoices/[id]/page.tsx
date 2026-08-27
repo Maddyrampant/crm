@@ -5,6 +5,7 @@ import { getInvoice } from "@/services/invoices";
 import { InvoiceDetail } from "@/components/invoices/invoice-detail";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "جزئیات فاکتور" };
 
 export default async function InvoiceDetailPage({

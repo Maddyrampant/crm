@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { toFaDigits } from "@/lib/format";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "گزارش مصرف AI" };
 
 export default async function AiUsagePage() {

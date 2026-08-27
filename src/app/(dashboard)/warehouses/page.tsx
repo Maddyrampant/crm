@@ -1,7 +1,11 @@
+import type { Metadata } from "next";
 import { requireWorkspace, hasPermission } from "@/lib/session";
 import { listWarehouses } from "@/services/inventory";
 import { PageHeader } from "@/components/ui/page-header";
 import { WarehousesTable } from "@/components/inventory/warehouses-table";
+
+export const dynamic = "force-dynamic";
+export const metadata: Metadata = { title: "انبارها" };
 
 export default async function WarehousesPage() {
   const { workspaceId, membership } = await requireWorkspace();

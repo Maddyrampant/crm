@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { requireWorkspace, hasPermission } from "@/lib/session";
 import { getContact, listCustomFields } from "@/services/contacts";
@@ -12,6 +13,9 @@ import {
 } from "@/lib/serialize";
 import { ContactDetail } from "@/components/contacts/contact-detail";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
+
+export const dynamic = "force-dynamic";
+export const metadata: Metadata = { title: "جزئیات مخاطب" };
 
 export default async function ContactDetailPage({
   params,

@@ -6,6 +6,7 @@ import { TrackingCharts } from "@/components/reports/tracking-charts";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { ReportExportButton } from "@/components/reports/report-export-button";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "ردیابی ایمیل و اسناد" };
 
 export default async function TrackingPage() {

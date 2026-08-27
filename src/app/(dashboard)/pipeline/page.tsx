@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { requireWorkspace, hasPermission } from "@/lib/session";
 import { getKanbanBoard } from "@/services/deals";
 import { listPipelines } from "@/services/pipelines";
@@ -7,6 +8,9 @@ import { toKanbanBoardRow, toPipelineRow } from "@/lib/serialize";
 import { PageHeader } from "@/components/ui/page-header";
 import { KanbanBoard } from "@/components/pipeline/kanban-board";
 import { ImportCsvDialog } from "@/components/contacts/import-csv-dialog";
+
+export const dynamic = "force-dynamic";
+export const metadata: Metadata = { title: "فانل فروش" };
 
 export default async function PipelinePage() {
   const { workspaceId, membership } = await requireWorkspace();

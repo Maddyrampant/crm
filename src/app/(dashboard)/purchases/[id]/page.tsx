@@ -1,8 +1,12 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { requireWorkspace, hasPermission } from "@/lib/session";
 import { getPurchaseOrder } from "@/services/inventory";
 import { PurchaseOrderDetail } from "@/components/inventory/purchase-order-detail";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
+
+export const dynamic = "force-dynamic";
+export const metadata: Metadata = { title: "جزئیات سفارش خرید" };
 
 export default async function PurchaseOrderDetailPage({
   params,
