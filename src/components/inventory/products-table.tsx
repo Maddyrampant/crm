@@ -58,6 +58,8 @@ import {
   exportProductsCsvAction,
 } from "@/actions/inventory";
 import { showUndoToast } from "@/components/ui/undo-toast";
+import { useRowSelection } from "@/hooks/use-row-selection";
+import { BulkActionBar } from "@/components/ui/bulk-action-bar";
 import { ProductFormDialog } from "@/components/inventory/product-form-dialog";
 import { CategoryManagerDialog } from "@/components/inventory/category-manager-dialog";
 import { ImportProductsDialog } from "@/components/inventory/import-products-dialog";
@@ -91,8 +93,10 @@ export function ProductsTable({ initialData, categories, canManage }: Props) {
   const [deleting, setDeleting] = useState<ProductWithStock | null>(null);
   const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
   const [sort, setSort] = useState<ColumnSort | null>(null);
   const [exporting, setExporting] = useState(false);
+  const selection = useRowSelection<ProductWithStock>();
 
   function toggleSort(col: string) {
     setSort((prev) => ({
@@ -184,6 +188,24 @@ export function ProductsTable({ initialData, categories, canManage }: Props) {
   }
 
   const totalPages = Math.max(1, Math.ceil(data.total / PAGE_SIZE));
+
+  async function handleBulkDelete() {
+    const ids = selection.selectedIds;
+    if (!ids.length) return;
+    setBulkBusy(true);
+    try {
+      const { bulkDeleteProductsAction } = await import("@/actions/bulk");
+      const result = await bulkDeleteProductsAction(ids);
+      if (result.ok) {
+        showUndoToast({ message: `${ids.length} کالا حذف شد`, onUndo: () => load() });
+        setData((d) => ({ items: d.items.filter((x) => !ids.includes(x.id)), total: Math.max(0, d.total - ids.length) }));
+        selection.clear();
+      } else {
+        toast.error(result.error);
+      }
+    } catch { toast.error("خطا در حذف گروهی"); }
+    setBulkBusy(false);
+  }
 
   return (
     <div className="space-y-4">
@@ -281,6 +303,17 @@ export function ProductsTable({ initialData, categories, canManage }: Props) {
             <Table>
               <TableHeader>
                 <TableRow>
+                  {canManage && (
+                    <TableHead className="w-12">
+                      <input
+                        type="checkbox"
+                        className="size-4 cursor-pointer"
+                        checked={selection.isAllSelected(data.items)}
+                        ref={(el) => { if (el) el.indeterminate = selection.isPartial(data.items); }}
+                        onChange={() => selection.toggleAll(data.items)}
+                      />
+                    </TableHead>
+                  )}
                   <TableHead>
                     <button onClick={() => toggleSort("name")} className="inline-flex items-center gap-1 hover:text-foreground">
                       کالا
@@ -308,7 +341,7 @@ export function ProductsTable({ initialData, categories, canManage }: Props) {
               <TableBody>
                 {data.items.length === 0 && !isPending ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="border-0">
+                    <TableCell colSpan={canManage ? 8 : 7} className="border-0">
                       <EmptyState
                         icon={Package}
                         title="کالایی یافت نشد"
@@ -318,7 +351,17 @@ export function ProductsTable({ initialData, categories, canManage }: Props) {
                   </TableRow>
                 ) : (
                   data.items.map((p) => (
-                    <TableRow key={p.id}>
+                    <TableRow key={p.id} data-state={selection.isSelected(p.id) ? "selected" : undefined}>
+                      {canManage && (
+                        <TableCell>
+                          <input
+                            type="checkbox"
+                            className="size-4 cursor-pointer"
+                            checked={selection.isSelected(p.id)}
+                            onChange={() => selection.toggle(p.id)}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell>
                         <div className="min-w-0">
                           <span className="block truncate font-medium">
@@ -453,6 +496,14 @@ export function ProductsTable({ initialData, categories, canManage }: Props) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <BulkActionBar
+        count={selection.count}
+        onClear={selection.clear}
+        onDelete={handleBulkDelete}
+        deleting={bulkBusy}
+        label="کالا"
+      />
     </div>
   );
 }

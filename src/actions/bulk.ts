@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireWorkspace, hasPermission } from "@/lib/session";
 import { db } from "@/db";
-import { contacts, deals, invoices } from "@/db/schema";
+import { contacts, deals, invoices, products } from "@/db/schema";
 import { eq, inArray, and } from "drizzle-orm";
 
 export async function bulkDeleteContactsAction(ids: string[]) {
@@ -48,5 +48,20 @@ export async function bulkDeleteInvoicesAction(ids: string[]) {
     .where(and(inArray(invoices.id, ids), eq(invoices.workspaceId, workspaceId)));
 
   revalidatePath("/invoices");
+  return { ok: true, deleted: ids.length };
+}
+
+export async function bulkDeleteProductsAction(ids: string[]) {
+  const { workspaceId, membership } = await requireWorkspace();
+  if (!hasPermission(membership, "manager")) {
+    return { ok: false, error: "شما اجازه حذف گروهی کالاها را ندارید" };
+  }
+  if (!ids.length) return { ok: false, error: "هیچ آیتمی انتخاب نشده" };
+
+  await db
+    .delete(products)
+    .where(and(inArray(products.id, ids), eq(products.workspaceId, workspaceId)));
+
+  revalidatePath("/products");
   return { ok: true, deleted: ids.length };
 }

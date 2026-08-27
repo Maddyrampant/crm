@@ -56,12 +56,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/ui/empty-state";
 import { showUndoToast } from "@/components/ui/undo-toast";
 import { InlineEdit } from "@/components/ui/inline-edit";
+import { useRowSelection } from "@/hooks/use-row-selection";
+import { BulkActionBar } from "@/components/ui/bulk-action-bar";
 import {
   deleteDealAction,
   listDealsAction,
   patchDealAction,
   setDealOutcomeAction,
 } from "@/actions/deals";
+import { bulkDeleteDealsAction } from "@/actions/bulk";
 import { STATUS_LABELS } from "@/lib/labels";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/format";
 import type { DealRow, DealStatus, PipelineRow } from "@/lib/api-types";
@@ -123,7 +126,9 @@ export function DealsTable({
   const [lostReason, setLostReason] = useState("");
   const [deleting, setDeleting] = useState<DealRow | null>(null);
   const [busy, setBusy] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
   const [sort, setSort] = useState<ColumnSort | null>(null);
+  const selection = useRowSelection<DealRow>();
 
   function toggleSort(col: string) {
     setSort((prev) => ({
@@ -230,6 +235,27 @@ export function DealsTable({
 
   const totalPages = Math.max(1, Math.ceil(data.total / pageSize));
 
+  async function handleBulkDelete() {
+    const ids = selection.selectedIds;
+    if (!ids.length) return;
+    setBulkBusy(true);
+    const result = await bulkDeleteDealsAction(ids);
+    setBulkBusy(false);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    showUndoToast({
+      message: `${ids.length} فروش حذف شد`,
+      onUndo: () => load(),
+    });
+    setData((d) => ({
+      items: d.items.filter((x) => !ids.includes(x.id)),
+      total: Math.max(0, d.total - ids.length),
+    }));
+    selection.clear();
+  }
+
   return (
     <div className="space-y-4">
       <Card>
@@ -334,6 +360,19 @@ export function DealsTable({
             <Table>
               <TableHeader>
                 <TableRow>
+                  {canDelete && (
+                    <TableHead className="w-12">
+                      <input
+                        type="checkbox"
+                        className="size-4 cursor-pointer"
+                        checked={selection.isAllSelected(data.items)}
+                        ref={(el) => {
+                          if (el) el.indeterminate = selection.isPartial(data.items);
+                        }}
+                        onChange={() => selection.toggleAll(data.items)}
+                      />
+                    </TableHead>
+                  )}
                   <TableHead>
                     <button onClick={() => toggleSort("title")} className="inline-flex items-center gap-1 hover:text-foreground">
                       عنوان
@@ -363,7 +402,7 @@ export function DealsTable({
               <TableBody>
                 {data.items.length === 0 && !isPending ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="border-0">
+                    <TableCell colSpan={canDelete ? 10 : 9} className="border-0">
                       <EmptyState
                         icon={Trophy}
                         title="فروشی یافت نشد"
@@ -380,7 +419,17 @@ export function DealsTable({
                   </TableRow>
                 ) : (
                   data.items.map((d) => (
-                    <TableRow key={d.id}>
+                    <TableRow key={d.id} data-state={selection.isSelected(d.id) ? "selected" : undefined}>
+                      {canDelete && (
+                        <TableCell>
+                          <input
+                            type="checkbox"
+                            className="size-4 cursor-pointer"
+                            checked={selection.isSelected(d.id)}
+                            onChange={() => selection.toggle(d.id)}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell>
                         <div className="min-w-0">
                           <InlineEdit
@@ -640,6 +689,14 @@ export function DealsTable({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <BulkActionBar
+        count={selection.count}
+        onClear={selection.clear}
+        onDelete={handleBulkDelete}
+        deleting={bulkBusy}
+        label="فروش"
+      />
     </div>
   );
 }
