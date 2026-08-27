@@ -34,6 +34,7 @@ import { LeadSourcePie } from "@/components/dashboard/lead-source-pie";
 import { ActivityTimeline } from "@/components/dashboard/activity-timeline";
 import { StalledDealsTable } from "@/components/dashboard/stalled-deals-table";
 import { DateRangeFilter } from "@/components/dashboard/date-range-filter";
+import { WindowDemo } from "@/components/window/window-demo";
 
 export const metadata: Metadata = { title: "داشبورد" };
 
@@ -259,8 +260,7 @@ export default async function DashboardPage({
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader className="flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-base">مشتریان اخیر</CardTitle>
-            <ButtonLink href="/contacts" />
+            <CardTitle className="text-base">مشتریان اخیر</CardTitle>            <ButtonLink href="/contacts" />
           </CardHeader>
           <CardContent className="space-y-3">
             {recentContacts.length === 0 ? (
@@ -303,8 +303,7 @@ export default async function DashboardPage({
             <ButtonLink href="/pipeline/deals" />
           </CardHeader>
           <CardContent className="space-y-3">
-            {recentDeals.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">
+            {recentDeals.length === 0 ? (              <p className="py-6 text-center text-sm text-muted-foreground">
                 هنوز فروشی ثبت نشده است.
               </p>
             ) : (
@@ -341,6 +340,8 @@ export default async function DashboardPage({
           </CardContent>
         </Card>
       </div>
+
+      <WindowDemo />
     </div>
   );
 }

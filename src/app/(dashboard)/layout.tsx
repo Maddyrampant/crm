@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { AppHeader } from "@/components/layout/app-header";
 import { CommandPalette } from "@/components/ui/command-palette";
+import { WindowManager } from "@/components/window/window-manager";
 import { requireWorkspace } from "@/lib/session";
 
 export default async function DashboardLayout({
@@ -23,6 +24,7 @@ export default async function DashboardLayout({
           <main className="flex-1 p-4 md:p-6">{children}</main>
         </SidebarInset>
         <CommandPalette />
+        <WindowManager />
       </SidebarProvider>
     </TooltipProvider>
   );
