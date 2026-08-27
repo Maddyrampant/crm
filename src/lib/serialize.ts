@@ -7,9 +7,11 @@ import type {
   ContactRow,
   CustomFieldRow,
   DealRow,
+  InvoiceRow,
   KanbanBoardRow,
   KanbanStageRow,
   PipelineRow,
+  ProductRow,
   StageRow,
 } from "@/lib/api-types";
 
@@ -191,5 +193,25 @@ export function toPipelineRow(p: {
     name: p.name,
     isDefault: p.isDefault,
     stages: p.stages.map(toStageRow),
+  };
+}
+
+export function toInvoiceRow(i: { id: string; number: string; status: string; total: string | number; contactId: string }): InvoiceRow {
+  return {
+    id: i.id,
+    number: i.number,
+    status: i.status,
+    total: String(i.total),
+    contactId: i.contactId,
+  };
+}
+
+export function toProductRow(p: { id: string; name: string; sku: string; unitPrice: string | number; active: boolean }): ProductRow {
+  return {
+    id: p.id,
+    name: p.name,
+    sku: p.sku,
+    unitPrice: String(p.unitPrice),
+    active: p.active,
   };
 }
