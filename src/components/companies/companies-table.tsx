@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/dialog";
 import { showUndoToast } from "@/components/ui/undo-toast";
 import { CompanyFormDialog } from "@/components/companies/company-form-dialog";
+import { WindowCompanyForm } from "@/components/window/window-company-form";
 import { EmptyState } from "@/components/ui/empty-state";
 import { listCompaniesAction, deleteCompanyAction } from "@/actions/contacts";
 import { formatDate, formatNumber } from "@/lib/format";
@@ -119,16 +120,14 @@ export function CompaniesTable({ initialData, canManage, canDelete }: Props) {
         <CardHeader className="flex-row items-center justify-between space-y-0">
           <CardTitle className="text-lg">شرکت‌ها</CardTitle>
           {canManage && (
-            <Button
-              size="sm"
-              onClick={() => {
-                setEditing(null);
-                setFormOpen(true);
-              }}
-            >
-              <Plus className="size-4" />
-              شرکت جدید
-            </Button>
+            <WindowCompanyForm
+              render={(open) => (
+                <Button size="sm" onClick={open}>
+                  <Plus className="size-4" />
+                  شرکت جدید
+                </Button>
+              )}
+            />
           )}
         </CardHeader>
         <CardContent className="space-y-4">

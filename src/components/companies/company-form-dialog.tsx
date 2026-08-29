@@ -35,6 +35,32 @@ type FormState = {
 };
 
 export function CompanyFormDialog({ open, onOpenChange, company, onSaved }: Props) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{company ? "ویرایش شرکت" : "شرکت جدید"}</DialogTitle>
+          <DialogDescription>اطلاعات شرکت را وارد کنید.</DialogDescription>
+        </DialogHeader>
+        <CompanyFormBody
+          company={company}
+          onSaved={onSaved}
+          onCancel={() => onOpenChange(false)}
+        />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function CompanyFormBody({
+  company,
+  onSaved,
+  onCancel,
+}: {
+  company?: CompanyRow | null;
+  onSaved: (company: CompanyRow) => void;
+  onCancel?: () => void;
+}) {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<FormState>({
     name: company?.name ?? "",
@@ -74,93 +100,80 @@ export function CompanyFormDialog({ open, onOpenChange, company, onSaved }: Prop
 
     toast.success(company ? "شرکت ویرایش شد" : "شرکت جدید ساخته شد");
     onSaved(result.data as CompanyRow);
-    onOpenChange(false);
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{company ? "ویرایش شرکت" : "شرکت جدید"}</DialogTitle>
-          <DialogDescription>اطلاعات شرکت را وارد کنید.</DialogDescription>
-        </DialogHeader>
-
-        <div className="overflow-y-auto flex-1 px-4">
-          <form onSubmit={handleSubmit} className="grid gap-4">
+    <div className="flex h-full flex-col">
+      <div className="flex-1 overflow-y-auto pr-1">
+        <form id="company-form" onSubmit={handleSubmit} className="grid gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="name">نام شرکت *</Label>
+            <Input
+              id="name"
+              required
+              value={form.name}
+              onChange={(e) => set("name", e.target.value)}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-2">
-              <Label htmlFor="name">نام شرکت *</Label>
+              <Label htmlFor="domain">دامنه</Label>
               <Input
-                id="name"
-                required
-                value={form.name}
-                onChange={(e) => set("name", e.target.value)}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-2">
-                <Label htmlFor="domain">دامنه</Label>
-                <Input
-                  id="domain"
-                  dir="ltr"
-                  placeholder="example.com"
-                  value={form.domain}
-                  onChange={(e) => set("domain", e.target.value)}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="industry">صنعت</Label>
-                <Input
-                  id="industry"
-                  value={form.industry}
-                  onChange={(e) => set("industry", e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="website">وب‌سایت</Label>
-              <Input
-                id="website"
+                id="domain"
                 dir="ltr"
-                placeholder="https://..."
-                value={form.website}
-                onChange={(e) => set("website", e.target.value)}
+                placeholder="example.com"
+                value={form.domain}
+                onChange={(e) => set("domain", e.target.value)}
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="address">آدرس</Label>
+              <Label htmlFor="industry">صنعت</Label>
               <Input
-                id="address"
-                value={form.address}
-                onChange={(e) => set("address", e.target.value)}
+                id="industry"
+                value={form.industry}
+                onChange={(e) => set("industry", e.target.value)}
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="notes">یادداشت</Label>
-              <Textarea
-                id="notes"
-                rows={3}
-                value={form.notes}
-                onChange={(e) => set("notes", e.target.value)}
-              />
-            </div>
-          </form>
-        </div>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="website">وب‌سایت</Label>
+            <Input
+              id="website"
+              dir="ltr"
+              placeholder="https://..."
+              value={form.website}
+              onChange={(e) => set("website", e.target.value)}
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="address">آدرس</Label>
+            <Input
+              id="address"
+              value={form.address}
+              onChange={(e) => set("address", e.target.value)}
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="notes">یادداشت</Label>
+            <Textarea
+              id="notes"
+              rows={3}
+              value={form.notes}
+              onChange={(e) => set("notes", e.target.value)}
+            />
+          </div>
+        </form>
+      </div>
 
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={saving}
-          >
-            انصراف
-          </Button>
-          <Button type="submit" disabled={saving}>
-            {saving && <Loader2 className="size-4 animate-spin" />}
-            {company ? "ذخیره تغییرات" : "ایجاد شرکت"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      <div className="flex justify-start gap-2 border-t pt-3">
+        <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
+          انصراف
+        </Button>
+        <Button type="submit" form="company-form" disabled={saving}>
+          {saving && <Loader2 className="size-4 animate-spin" />}
+          {company ? "ذخیره تغییرات" : "ایجاد شرکت"}
+        </Button>
+      </div>
+    </div>
   );
 }
