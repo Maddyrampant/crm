@@ -43,6 +43,7 @@ async function ensureConnected(): Promise<RedisClient | null> {
     return null;
   }
 }
+export { ensureConnected };
 
 export async function redisGet(key: string): Promise<string | null> {
   const c = await ensureConnected();

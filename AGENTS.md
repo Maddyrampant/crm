@@ -27,12 +27,12 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ## Important Ports
 - Port 3000: belongs to another project (DO NOT USE)
 - Port 3001: CRM server
-- Port 5433: PostgreSQL (crm-db, user: crm, pass: crm)
+- Port 5432: PostgreSQL (db: crm, user: crm, pass: crm)
 
 ## Auth
 - Login: `admin@crm.dev` / `admin1234`
 - Cookies stored at: `/tmp/crm-cookies.txt`
-- `BETTER_AUTH_URL="http://localhost:3000"` in `.env.local`
+- `BETTER_AUTH_URL="http://localhost:3001"` in `.env.local`
 
 ## Database
 - Schema files: `src/db/schema/*.ts`
@@ -62,7 +62,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Options: برنامهریزی=f75ad846, در حال انجام=47fc9ee4, در بازبینی=dbba2e78, مسدود=74ec92c5, انجام شد=98236657
 
 ## Current Status (Aug 2026)
-- 37+ pages, 115+ components, 30+ services, 25+ action files, 20 DB tables
+- 37+ pages, 115+ components, 30+ services, 25+ action files, 79 DB tables
 - Major modules: Dashboard, Contacts, Companies, Pipeline/Deals, Products, Warehouses, Stock, Purchases, Suppliers, Invoices, Quotes, Email Campaigns, SMS, Goals, Reports, Lead Scoring, Custom Fields, Rules, Bookings, Notifications, Activity, Tracking, Audit Logs, WooCommerce, Profile, Workspace
 - Security: Rate limiting, HMAC timing-safe, AES-256-GCM encryption
 - Performance: 47 indexes on FK columns
