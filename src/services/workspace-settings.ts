@@ -100,7 +100,7 @@ export type AiSettings = {
 };
 
 const AI_DEFAULTS: AiSettings = {
-  defaultModel: "openrouter:openai/gpt-4o-mini",
+  defaultModel: "openrouter:openrouter/free",
   maxSteps: 4,
   systemPromptSuffix: "",
   temperature: 0.7,

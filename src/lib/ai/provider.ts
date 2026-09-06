@@ -22,7 +22,7 @@ export function getChatModel(model?: string) {
     apiKey: process.env.OPENROUTER_API_KEY,
   });
   if (specifier && specifier !== "default") return openrouter(specifier);
-  return openrouter(process.env.OPENROUTER_MODEL ?? "openai/gpt-4o-mini");
+  return openrouter(process.env.OPENROUTER_MODEL ?? "openrouter/free");
 }
 
 export function hasAiConfigured() {

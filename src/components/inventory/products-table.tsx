@@ -117,7 +117,7 @@ export function ProductsTable({ initialData, categories, canManage }: Props) {
         categoryId: filters.categoryId === "all" ? undefined : filters.categoryId,
         active: filters.active === "all" ? undefined : (filters.active as "active" | "inactive"),
         page,
-        sortBy: sort?.column as any,
+        sortBy: sort?.column as "name" | "unitPrice" | "totalStock" | "createdAt" | undefined,
         sortDir: sort?.direction,
       });
       setData(result);

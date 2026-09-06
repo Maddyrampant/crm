@@ -157,7 +157,7 @@ export function DealsTable({
       closeDateTo: filters.closeDateTo || null,
       page,
       pageSize,
-      sortBy: sort?.column as any,
+      sortBy: sort?.column as "title" | "amount" | "updatedAt" | "closeDate" | undefined,
       sortDir: sort?.direction,
     });
     if (result.ok && result.data) setData(result.data);

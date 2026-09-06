@@ -129,7 +129,7 @@ export function StockTable({ initialData, lowStockIds }: Props) {
         const result = await listProductsAction({
           search: search || undefined,
           page,
-          sortBy: sort?.column as any,
+          sortBy: sort?.column as "name" | "unitPrice" | "totalStock" | "createdAt" | undefined,
           sortDir: sort?.direction,
         });
         setData(result);

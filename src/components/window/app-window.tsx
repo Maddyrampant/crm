@@ -126,9 +126,9 @@ export function AppWindow({ win }: Props) {
     };
   }, [win.id, win.maximized, win.minWidth, win.minHeight, win.x, win.y, win.width, win.height, moveWindow, resizeWindow]);
 
-  if (win.minimized) return null;
-
   const isActive = useActiveWindow(win.id);
+
+  if (win.minimized) return null;
 
   const resizeHandles = [
     ["n", "top-0 left-0 right-0 h-1.5"],

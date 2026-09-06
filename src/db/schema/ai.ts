@@ -24,7 +24,7 @@ export const aiConversations = pgTable("ai_conversations", {
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
   title: text("title").notNull().default("گفتگوی جدید"),
-  model: text("model").notNull().default("openai/gpt-4o-mini"),
+  model: text("model").notNull().default("openrouter/free"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
